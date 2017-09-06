@@ -120,7 +120,7 @@ function timer_stop {
   # "Ding" over the speakers if a long-running (>60s) command just completed.
   if ((delta_us > (1000 * 1000 * 60))); then
     # If we're not running in SSH and we can play sounds: play a sound.
-    if [[ -n "${SSH_TTY}" && -x /usr/bin/paplay ]]; then
+    if [ -z "$SSH_TTY" ] && [ -x /usr/bin/paplay ]; then
       /usr/bin/paplay /usr/share/sounds/freedesktop/stereo/complete.oga
       # Note: Might also consider using `spd-say "It's done!"`.
     # Otherwise, beep.
