@@ -4,7 +4,7 @@
 ##
 
 # The source directories for dotfiles. The first in the list is the default.
-DOTFILES_DIRS="~/.dotfiles-karlmdavis.git"
+DOTFILES_DIRS="/home/karl/.dotfiles-karlmdavis.git/"
 
 # The files to exclude when reading dotfiles repos.
 EXCLUDES="LICENSE README.md"
