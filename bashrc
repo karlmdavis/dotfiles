@@ -231,3 +231,16 @@ if [[ -f ~/.bashrc_local ]]; then
   . ~/.bashrc_local
 fi
 
+# nvm manages Node installs/versions. Recommend going with a "Manual Install", per:
+# https://github.com/creationix/nvm#manual-install
+export NVM_DIR="$HOME/workspaces/tools/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
+# Yarn manages Node/JS packages. Recommend going with a "Manual Install via tarball", per:
+# https://yarnpkg.com/lang/en/docs/install/#alternatives-stable
+export YARN_DIR="$HOME/workspaces/tools/yarn-v1.6.0/bin"
+[ -d "$YARN_DIR" ] && path_prepend "$YARN_DIR"
+
+# RVM manages Ruby installations.
+export RVM_DIR="$HOME/.rvm"
+[ -d "$RVM_DIR" ] && source "${RVM_DIR}/scripts/rvm"
