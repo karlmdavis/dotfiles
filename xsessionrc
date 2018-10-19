@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Enable natural scrolling on brust's builtin touchpad.
+xinput set-prop 'DELL07E6:00 06CB:76AF Touchpad' 'libinput Natural Scrolling Enabled' 1
