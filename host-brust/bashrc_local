@@ -1,0 +1,5 @@
+# Add Maven to path.
+mavenDir="${HOME}/workspaces/tools/apache-maven-3.5.2"
+if [[ -d "${mavenDir}" ]]; then
+  path_prepend "${mavenDir}/bin"
+fi
