@@ -20,8 +20,15 @@ shopt -s histappend
 
 # Don't automatically cap ~/.bash_history; let it grow forever. I've had a 
 # history file that's 25K lines, and it wasn't a problem.
-HISTSIZE=-1
-HISTFILESIZE=-1
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # MacOS doesn't seem to like the `-1` variants of this.
+  HISTSIZE=9999999999
+  HISTFILESIZE=999999999
+else
+  # Seems to work on Linux.
+  HISTSIZE=-1
+  HISTFILESIZE=-1
+fi
 
 # Record timestamps in the Bash history, as well.
 # See `man strftime` for format options, but this is the ISO 8601 datetime 
@@ -32,17 +39,20 @@ HISTTIMEFORMAT='%FT%T%z '
 # of LINES and COLUMNS.
 shopt -s checkwinsize
 
-# If set, the pattern "**" used in a pathname expansion context will match all 
-# files and zero or more directories and subdirectories.
-#shopt -s globstar
+# Configure options that are only available in newer versions of Bash.
+setBash4Options() {
+  # If set, the pattern "**" used in a pathname expansion context will match all 
+  # files and zero or more directories and subdirectories.
+  shopt -s globstar
+}
+
+# On MacOS, the default Bash is a POSIX-compliant-only v3.2.
+if [ "${BASH_VERSION}" == "${BASH_VERSION/3.2/}" ]; then
+  setBash4Options
+fi
 
 # Make less more friendly for non-text input files, see lesspipe(1).
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
-
-# Set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
-  debian_chroot=$(cat /etc/debian_chroot)
-fi
 
 # Set a fancy prompt (non-color, unless we know we "want" color).
 case "$TERM" in
@@ -92,7 +102,12 @@ BWHT="\[\033[47m\]" # background white
 # last command.
 # Reference: http://stackoverflow.com/a/34812608/1851299
 function timer_now {
-  date +%s%N
+  if [[ "${OSTYPE}" == "darwin"* ]]; then
+    # MacOS only supports seconds precision.
+    date +%s
+  else
+    date +%s%N
+  fi
 }
 
 function timer_start {
@@ -100,25 +115,40 @@ function timer_start {
 }
 
 function timer_stop {
-  local delta_us=$((($(timer_now) - $timer_start) / 1000))
-  local us=$((delta_us % 1000))
-  local ms=$(((delta_us / 1000) % 1000))
-  local s=$(((delta_us / 1000000) % 60))
-  local m=$(((delta_us / 60000000) % 60))
-  local h=$((delta_us / 3600000000))
-  # Goal: always show around 3 digits of accuracy
-  if ((h > 0)); then timer_show=${h}h${m}m
-  elif ((m > 0)); then timer_show=${m}m${s}s
-  elif ((s >= 10)); then timer_show=${s}.$((ms / 100))s
-  elif ((s > 0)); then timer_show=${s}.$(printf %03d $ms)s
-  elif ((ms >= 100)); then timer_show=${ms}ms
-  elif ((ms > 0)); then timer_show=${ms}.$((us / 100))ms
-  else timer_show=${us}us
+  local delta_s
+  if [[ "${OSTYPE}" == "darwin"* ]]; then
+    # MacOS only supports seconds precision.
+    delta_s=$((($(timer_now) - timer_start)))
+    local s=$(((delta_s) % 60))
+    local m=$(((delta_s / 60) % 60))
+    local h=$((delta_s / 3600))
+    # Goal: always show around 3 digits of accuracy
+    if ((h > 0)); then timer_show=${h}h${m}m
+    elif ((m > 0)); then timer_show=${m}m${s}s
+    else timer_show=${s}s
+    fi
+  else
+    delta_s=$((($(timer_now) - timer_start) / 1000 / 1000000))
+    local delta_us=$((($(timer_now) - timer_start) / 1000))
+    local us=$((delta_us % 1000))
+    local ms=$(((delta_us / 1000) % 1000))
+    local s=$(((delta_us / 1000000) % 60))
+    local m=$(((delta_us / 60000000) % 60))
+    local h=$((delta_us / 3600000000))
+    # Goal: always show around 3 digits of accuracy
+    if ((h > 0)); then timer_show=${h}h${m}m
+    elif ((m > 0)); then timer_show=${m}m${s}s
+    elif ((s >= 10)); then timer_show=${s}.$((ms / 100))s
+    elif ((s > 0)); then timer_show=${s}.$(printf %03d $ms)s
+    elif ((ms >= 100)); then timer_show=${ms}ms
+    elif ((ms > 0)); then timer_show=${ms}.$((us / 100))ms
+    else timer_show=${us}us
+    fi
   fi
   unset timer_start
   
   # "Ding" over the speakers if a long-running (>60s) command just completed.
-  if ((delta_us > (1000 * 1000 * 60))); then
+  if ((delta_s > 60)); then
     # If we're not running in SSH and we can play sounds: play a sound.
     if [ -z "$SSH_TTY" ] && [ -x /usr/bin/paplay ]; then
       /usr/bin/paplay /usr/share/sounds/freedesktop/stereo/complete.oga
@@ -153,9 +183,9 @@ if [ "$color_prompt" = yes ]; then
   #     2016-05-02 09:45:04, last command took 42s
   #     user@hostname:~/somedir
   #     $ 
-  PS1="${FMAG}\n\D{%F %T}, last command took \${timer_show}${RS}\n${debian_chroot:+($debian_chroot)}${FGRN}\u@\h${RS}:${FBLE}\w\n${RS}\$ "
+  PS1="${FMAG}\n\D{%F %T}, last command took \${timer_show}${RS}\n${FGRN}\u@\h${RS}:${FBLE}\w\n${RS}\$ "
 else
-  PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+  PS1='\u@\h:\w\$ '
 fi
 unset color_prompt force_color_prompt
 
@@ -230,17 +260,3 @@ export EDITOR=/usr/bin/vim
 if [[ -f ~/.bashrc_local ]]; then
   . ~/.bashrc_local
 fi
-
-# nvm manages Node installs/versions. Recommend going with a "Manual Install", per:
-# https://github.com/creationix/nvm#manual-install
-export NVM_DIR="$HOME/workspaces/tools/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
-
-# Yarn manages Node/JS packages. Recommend going with a "Manual Install via tarball", per:
-# https://yarnpkg.com/lang/en/docs/install/#alternatives-stable
-export YARN_DIR="$HOME/workspaces/tools/yarn-v1.6.0/bin"
-[ -d "$YARN_DIR" ] && path_prepend "$YARN_DIR"
-
-# RVM manages Ruby installations.
-export RVM_DIR="$HOME/.rvm"
-[ -d "$RVM_DIR" ] && source "${RVM_DIR}/scripts/rvm"
