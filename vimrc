@@ -74,10 +74,6 @@ set listchars=tab:␉·
 " Automatically format Rust files on save.
 let g:rustfmt_autosave = 1
 
-" Configure NERDtree to start at launch.
-autocmd VimEnter * NERDTree
-autocmd BufEnter * NERDTreeMirror
-
 " CTRL-t to toggle tree view with CTRL-t.
 nmap <silent> <C-t> :NERDTreeToggle<CR>
 " Set F2 to put the cursor to the nerdtree.
