@@ -1,6 +1,13 @@
+" Install vim-plug if it's not already present.
+if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
+
 " Plugins to be managed via https://github.com/junegunn/vim-plug
 " will be listed in this plug#begin / plug#end block.
-"
+
 " After updating this set, run `:so %` (in this buffer!) to reload your `.vimrc`
 " and then either `:PlugInstall` or `:PlugUpdate` to install/update the entries.
 call plug#begin('~/.vim/plugged')
