@@ -48,6 +48,9 @@ Plug 'chase/vim-ansible-yaml'
 " Install a decent Python mode.
 Plug 'python-mode/python-mode'
 
+" Handle CSV files.
+Plug 'chrisbra/csv.vim'
+
 " Add plugins to &runtimepath
 call plug#end()
 
