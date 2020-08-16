@@ -263,6 +263,9 @@ if [[ -f ~/.bashrc_local ]]; then
   . ~/.bashrc_local
 fi
 
+# jabba manages JDK/JRE installs/versions.
+[ -s "${HOME}/.jabba/jabba.sh" ] && source "${HOME}/.jabba/jabba.sh"
+
 # nvm manages Node installs/versions. Recommend going with a "Manual Install", per:
 # https://github.com/creationix/nvm#manual-install
 export NVM_DIR="$HOME/workspaces/tools/nvm"
