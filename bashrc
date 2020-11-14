@@ -263,6 +263,14 @@ export PATH
 # Set default editor that will be used by most terminal programs (e.g. git).
 export EDITOR=/usr/bin/vim
 
+# Use Gnome Keyring as an SSH agent, etc.
+# Taken from:
+# <https://wiki.archlinux.org/index.php/GNOME/Keyring#With_a_display_manager>.
+if [ -n "$DESKTOP_SESSION" ];then
+    eval $(gnome-keyring-daemon --start)
+    export SSH_AUTH_SOCK
+fi
+
 # This `~/.bashrc` file is shared across many systems, but some things need to 
 # be set per-system. Import any local settings, if they exist.
 if [[ -f ~/.bashrc_local ]]; then
