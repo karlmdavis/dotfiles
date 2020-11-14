@@ -12,6 +12,9 @@ endif
 " and then either `:PlugInstall` or `:PlugUpdate` to install/update the entries.
 call plug#begin('~/.vim/plugged')
 
+" Adds support for color schemes.
+Plug 'chriskempson/base16-vim'
+
 " Set sensisble .vimrc defaults.
 Plug 'tpope/vim-sensible'
 
@@ -56,6 +59,9 @@ Plug 'chrisbra/csv.vim'
 
 " Add plugins to &runtimepath
 call plug#end()
+
+" Configure the color scheme.
+colorscheme base16-material
 
 " Relative line numbers (sort of, per vim-numbertoggle plugin).
 set number relativenumber

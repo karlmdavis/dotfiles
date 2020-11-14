@@ -54,6 +54,12 @@ fi
 # Make less more friendly for non-text input files, see lesspipe(1).
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
+# Base16 Shell
+BASE16_SHELL="$HOME/workspaces/tools/base16-shell.git"
+[ -n "$PS1" ] && \
+    [ -s "$BASE16_SHELL/profile_helper.sh" ] && \
+        eval "$("$BASE16_SHELL/profile_helper.sh")"
+
 # Set a fancy prompt (non-color, unless we know we "want" color).
 case "$TERM" in
   xterm-color|*-256color) color_prompt=yes;;
