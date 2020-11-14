@@ -46,7 +46,7 @@ Plug 'majutsushi/tagbar'
 " Provides auto-complete for Rust (or whatever). See repo for additional
 " installation instructions (e.g. `cd ~/.vim/plugged/YouCompleteMe &&
 " ./install.py --rust-completer`).
-Plug 'Valloric/YouCompleteMe'
+"Plug 'Valloric/YouCompleteMe'
 
 " Enable the vim-ansible-yaml plugin, which makes Ansible editing sane.
 Plug 'chase/vim-ansible-yaml'
