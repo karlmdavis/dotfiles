@@ -54,6 +54,12 @@ fi
 # Make less more friendly for non-text input files, see lesspipe(1).
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
+# Base16 Shell
+BASE16_SHELL="$HOME/workspaces/tools/base16-shell.git"
+[ -n "$PS1" ] && \
+    [ -s "$BASE16_SHELL/profile_helper.sh" ] && \
+        eval "$("$BASE16_SHELL/profile_helper.sh")"
+
 # Set a fancy prompt (non-color, unless we know we "want" color).
 case "$TERM" in
   xterm-color|*-256color) color_prompt=yes;;
@@ -257,8 +263,37 @@ export PATH
 # Set default editor that will be used by most terminal programs (e.g. git).
 export EDITOR=/usr/bin/vim
 
+# Use Gnome Keyring as an SSH agent, etc.
+# Taken from:
+# <https://wiki.archlinux.org/index.php/GNOME/Keyring#With_a_display_manager>.
+if [ -n "$DESKTOP_SESSION" ];then
+    eval $(gnome-keyring-daemon --start)
+    export SSH_AUTH_SOCK
+fi
+
 # This `~/.bashrc` file is shared across many systems, but some things need to 
 # be set per-system. Import any local settings, if they exist.
 if [[ -f ~/.bashrc_local ]]; then
   . ~/.bashrc_local
 fi
+
+# jabba manages JDK/JRE installs/versions.
+[ -s "${HOME}/.jabba/jabba.sh" ] && source "${HOME}/.jabba/jabba.sh"
+
+# nvm manages Node installs/versions. Recommend going with a "Manual Install", per:
+# https://github.com/creationix/nvm#manual-install
+export NVM_DIR="$HOME/workspaces/tools/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
+# Yarn manages Node/JS packages. Recommend going with a "Manual Install via tarball", per:
+# https://yarnpkg.com/lang/en/docs/install/#alternatives-stable
+export YARN_DIR="$HOME/workspaces/tools/yarn-v1.6.0/bin"
+[ -d "$YARN_DIR" ] && path_prepend "$YARN_DIR" && export PATH
+
+# RVM manages Ruby installations.
+export RVM_DIR="$HOME/.rvm"
+[ -d "$RVM_DIR" ] && source "${RVM_DIR}/scripts/rvm"
+
+# Go install, which is installed manually via tarball per <https://golang.org/doc/install>.
+export GO_DIR="$HOME/workspaces/tools/go1.11.5.linux-amd64/bin"
+[ -d "$GO_DIR" ] && path_prepend "$GO_DIR" && export PATH

@@ -12,6 +12,9 @@ endif
 " and then either `:PlugInstall` or `:PlugUpdate` to install/update the entries.
 call plug#begin('~/.vim/plugged')
 
+" Adds support for color schemes.
+Plug 'chriskempson/base16-vim'
+
 " Set sensisble .vimrc defaults.
 Plug 'tpope/vim-sensible'
 
@@ -23,6 +26,9 @@ Plug 'jeffkreeftmeijer/vim-numbertoggle'
 
 " Install a decent Markdown mode.
 Plug 'godlygeek/tabular' | Plug 'plasticboy/vim-markdown'
+
+" Install a Markdown preview (key mapping below).
+Plug 'iamcco/markdown-preview.vim'
 
 " Enable the Rust plugin, which includes autoformatting via rustfmt, syntax highlisting, and more.
 Plug 'rust-lang/rust.vim'
@@ -40,7 +46,7 @@ Plug 'majutsushi/tagbar'
 " Provides auto-complete for Rust (or whatever). See repo for additional
 " installation instructions (e.g. `cd ~/.vim/plugged/YouCompleteMe &&
 " ./install.py --rust-completer`).
-Plug 'Valloric/YouCompleteMe'
+"Plug 'Valloric/YouCompleteMe'
 
 " Enable the vim-ansible-yaml plugin, which makes Ansible editing sane.
 Plug 'chase/vim-ansible-yaml'
@@ -54,6 +60,9 @@ Plug 'chrisbra/csv.vim'
 " Add plugins to &runtimepath
 call plug#end()
 
+" Configure the color scheme.
+colorscheme base16-material
+
 " Relative line numbers (sort of, per vim-numbertoggle plugin).
 set number relativenumber
 
@@ -63,6 +72,12 @@ autocmd FileType markdown set expandtab
 
 " Disable vim-markdown's folding (dumbest feature ever).
 let g:vim_markdown_folding_disabled = 1
+
+" Key mappings to open Markdown preview in browser.
+nmap <silent> <F6> <Plug>MarkdownPreview        " for normal mode
+imap <silent> <F6> <Plug>MarkdownPreview        " for insert mode
+nmap <silent> <F7> <Plug>StopMarkdownPreview    " for normal mode
+imap <silent> <F7> <Plug>StopMarkdownPreview    " for insert mode
 
 " Adjust how wide tab characters appear.
 set tabstop=4
