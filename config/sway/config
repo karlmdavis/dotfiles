@@ -41,17 +41,14 @@ set $menu i3-dmenu-desktop
     set $mode_displays Displays: [1]: laptop panel ($output-laptop) only, [2]: desk monitor ($output-home-desk) only, [3]: laptop panel only (no scaling)
     bindsym $mod+p mode "$mode_displays"
     mode "$mode_displays" {
-        #bindsym 1 exec --no-startup-id "xrandr --output eDP-1 --mode 1920x1080 --primary --output DP-2-2 --off"
         bindsym 1 \
             output $output-laptop enable; \
             output $output-laptop resolution 3840x2160@59.997002Hz scale 2; \
             output $output-home-desk disable
-        #bindsym 2 exec --no-startup-id "xrandr --output eDP-1 --off --output DP-2-2 --mode 3840x2160 --rate 30.00 --primary"
         bindsym 2 \
             output $output-laptop disable; \
             output $output-home-desk enable; \
             output $output-home-desk resolution 3840x2160@30.00Hz
-        #bindsym 3 exec --no-startup-id "xrandr --output eDP-1 --auto --primary --output DP-2-2 --off"
         bindsym 3 \
             output $output-laptop enable; \
             output $output-laptop resolution 3840x2160@59.997002Hz scale 1; \
