@@ -104,82 +104,6 @@ BMAG="\[\033[45m\]" # background magenta
 BCYN="\[\033[46m\]" # background cyan
 BWHT="\[\033[47m\]" # background white
 
-# These functions can be used to collect and display wall-clock runtime of the
-# last command.
-# Reference: http://stackoverflow.com/a/34812608/1851299
-function timer_now {
-  if [[ "${OSTYPE}" == "darwin"* ]]; then
-    # MacOS only supports seconds precision.
-    date +%s
-  else
-    date +%s%N
-  fi
-}
-
-function timer_start {
-  timer_start=${timer_start:-$(timer_now)}
-}
-
-function timer_stop {
-  local delta_s
-  if [[ "${OSTYPE}" == "darwin"* ]]; then
-    # MacOS only supports seconds precision.
-    delta_s=$((($(timer_now) - timer_start)))
-    local s=$(((delta_s) % 60))
-    local m=$(((delta_s / 60) % 60))
-    local h=$((delta_s / 3600))
-    # Goal: always show around 3 digits of accuracy
-    if ((h > 0)); then timer_show=${h}h${m}m
-    elif ((m > 0)); then timer_show=${m}m${s}s
-    else timer_show=${s}s
-    fi
-  else
-    delta_s=$((($(timer_now) - timer_start) / 1000 / 1000000))
-    local delta_us=$((($(timer_now) - timer_start) / 1000))
-    local us=$((delta_us % 1000))
-    local ms=$(((delta_us / 1000) % 1000))
-    local s=$(((delta_us / 1000000) % 60))
-    local m=$(((delta_us / 60000000) % 60))
-    local h=$((delta_us / 3600000000))
-    # Goal: always show around 3 digits of accuracy
-    if ((h > 0)); then timer_show=${h}h${m}m
-    elif ((m > 0)); then timer_show=${m}m${s}s
-    elif ((s >= 10)); then timer_show=${s}.$((ms / 100))s
-    elif ((s > 0)); then timer_show=${s}.$(printf %03d $ms)s
-    elif ((ms >= 100)); then timer_show=${ms}ms
-    elif ((ms > 0)); then timer_show=${ms}.$((us / 100))ms
-    else timer_show=${us}us
-    fi
-  fi
-  unset timer_start
-  
-  # "Ding" over the speakers if a long-running (>60s) command just completed.
-  if ((delta_s > 60)); then
-    # If we're not running in SSH and we can play sounds: play a sound.
-    if [ -z "$SSH_TTY" ] && [ -x /usr/bin/paplay ]; then
-      /usr/bin/paplay /usr/share/sounds/freedesktop/stereo/complete.oga
-      # Note: Might also consider using `spd-say "It's done!"`.
-    # Otherwise, beep.
-    else
-      for i in {1..5}; do tput bel; sleep 0.2; done
-    fi
-  fi
-}
-
-trap 'timer_start' DEBUG
-
-promptCommand() {
-  timer_stop
-
-  # Append to history immediately, rather than at shell exit.
-  # Note: If there are concurrent Bash sessions, their history will get mixed
-  # in file. But this is worth the cost, as we no longer lose history when
-  # shells exit abnormally.
-  history -a
-}
-
-PROMPT_COMMAND=promptCommand
-
 if [ "$color_prompt" = yes ]; then
   # Ubuntu 14.04's default prompt was:
   # PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
@@ -300,3 +224,6 @@ export GO_DIR="$HOME/workspaces/tools/go1.11.5.linux-amd64/bin"
 
 # Setup the Cargo environment, which is used for Rust development.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# Enable the Starship prompt.
+hash starship && eval "$(starship init bash)"
