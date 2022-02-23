@@ -34,7 +34,7 @@ set $menu i3-dmenu-desktop
 
     # Set output variables.
     set $output-laptop "eDP-1"
-    set $output-home-desk "DP2-2"
+    set $output-home-desk "DP-2"
 
     # Sway's default works out to this:
     #output $output-laptop resolution 3840x2160@59.997002 scale 2
