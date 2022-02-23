@@ -262,6 +262,10 @@ bindsym $mod+r mode "resize"
     # Screenshot.
     bindsym Print exec /usr/bin/bash /home/karl/bin/screenshot.sh
 
+    # Suspend.
+    # FIXME: Can't figure out the key symbol for this.
+    #bindsym XF86Standby exec systemctl suspend
+
 #
 # Brightness Controls
 #
