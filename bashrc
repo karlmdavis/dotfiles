@@ -297,3 +297,6 @@ export RVM_DIR="$HOME/.rvm"
 # Go install, which is installed manually via tarball per <https://golang.org/doc/install>.
 export GO_DIR="$HOME/workspaces/tools/go1.11.5.linux-amd64/bin"
 [ -d "$GO_DIR" ] && path_prepend "$GO_DIR" && export PATH
+
+# Setup the Cargo environment, which is used for Rust development.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
