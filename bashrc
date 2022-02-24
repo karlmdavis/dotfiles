@@ -257,8 +257,7 @@ fi
 path_prepend() { case ":${PATH:=$1}:" in *:$1:*) ;; *) PATH="$1:$PATH" ;; esac; }
 
 # Allow user binaries to override system ones (e.g. used for updated tmux).
-path_prepend ~/bin
-export PATH
+[ -d "${HOME}/bin" ] && path_prepend "${HOME}/bin" && export PATH
 
 # Set default editor that will be used by most terminal programs (e.g. git).
 export EDITOR=/usr/bin/vim
