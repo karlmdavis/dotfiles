@@ -317,4 +317,4 @@ export SDKMAN_DIR="${HOME}/.sdkman"
 [[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
 
 # Enable the Starship prompt.
-hash starship && eval "$(starship init bash)"
+hash starship 2> /dev/null  && eval "$(starship init bash)"
