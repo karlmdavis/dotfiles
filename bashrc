@@ -312,5 +312,9 @@ fi
 # <https://python-poetry.org/> and perhaps other tools install to this path.
 [ -d "${HOME}/.local/bin" ] && path_prepend "${HOME}/.local/bin" && export PATH
 
+# <https://sdkman.io/> manages the installation and versioning of various dev tooling, e.g. Maven.
+export SDKMAN_DIR="${HOME}/.sdkman"
+[[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
+
 # Enable the Starship prompt.
 hash starship && eval "$(starship init bash)"
