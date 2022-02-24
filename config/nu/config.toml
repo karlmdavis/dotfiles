@@ -1,0 +1,10 @@
+startup = [
+  # Enable https://github.com/ajeetdsouza/zoxide as a fancy `cd` replacement.
+  "zoxide init nushell --hook prompt | save ~/.zoxide.nu", "source ~/.zoxide.nu",
+
+  # Enable https://starship.rs/ as a fancy prompt.
+  "mkdir ~/.cache/starship",
+  "starship init nu | save ~/.cache/starship/init.nu",
+  "source ~/.cache/starship/init.nu",
+]
+prompt = "starship_prompt"
