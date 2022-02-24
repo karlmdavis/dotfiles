@@ -85,6 +85,9 @@ min_time = 0
 show_milliseconds = true
 
 # Enable desktop notifications for longer commands.
+#
+# Note: On sway, this requires `mako`, with the following fix:
+# <https://github.com/emersion/mako/issues/257#issuecomment-1049087860>.
 show_notifications = true
 min_time_to_notify = 45_000
 
