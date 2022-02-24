@@ -309,5 +309,8 @@ if [ -d "${PYENV_ROOT}" ]; then
   eval "$(pyenv init -)"
 fi
 
+# <https://python-poetry.org/> and perhaps other tools install to this path.
+[ -d "${HOME}/.local/bin" ] && path_prepend "${HOME}/.local/bin" && export PATH
+
 # Enable the Starship prompt.
 hash starship && eval "$(starship init bash)"
