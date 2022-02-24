@@ -300,5 +300,14 @@ export GO_DIR="$HOME/workspaces/tools/go1.11.5.linux-amd64/bin"
 # Setup the Cargo environment, which is used for Rust development.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# pyenv manages multiple Python installations.
+export PYENV_ROOT="${HOME}/.pyenv"
+if [ -d "${PYENV_ROOT}" ]; then
+  path_prepend "${PYENV_ROOT}"
+  export PATH
+  eval "$(pyenv init --path)"
+  eval "$(pyenv init -)"
+fi
+
 # Enable the Starship prompt.
 hash starship && eval "$(starship init bash)"
