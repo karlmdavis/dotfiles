@@ -63,7 +63,7 @@ deleted_style = "fg:red bg:#394260"
 [time]
 # Enable this module (it's disabled by default).
 disabled = false
-time_format = " %R"
+time_format = "%R"
 format = '[[  $time ](fg:#a0a9cb bg:#212736)]($style)'
 style = "bg:#212736"
 
