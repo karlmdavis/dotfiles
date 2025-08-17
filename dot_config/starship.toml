@@ -1,116 +1,59 @@
-# Re-arrange things to better match my preferences.
-# See <https://starship.rs/config> for details.
+##
+# Starship Prompt Configuration
+#
+# Largely based on this preset: <https://starship.rs/presets/tokyo-night>.
+##
 format = """
-$time\
-$cmd_duration\
-$line_break\
-$username\
-$hostname\
-$localip\
-$shlvl\
-$singularity\
-$kubernetes\
+[░▒▓](#a3aed2)\
+[ $os ](bg:#a3aed2 fg:#090c0c)\
+[](bg:#769ff0 fg:#a3aed2)\
 $directory\
-$vcsh\
+[](fg:#769ff0 bg:#394260)\
 $git_branch\
-$git_commit\
-$git_state\
-$git_metrics\
 $git_status\
-$hg_branch\
-$docker_context\
-$package\
-$cmake\
-$cobol\
-$container\
-$dart\
-$deno\
-$dotnet\
-$elixir\
-$elm\
-$erlang\
-$golang\
-$helm\
-$java\
-$julia\
-$kotlin\
-$lua\
-$nim\
-$nodejs\
-$ocaml\
-$perl\
-$php\
-$pulumi\
-$purescript\
-$python\
-$rlang\
-$red\
-$ruby\
-$rust\
-$scala\
-$swift\
-$terraform\
-$vlang\
-$vagrant\
-$zig\
-$nix_shell\
-$conda\
-$memory_usage\
-$aws\
-$gcloud\
-$openstack\
-$azure\
-$env_var\
-$crystal\
-$custom\
-$sudo\
-$line_break\
-$jobs\
-$battery\
-$status\
-$shell\
-$character"""
+$git_metrics\
+[](fg:#394260 bg:#212736)\
+$time\
+[](fg:#212736 bg:#1d2230)\
+$cmd_duration\
+[ ](fg:#1d2230)\
+\n$character"""
+
 
 # Git seems to run a bit too slow on my work laptop for the default (500 milliseconds).
 command_timeout = 2000
 
-[aws]
 
-# Disable this module, as it's mostly noise for my use cases.
-disabled = true
+[os]
+format = "$symbol"
+style = "bold"
+disabled = false
+
+[os.symbols]
+Macos = ""
+
+
+[git_metrics]
+# Enable this module (it's disabled by default).
+disabled = false
+
+
+[time]
+# Enable this module (it's disabled by default).
+disabled = false
+# Include the date & TZ.
+format = "$time"
+time_format = " %R"
 
 
 [cmd_duration]
-
 # Always display command duration.
 min_time = 0
+format = "\ueba2 $duration"
 show_milliseconds = true
-
 # Enable desktop notifications for longer commands.
 #
 # Note: On sway, this requires `mako`, with the following fix:
 # <https://github.com/emersion/mako/issues/257#issuecomment-1049087860>.
 show_notifications = true
 min_time_to_notify = 45_000
-
-
-[git_metrics]
-
-# Enable this module (it's disabled by default).
-disabled = false
-
-
-[ruby]
-# Given RVM is always active, we don't need this module triggering in every directory.
-# The `detect_{extensions,files}` variables should ensure it's triggered in actual Ruby projects.
-detect_variables = []
-
-
-[time]
-
-# Enable this module (it's disabled by default).
-disabled = false
-
-# Include the date & TZ.
-format = "[$time]($style), "
-time_format = "%Y-%m-%dT%H:%M:%S%:z"

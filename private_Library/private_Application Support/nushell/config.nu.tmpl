@@ -1,0 +1,97 @@
+# config.nu
+#
+# Installed by:
+# version = "0.106.1"
+#
+# This file is used to override default Nushell settings, define
+# (or import) custom commands, or run any other startup tasks.
+# See https://www.nushell.sh/book/configuration.html
+#
+# Nushell sets "sensible defaults" for most configuration settings, 
+# so your `config.nu` only needs to override these defaults if desired.
+#
+# You can open this file in your default editor using:
+#     config nu
+#
+# You can also pretty-print and page through the documentation for configuration
+# options using:
+#     config nu --doc | nu-highlight | less -R
+
+# Disable nu's default startup banner.
+$env.config.show_banner = false
+
+# Enable the [Starship](https://starship.rs) prompt.
+mkdir ($nu.data-dir | path join "vendor/autoload")
+starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+
+# Set vim as default editor.
+$env.config.buffer_editor = '/opt/homebrew/bin/hx'
+$env.EDITOR = '/opt/homebrew/bin/hx'
+
+
+##
+# Environment Variables and Path Additions
+#
+# Note: `++=` appends entries, while `path add` prepends entries.
+##
+use std/util 'path add'
+
+{{ if .isCMS }}
+# Set username for ctkey, which is used to get AWS CLI tokens.
+$env.CTKEY_USERNAME = 'd6lu'
+{{ end }}
+
+# Add /usr/local/bin to my path.
+path add '/usr/local/bin'
+
+# Configure Homebrew.
+$env.HOMEBREW_PREFIX = '/opt/homebrew'
+$env.HOMEBREW_CELLAR = '/opt/homebrew/Cellar'
+$env.HOMEBREW_REPOSITORY = '/opt/homebrew'
+path add ($env.HOMEBREW_PREFIX | path join 'bin')
+path add ($env.HOMEBREW_PREFIX | path join 'sbin')
+$env.MANPATH = if "MANPATH" in $env {
+    $env.MANPATH 
+    | split row (char colon)
+    | prepend /opt/homebrew/share/man
+    | str join (char colon)
+} else {
+    "/opt/homebrew/share/man:"
+}  
+$env.INFOPATH = if "INFOPATH" in $env {
+    $env.INFOPATH
+    | split row (char colon) 
+    | prepend /opt/homebrew/share/info
+    | str join (char colon)
+} else {
+    "/opt/homebrew/share/info:"
+}
+
+# Add Java (from SDKMAN!) to my path.
+$env.JAVA_HOME = ($env.HOME | path join ".sdkman/candidates/java/current")
+path add ($env.JAVA_HOME | path join "bin")
+
+# Add Rust toolchain to my path.
+$env.CARGO_HOME = ($nu.home-path | path join '.cargo')
+path add ($env.CARGO_HOME | path join "bin")
+
+# Add Docker CLI tools to my path.
+let docker_bin = ([$nu.home-path, '.docker', 'bin'] | path join)
+if ($docker_bin | path exists) {
+    path add $docker_bin
+}
+
+# Configure Volta.
+$env.VOLTA_HOME = ($env.HOME | path join '.volta')
+path add ($env.VOLTA_HOME | path join 'bin')
+
+# Enable fnm, to add nvm and NodeJS to the path.
+fnm env --json | from json | load-env
+path add ($env.FNM_MULTISHELL_PATH | path join "bin")
+$env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+
+# Configure pipx.
+path add ($env.HOME | path join '.local' | path join 'bin')
+
+# Add basictex/pdflatex to the path.
+path add '/usr/local/texlive/2025basic/bin/universal-darwin/'
