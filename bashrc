@@ -210,12 +210,8 @@ if [[ -f ~/.bashrc_local ]]; then
   . ~/.bashrc_local
 fi
 
-# jabba manages JDK/JRE installs/versions.
-[ -s "${HOME}/.jabba/jabba.sh" ] && source "${HOME}/.jabba/jabba.sh"
-
-# nvm manages Node installs/versions. Recommend going with a "Manual Install", per:
-# https://github.com/creationix/nvm#manual-install
-export NVM_DIR="$HOME/workspaces/tools/nvm"
+# nvm manages Node installs/versions.
+export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 
 # Yarn manages Node/JS packages. Recommend going with a "Manual Install via tarball", per:
@@ -233,15 +229,6 @@ export GO_DIR="$HOME/workspaces/tools/go1.11.5.linux-amd64/bin"
 
 # Setup the Cargo environment, which is used for Rust development.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
-# pyenv manages multiple Python installations.
-export PYENV_ROOT="${HOME}/.pyenv"
-if [ -d "${PYENV_ROOT}" ]; then
-  path_prepend "${PYENV_ROOT}"
-  export PATH
-  eval "$(pyenv init --path)"
-  eval "$(pyenv init -)"
-fi
 
 # <https://python-poetry.org/> and perhaps other tools install to this path.
 [ -d "${HOME}/.local/bin" ] && path_prepend "${HOME}/.local/bin" && export PATH

@@ -1,3 +1,6 @@
+" Set vim to always use Bash as its shell, as we get weird errors otherwise.
+set shell=/bin/bash
+
 " Install vim-plug if it's not already present.
 if empty(glob('~/.vim/autoload/plug.vim'))
   silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
@@ -61,6 +64,8 @@ Plug 'chrisbra/csv.vim'
 call plug#end()
 
 " Configure the color scheme.
+"let base16colorspace=256  " Access colors present in 256 colorspace
+set termguicolors
 colorscheme base16-material
 
 " Relative line numbers (sort of, per vim-numbertoggle plugin).

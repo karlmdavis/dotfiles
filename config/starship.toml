@@ -71,6 +71,8 @@ $status\
 $shell\
 $character"""
 
+# Git seems to run a bit too slow on my work laptop for the default (500 milliseconds).
+command_timeout = 2000
 
 [aws]
 
