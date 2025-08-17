@@ -17,17 +17,6 @@
 # options using:
 #     config nu --doc | nu-highlight | less -R
 
-# Disable nu's default startup banner.
-$env.config.show_banner = false
-
-# Enable the [Starship](https://starship.rs) prompt.
-mkdir ($nu.data-dir | path join "vendor/autoload")
-starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
-
-# Set vim as default editor.
-$env.config.buffer_editor = '/opt/homebrew/bin/hx'
-$env.EDITOR = '/opt/homebrew/bin/hx'
-
 
 ##
 # Environment Variables and Path Additions
@@ -86,12 +75,32 @@ $env.VOLTA_HOME = ($env.HOME | path join '.volta')
 path add ($env.VOLTA_HOME | path join 'bin')
 
 # Enable fnm, to add nvm and NodeJS to the path.
-fnm env --json | from json | load-env
-path add ($env.FNM_MULTISHELL_PATH | path join "bin")
-$env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+if (which fnm | is-not-empty) {
+    fnm env --json | from json | load-env
+    path add ($env.FNM_MULTISHELL_PATH | path join "bin")
+    $env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+}
 
 # Configure pipx.
 path add ($env.HOME | path join '.local' | path join 'bin')
 
 # Add basictex/pdflatex to the path.
 path add '/usr/local/texlive/2025basic/bin/universal-darwin/'
+
+
+##
+# Other Configuration
+#
+# Note: Some of this requires the above path, etc. setup, so this needs to be after it.
+##
+
+# Disable nu's default startup banner.
+$env.config.show_banner = false
+
+# Enable the [Starship](https://starship.rs) prompt.
+mkdir ($nu.data-dir | path join "vendor/autoload")
+starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+
+# Set vim as default editor.
+$env.config.buffer_editor = '/opt/homebrew/bin/hx'
+$env.EDITOR = '/opt/homebrew/bin/hx'

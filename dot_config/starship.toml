@@ -25,31 +25,53 @@ command_timeout = 2000
 
 
 [os]
+disabled = false
 format = "$symbol"
 style = "bold"
-disabled = false
 
 [os.symbols]
 Macos = ""
 
+[directory]
+format = "[ $path ]($style)"
+style = "fg:#e3e5e5 bg:#769ff0"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = " "
+"Pictures" = " "
+
+[git_branch]
+symbol = ""
+format = '[[ $symbol $branch ](fg:#769ff0 bg:#394260)]($style)'
+style = "bg:#394260"
+
+[git_status]
+format = '[[($all_status$ahead_behind )](fg:#769ff0 bg:#394260)]($style)'
+style = "bg:#394260"
 
 [git_metrics]
 # Enable this module (it's disabled by default).
 disabled = false
-
+format = '([+$added]($added_style) )([-$deleted]($deleted_style) )'
+added_style = "fg:green bg:#394260"
+deleted_style = "fg:red bg:#394260"
 
 [time]
 # Enable this module (it's disabled by default).
 disabled = false
-# Include the date & TZ.
-format = "$time"
 time_format = " %R"
-
+format = '[[  $time ](fg:#a0a9cb bg:#212736)]($style)'
+style = "bg:#212736"
 
 [cmd_duration]
 # Always display command duration.
 min_time = 0
-format = "\ueba2 $duration"
+format = "[\ueba2 $duration]($style)"
+style = "bg:#1d2230"
 show_milliseconds = true
 # Enable desktop notifications for longer commands.
 #
