@@ -1,0 +1,11 @@
+# Ignore project metadata.
+README.md
+LICENSE
+
+{{- if ne .chezmoi.os "linux" }}
+# Only apply Linux-only files when on Linux.
+.config/sway/
+.config/i3
+.config/i3status
+.xsessionrc
+{{- end }}
