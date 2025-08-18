@@ -25,10 +25,10 @@
 ##
 use std/util 'path add'
 
-{{ if .isCMS }}
+{{- if .isCMS }}
 # Set username for ctkey, which is used to get AWS CLI tokens.
 $env.CTKEY_USERNAME = 'd6lu'
-{{ end }}
+{{- end }}
 
 # Add /usr/local/bin to my path.
 path add '/usr/local/bin'
@@ -78,7 +78,9 @@ path add ($env.VOLTA_HOME | path join 'bin')
 if (which fnm | is-not-empty) {
     fnm env --json | from json | load-env
     path add ($env.FNM_MULTISHELL_PATH | path join "bin")
+    {{- if .isCMS }}
     $env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+    {{- end }}
 }
 
 # Configure pipx.
