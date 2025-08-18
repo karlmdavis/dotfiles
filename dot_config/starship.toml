@@ -56,7 +56,7 @@ style = "bg:#394260"
 [git_metrics]
 # Enable this module (it's disabled by default).
 disabled = false
-format = '([+$added]($added_style) )([-$deleted]($deleted_style) )'
+format = '([+$added]($added_style) )([-$deleted]($deleted_style) )[bg:#394260]'
 added_style = "fg:green bg:#394260"
 deleted_style = "fg:red bg:#394260"
 
