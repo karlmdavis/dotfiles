@@ -1,0 +1,34 @@
+##
+# This file, paired with the `../run_onchange_system_packages_autoinstall_macos.sh.tmpl` script,
+# configures chezmoi to automatically install the packages listed below when `chezmoi apply`
+# detects/applies changes to this manifest/data file.
+##
+packages:
+  macos:
+    homebrew:
+      brews:
+        # Manage dotfiles with incredible UX (Go impl).
+        - chezmoi
+        # Modern window/session/pane manager, replacement for tmux (Rust impl).
+        - zellij
+        # Modern non-POSIX shell with focus on UX (Rust impl).
+        - nushell
+        # Modern fancy shell prompt builder/handler (Rust impl).
+        - starship
+        # Modern editor, replacement for vim (Rust impl).
+        - helix
+        # Basic command line utility for downloading web content.
+        - wget
+        # Count lines of code in a project (Rust impl).
+        #- tokei
+        # Python build tool.
+        #- uv
+        # Manage installations of Node and npm packages (Rust impl).
+        #- fnm
+        # Get overview of system CPU, memory, etc. resource usage.
+        #- btop
+      casks:
+        # Modern font for coding with solid emoji support.
+        - font-jetbrains-mono-nerd-font
+        # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
+        #- raycast
