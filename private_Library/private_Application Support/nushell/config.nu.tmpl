@@ -104,6 +104,12 @@ alias claude = volta run --node=22 --bundled-npm npx @anthropic-ai/claude-code
 # Disable nu's default startup banner.
 $env.config.show_banner = false
 
+# Save shell command history more or less permanently.
+$env.config.history.max_size = 5_000_000_000
+$env.config.history.sync_on_enter = true
+$env.config.history.file_format = sqlite
+$env.config.history.isolation = true
+
 # Enable the [Starship](https://starship.rs) prompt.
 mkdir ($nu.data-dir | path join "vendor/autoload")
 starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
