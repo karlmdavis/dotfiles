@@ -17,7 +17,7 @@ $time\
 [](fg:#212736 bg:#1d2230)\
 $cmd_duration\
 [ ](fg:#1d2230)\
-\n$character"""
+\nfooo$character"""
 
 
 # Git seems to run a bit too slow on my work laptop for the default (500 milliseconds).
