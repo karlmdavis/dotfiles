@@ -119,3 +119,6 @@ starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.n
 # Set vim as default editor.
 $env.config.buffer_editor = '/opt/homebrew/bin/hx'
 $env.EDITOR = '/opt/homebrew/bin/hx'
+
+# Make the `dirs` command available.
+use std/dirs
