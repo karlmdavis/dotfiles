@@ -19,6 +19,8 @@ packages:
         - helix
         # Basic command line utility for downloading web content.
         - wget
+        # Manage JS environments (Rsut impl).
+        - volta
         # Count lines of code in a project (Rust impl).
         #- tokei
         # Python build tool.
