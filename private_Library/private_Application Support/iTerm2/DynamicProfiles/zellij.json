@@ -14,7 +14,7 @@
     "Character Encoding" : 4,
     "Close Sessions On End" : true,
     "Columns" : 80,
-    "Command" : "\/usr\/bin\/env \/opt\/homebrew\/bin\/nu \/Users\/d6lu\/.local\/bin\/zellij-launch.nu",
+    "Command" : "\/usr\/bin\/env \/opt\/homebrew\/bin\/nu ~\/.local\/bin\/zellij-launch.nu",
     "Custom Command" : "Yes",
     "Custom Directory" : "No",
     "Description" : "Default",
