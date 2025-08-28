@@ -6,6 +6,9 @@
 packages:
   macos:
     homebrew:
+      taps:
+        # More modern alternative to esbuild (Zig impl).
+        - oven-sh/bun
       brews:
         # Manage dotfiles with incredible UX (Go impl).
         - chezmoi
@@ -19,14 +22,14 @@ packages:
         - helix
         # Basic command line utility for downloading web content.
         - wget
-        # Manage JS environments (Rsut impl).
+        # Manage JS environments (Rust impl).
         - volta
+        # More modern alternative to esbuild (Zig impl).
+        - oven-sh/bun/bun
         # Count lines of code in a project (Rust impl).
         #- tokei
         # Python build tool.
-        #- uv
-        # Manage installations of Node and npm packages (Rust impl).
-        #- fnm
+        - uv
         # Get overview of system CPU, memory, etc. resource usage.
         #- btop
       casks:

@@ -8,6 +8,9 @@
 ##
 
 brew bundle --no-upgrade --file=/dev/stdin <<EOF
+{{ range .packages.macos.homebrew.taps -}}
+tap {{ . | quote }}
+{{ end -}}
 {{ range .packages.macos.homebrew.brews -}}
 brew {{ . | quote }}
 {{ end -}}
