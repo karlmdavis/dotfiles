@@ -1,0 +1,39 @@
+#!/bin/bash
+
+##
+# This file, paired with the `.chezmoidata/system_packages_autoinstall.yaml` manifest/data file,
+# configures chezmoi to automatically install the packages listed in the manfest when
+# `chezmoi apply` detects/applies changes to the manifest/data file.
+##
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Use `brew bundle ...` to install all of the taps, formulae, and casks at once.
+brew bundle --no-upgrade --file=/dev/stdin <<EOF
+{{ range .packages.macos.homebrew.taps -}}
+tap {{ . | quote }}
+{{ end -}}
+{{ range .packages.macos.homebrew.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.macos.homebrew.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+EOF
+
+{{ else if eq .chezmoi.osRelease.id "ubuntu" -}}
+# Install all of the APT packages at once.
+sudo apt install {{ range .packages.ubuntu.apt }}{{ . }}{{ end }}
+
+# Use `brew bundle ...` to install all of the taps, formulae, and casks at once.
+brew bundle --no-upgrade --file=/dev/stdin <<EOF
+{{ range .packages.ubuntu.homebrew.taps -}}
+tap {{ . | quote }}
+{{ end -}}
+{{ range .packages.ubuntu.homebrew.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.ubuntu.homebrew.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+EOF
+{{ end -}}

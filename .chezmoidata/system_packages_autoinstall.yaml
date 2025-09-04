@@ -60,8 +60,6 @@ packages:
         - volta
         # More modern alternative to esbuild (Zig impl).
         - oven-sh/bun/bun
-        # Count lines of code in a project (Rust impl).
-        #- tokei
         # Python build tool.
         - uv
         # Get overview of system CPU, memory, etc. resource usage.
@@ -69,5 +67,3 @@ packages:
       casks:
         # Modern font for coding with solid emoji support.
         - font-jetbrains-mono-nerd-font
-        # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
-        #- raycast
