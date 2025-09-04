@@ -37,3 +37,37 @@ packages:
         - font-jetbrains-mono-nerd-font
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
+  ubuntu:
+    apt:
+      # Basic command line utility for downloading web content.
+      - wget
+    homebrew:
+      taps:
+        # More modern alternative to esbuild (Zig impl).
+        - oven-sh/bun
+      brews:
+        # Manage dotfiles with incredible UX (Go impl).
+        - chezmoi
+        # Modern window/session/pane manager, replacement for tmux (Rust impl).
+        - zellij
+        # Modern non-POSIX shell with focus on UX (Rust impl).
+        - nushell
+        # Modern fancy shell prompt builder/handler (Rust impl).
+        - starship
+        # Modern editor, replacement for vim (Rust impl).
+        - helix
+        # Manage JS environments (Rust impl).
+        - volta
+        # More modern alternative to esbuild (Zig impl).
+        - oven-sh/bun/bun
+        # Count lines of code in a project (Rust impl).
+        #- tokei
+        # Python build tool.
+        - uv
+        # Get overview of system CPU, memory, etc. resource usage.
+        #- btop
+      casks:
+        # Modern font for coding with solid emoji support.
+        - font-jetbrains-mono-nerd-font
+        # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
+        #- raycast
