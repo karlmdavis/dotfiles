@@ -38,9 +38,7 @@ packages:
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
-    apt:
-      # Basic command line utility for downloading web content.
-      - wget
+    apt: []
     homebrew:
       taps:
         # More modern alternative to esbuild (Zig impl).
