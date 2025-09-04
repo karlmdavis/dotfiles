@@ -535,5 +535,9 @@ scrollback_lines_to_serialize 0
 // Note: be sure to escape backslashes and similar characters properly
 // post_command_discovery_hook "echo $RESURRECT_COMMAND | sed <your_regex_here>"
 
-// Set nu as the default shell
-default_shell "/opt/homebrew/bin/nu"
+// Determine default shell (templated)
+{{- $nu := lookPath "nu" }}
+{{- if $nu }}
+// Use resolved nu path as default shell
+default_shell "{{ $nu }}"
+{{- end }}

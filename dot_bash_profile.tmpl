@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+##
+# ~/.bash_profile (managed by chezmoi)
+#
+# Purpose: On Ubuntu interactive login shells, auto-attach or create the persistent zellij session
+# running nushell (if available) using the builtin 'welcome' layout. Provides safe guards so
+# non-interactive SSH/scp/Ansible sessions are unaffected. macOS left effectively untouched
+# (guarded by OS check).
+#
+# Opt-out: set NO_ZELLIJ=1 in environment before launching login shell/ssh.
+# Example:
+#     $ NO_ZELLIJ=1 ssh host
+#
+# Fallback: If zellij is missing, remain in normal bash session.
+#
+# This intentionally does NOT source `~/.bashrc` to avoid resurrecting legacy bash-centric
+# configuration you no longer use. If you later need standard interactive bash behaviors when
+# falling back, you can uncomment the sourcing section below.
+##
+
+# Run only for login + interactive shells.
+case $- in
+  *i*) ;;  # interactive
+  *) return ;;  # non-interactive
+esac
+
+{{ if eq .chezmoi.os "linux" }}
+  {{ with .chezmoi.osRelease }}
+    {{ if eq .id "ubuntu" }}
+##
+# Ubuntu-only behavior (not included on other OSs)
+##
+
+# Do not interfere with non-interactive remote commands (ssh host 'cmd').
+[ -n "${SSH_ORIGINAL_COMMAND:-}" ] && return
+
+# Allow manual suppression.
+[ -n "${NO_ZELLIJ:-}" ] && return
+
+# Avoid recursion if already inside zellij.
+[ -n "${ZELLIJ:-}" ] && return
+
+# Attach/create persistent 'main' session using welcome layout when the zellij binary exists.
+if command -v zellij >/dev/null 2>&1; then
+  exec zellij -l welcome
+fi
+    {{ end }}
+  {{ end }}
+{{ end }}
+
+# Optional: source a system /etc/bash.bashrc or user ~/.bashrc if you later add one.
+# if [ -f ~/.bashrc ]; then
+#   . ~/.bashrc
+# fi

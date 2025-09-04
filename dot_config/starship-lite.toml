@@ -1,0 +1,44 @@
+##
+# Starship Prompt Configuration (Lite)
+#
+# Largely based on this preset: <https://starship.rs/presets/tokyo-night>, but without any of the
+# pretty/fun stuff. See `./starship.toml` for the full version.
+#
+# Used automatically on terminals that lack Nerd Font / Emoji support (e.g. Linux console where
+# `TERM=linux`). Strips most glyphs; keeps basic structure for clarity.
+##
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$time\
+$cmd_duration\
+\n\
+$character
+"""
+
+[directory]
+format = "$path "
+truncation_length = 3
+truncation_symbol = ".../"
+
+[git_branch]
+format = "on [$branch] "
+
+[git_status]
+format = "([$all_status$ahead_behind]) "
+
+[time]
+disabled = false
+time_format = "%R"
+format = "[$time] "
+
+[cmd_duration]
+min_time = 0
+format = "took [$duration] "
+show_milliseconds = true
+
+[character]
+success_symbol = ">"
+error_symbol = "!>"

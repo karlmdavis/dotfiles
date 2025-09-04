@@ -34,31 +34,43 @@ $env.CTKEY_USERNAME = 'd6lu'
 path add '/usr/local/bin'
 
 # Configure Homebrew.
-$env.HOMEBREW_PREFIX = '/opt/homebrew'
-$env.HOMEBREW_CELLAR = '/opt/homebrew/Cellar'
-$env.HOMEBREW_REPOSITORY = '/opt/homebrew'
-path add ($env.HOMEBREW_PREFIX | path join 'bin')
-path add ($env.HOMEBREW_PREFIX | path join 'sbin')
-$env.MANPATH = if "MANPATH" in $env {
-    $env.MANPATH 
-    | split row (char colon)
-    | prepend /opt/homebrew/share/man
-    | str join (char colon)
-} else {
-    "/opt/homebrew/share/man:"
-}  
-$env.INFOPATH = if "INFOPATH" in $env {
-    $env.INFOPATH
-    | split row (char colon) 
-    | prepend /opt/homebrew/share/info
-    | str join (char colon)
-} else {
-    "/opt/homebrew/share/info:"
+{{ if eq .chezmoi.os "darwin" -}}
+let homebrew_prefix = '/opt/homebrew'
+{{ else if eq .chezmoi.osRelease.id "ubuntu" -}}
+let homebrew_prefix = '/home/linuxbrew/.linuxbrew'
+{{ end -}}
+if ($homebrew_prefix | path exists) {
+    $env.HOMEBREW_PREFIX = $homebrew_prefix
+    $env.HOMEBREW_CELLAR = ($env.HOMEBREW_PREFIX | path join 'Cellar')
+    $env.HOMEBREW_REPOSITORY = $env.HOMEBREW_PREFIX
+    path add ($env.HOMEBREW_PREFIX | path join 'bin')
+    path add ($env.HOMEBREW_PREFIX | path join 'sbin')
+    let man_dir = ($env.HOMEBREW_PREFIX | path join 'share' | path join 'man')
+    $env.MANPATH = if "MANPATH" in $env {
+        $env.MANPATH
+        | split row (char colon)
+        | prepend $man_dir
+        | str join (char colon)
+    } else {
+        $"($man_dir):"
+    }
+    let info_dir = ($env.HOMEBREW_PREFIX | path join 'share' | path join 'info')
+    $env.INFOPATH = if "INFOPATH" in $env {
+        $env.INFOPATH
+        | split row (char colon)
+        | prepend $info_dir
+        | str join (char colon)
+    } else {
+        $"($info_dir):"
+    }
 }
 
-# Add Java (from SDKMAN!) to my path.
-$env.JAVA_HOME = ($env.HOME | path join ".sdkman/candidates/java/current")
-path add ($env.JAVA_HOME | path join "bin")
+# Add Java (from SDKMAN!) to my path if present.
+let sdkman_java = ($env.HOME | path join ".sdkman/candidates/java/current")
+if ($sdkman_java | path exists) {
+    $env.JAVA_HOME = $sdkman_java
+    path add ($env.JAVA_HOME | path join "bin")
+}
 
 # Add Rust toolchain to my path.
 $env.CARGO_HOME = ($nu.home-path | path join '.cargo')
@@ -86,8 +98,11 @@ if (which fnm | is-not-empty) {
 # Configure pipx.
 path add ($env.HOME | path join '.local' | path join 'bin')
 
-# Add basictex/pdflatex to the path.
-path add '/usr/local/texlive/2025basic/bin/universal-darwin/'
+# Add basictex/pdflatex to the path (macOS only, if present).
+let texlive_bin = '/usr/local/texlive/2025basic/bin/universal-darwin/'
+if ($texlive_bin | path exists) {
+    path add $texlive_bin
+}
 
 
 ##
@@ -112,13 +127,31 @@ $env.config.history.sync_on_enter = true
 $env.config.history.file_format = 'sqlite'
 $env.config.history.isolation = true
 
-# Enable the [Starship](https://starship.rs) prompt.
+# Enable the [Starship](https://starship.rs) prompt (lite vs full).
 mkdir ($nu.data-dir | path join "vendor/autoload")
-starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
 
-# Set vim as default editor.
-$env.config.buffer_editor = '/opt/homebrew/bin/hx'
-$env.EDITOR = '/opt/homebrew/bin/hx'
+# Linux console sessions (e.g. Ubuntu Server with a physical monitor) do not support fancy fonts.
+# Decide which starship config to use: lite for TERM=linux or when NO_NERD_FONT set.
+let starship_config_full = ($env.HOME | path join ".config" | path join "starship.toml")
+let starship_config_lite = ($env.HOME | path join ".config" | path join "starship-lite.toml")
+if ( ("TERM" in $env) and ($env.TERM == 'linux') ) or ("NO_NERD_FONT" in $env) {
+    if ($starship_config_lite | path exists) {
+        $env.STARSHIP_CONFIG = $starship_config_lite
+    }
+} else if ($starship_config_full | path exists) {
+    $env.STARSHIP_CONFIG = $starship_config_full
+}
+
+if (which starship | is-not-empty) {
+    starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
+}
+
+# Set helix as default editor.
+let helix_bin = ($homebrew_prefix | path join 'bin' | path join 'hx')
+if ($helix_bin | path exists) {
+    $env.config.buffer_editor = $helix_bin
+    $env.EDITOR = $helix_bin
+}
 
 # Make the `dirs` command available.
 use std/dirs

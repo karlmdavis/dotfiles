@@ -1,6 +1,7 @@
 # Ignore project metadata.
 README.md
 LICENSE
+dev/
 
 {{- if ne .chezmoi.os "linux" }}
 # Only apply Linux-only files when on Linux.
