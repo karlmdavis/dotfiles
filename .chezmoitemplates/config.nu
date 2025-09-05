@@ -51,18 +51,18 @@ if ($homebrew_prefix | path exists) {
     let man_dir = ($env.HOMEBREW_PREFIX | path join 'share' | path join 'man')
     $env.MANPATH = if "MANPATH" in $env {
         $env.MANPATH
-        | split row (char colon)
+        | split row ":"
         | prepend $man_dir
-        | str join (char colon)
+        | str join ":"
     } else {
         $"($man_dir):"
     }
     let info_dir = ($env.HOMEBREW_PREFIX | path join 'share' | path join 'info')
     $env.INFOPATH = if "INFOPATH" in $env {
         $env.INFOPATH
-        | split row (char colon)
+        | split row ":"
         | prepend $info_dir
-        | str join (char colon)
+        | str join ":"
     } else {
         $"($info_dir):"
     }
