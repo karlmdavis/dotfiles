@@ -3,10 +3,14 @@ README.md
 LICENSE
 dev/
 
+{{ if ne .chezmoi.os "darwin" }}
+# Only apply MacOS-only files when we're _actually_ on MacOS.
+Library/Application Support/nushell/config.nu
+{{ end }}
 {{- if ne .chezmoi.os "linux" }}
-# Only apply Linux-only files when on Linux.
+# Only apply Linux-only files when we're _actually on_ Linux.
+.config/nushell/config.nu
 .config/sway/
 .config/i3
 .config/i3status
-.xsessionrc
 {{- end }}
