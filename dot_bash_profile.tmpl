@@ -14,9 +14,36 @@
 #
 # Fallback: If zellij is missing, remain in normal bash session.
 #
-# This intentionally does NOT source `~/.bashrc` to avoid resurrecting legacy bash-centric
-# configuration you no longer use. If you later need standard interactive bash behaviors when
-# falling back, you can uncomment the sourcing section below.
+# Canonically:
+# - ~/.bash_profile should contain (potentially non-idempotent) environment setup, e.g.,
+#   PATH modifications and variable exports.
+# - ~/.bashrc should contain idempotent interactive shell setup, e.g., prompt config, completions,
+#   aliases, and functions.
+##
+
+# Source ~/.bashrc if it exists.
+if [ -f "$HOME/.bashrc" ] ; then
+    . "$HOME/.bashrc"
+fi
+
+# Add the user's private bin directories to the PATH, if they exist.
+if [ -d "$HOME/bin" ] ; then
+    PATH="$HOME/bin:$PATH"
+fi
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Add Cargo's bin directory to the PATH, if it exists.
+if [ -d "$HOME/.cargo/bin" ] ; then
+    PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+{{ with .chezmoi.osRelease }}
+  {{ if eq .id "ubuntu" }}
+##
+# This section only applies to Ubuntu and must appear at the end of ~/.bash_profile, after all of
+# the other environment setup is complete..
 ##
 
 # Run only for login + interactive shells.
@@ -24,13 +51,6 @@ case $- in
   *i*) ;;  # interactive
   *) return ;;  # non-interactive
 esac
-
-{{ if eq .chezmoi.os "linux" }}
-  {{ with .chezmoi.osRelease }}
-    {{ if eq .id "ubuntu" }}
-##
-# Ubuntu-only behavior (not included on other OSs)
-##
 
 # Do not interfere with non-interactive remote commands (ssh host 'cmd').
 [ -n "${SSH_ORIGINAL_COMMAND:-}" ] && return
@@ -41,15 +61,9 @@ esac
 # Avoid recursion if already inside zellij.
 [ -n "${ZELLIJ:-}" ] && return
 
-# Attach/create persistent 'main' session using welcome layout when the zellij binary exists.
+# Attach/create zellij session using the built-in welcome layout (when the zellij binary exists).
 if command -v zellij >/dev/null 2>&1; then
   exec zellij -l welcome
 fi
-    {{ end }}
   {{ end }}
 {{ end }}
-
-# Optional: source a system /etc/bash.bashrc or user ~/.bashrc if you later add one.
-# if [ -f ~/.bashrc ]; then
-#   . ~/.bashrc
-# fi
