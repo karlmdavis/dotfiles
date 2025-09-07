@@ -24,19 +24,19 @@ truncation_length = 3
 truncation_symbol = ".../"
 
 [git_branch]
-format = "on [$branch] "
+format = "on $branch "
 
 [git_status]
-format = "([$all_status$ahead_behind]) "
+format = "($all_status$ahead_behind) "
 
 [time]
 disabled = false
 time_format = "%R"
-format = "[$time] "
+format = "$time "
 
 [cmd_duration]
 min_time = 0
-format = "took [$duration] "
+format = "took $duration "
 show_milliseconds = true
 
 [character]
