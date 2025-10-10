@@ -1,10 +1,32 @@
 # This is Git's per-user configuration file.
 [user]
 	name = Karl M. Davis
+{{- if .isCMS }}
+	email = karl.davis@cms.hhs.gov
+{{- else }}
 	email = karl@justdavis.com
+{{- end }}
+
 [credential "https://github.com"]
 	helper =
 	helper = !{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/gh{{ else if eq .chezmoi.osRelease.id "ubuntu" }}/home/linuxbrew/.linuxbrew/bin/gh{{ end }} auth git-credential
 [credential "https://gist.github.com"]
 	helper =
 	helper = !{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/gh{{ else if eq .chezmoi.osRelease.id "ubuntu" }}/home/linuxbrew/.linuxbrew/bin/gh{{ end }} auth git-credential
+{{- if .isCMS }}
+[credential "https://github.cms.gov"]
+	helper =
+	helper = !{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/gh{{ else if eq .chezmoi.osRelease.id "ubuntu" }}/home/linuxbrew/.linuxbrew/bin/gh{{ end }} auth git-credential
+{{- end }}
+
+[alias]
+	find-merge = "!sh -c 'commit=$0 && branch=${1:-HEAD} && (git rev-list $commit..$branch --ancestry-path | cat -n; git rev-list $commit..$branch --first-parent | cat -n) | sort -k2 -s | uniq -f1 -d | sort -n | tail -1 | cut -f2'"
+	show-merge = "!sh -c 'merge=$(git find-merge $0 $1) && [ -n \"$merge\" ] && git show $merge'"
+[core]
+	autocrlf = input
+[pull]
+	rebase = true
+[init]
+	defaultBranch = main
+[push]
+	autoSetupRemote = true
