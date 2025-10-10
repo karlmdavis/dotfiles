@@ -8,7 +8,7 @@ This document is used to keep track of open ideas, tasks, etc. related to this p
 
 ## Quick Tasks
 
-(none at this time)
+- [ ] Add host name to prompts so I can tell when I'm on SSH.
 
 ## Larger Tasks
 
@@ -19,3 +19,4 @@ This document is used to keep track of open ideas, tasks, etc. related to this p
     - `echo $nu.is-login` should be `true` in a login shell.
     - This caused the weird "char colon" errors in nushell that I had to workaround.
     - Might have other not-yet-found issues?
+- [ ] Stop creation of `~/Library/Application Support/` on Linux.
