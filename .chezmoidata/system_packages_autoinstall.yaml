@@ -20,6 +20,8 @@ packages:
         - starship
         # Modern editor, replacement for vim (Rust impl).
         - helix
+        # GitHub CLI for managing repos, PRs, and issues from terminal.
+        - gh
         # Basic command line utility for downloading web content.
         - wget
         # Manage JS environments (Rust impl).
@@ -54,6 +56,8 @@ packages:
         - starship
         # Modern editor, replacement for vim (Rust impl).
         - helix
+        # GitHub CLI for managing repos, PRs, and issues from terminal.
+        - gh
         # Manage JS environments (Rust impl).
         - volta
         # More modern alternative to esbuild (Zig impl).
