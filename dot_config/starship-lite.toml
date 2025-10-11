@@ -9,6 +9,7 @@
 ##
 
 format = """
+$hostname\
 $directory\
 $git_branch\
 $git_status\
@@ -17,6 +18,10 @@ $cmd_duration\
 \n\
 $character
 """
+
+[hostname]
+ssh_only = true
+format = "@$hostname "
 
 [directory]
 format = "$path "

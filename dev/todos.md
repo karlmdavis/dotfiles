@@ -8,7 +8,7 @@ This document is used to keep track of open ideas, tasks, etc. related to this p
 
 ## Quick Tasks
 
-- [ ] Add host name to prompts so I can tell when I'm on SSH.
+- [x] Add host name to prompts so I can tell when I'm on SSH.
 
 ## Larger Tasks
 

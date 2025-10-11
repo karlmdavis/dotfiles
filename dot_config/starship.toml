@@ -6,8 +6,10 @@
 format = """
 [░▒▓](#a3aed2)\
 [ $os ](bg:#a3aed2 fg:#090c0c)\
-[](bg:#769ff0 fg:#a3aed2)\
+[](bg:#9ab0d9 fg:#a3aed2)\
+$hostname\
 $directory\
+[](bg:#769ff0 fg:#9ab0d9)\
 [](fg:#769ff0 bg:#394260)\
 $git_branch\
 $git_status\
@@ -31,6 +33,11 @@ style = "bold"
 
 [os.symbols]
 Macos = ""
+
+[hostname]
+ssh_only = true
+format = "[\uf109 $hostname ](fg:#e3e5e5 bg:#9ab0d9)"
+style = "bg:#9ab0d9"
 
 [directory]
 format = "[ $path ]($style)"
