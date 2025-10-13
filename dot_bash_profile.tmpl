@@ -61,6 +61,12 @@ esac
 # Avoid recursion if already inside zellij.
 [ -n "${ZELLIJ:-}" ] && return
 
+# Skip zellij for VS Code Remote SSH connections (prevents OOM from multiple background sessions).
+[ -n "${VSCODE_INJECTION:-}" ] && return
+
+# Skip zellij for VS Code integrated terminals.
+[ "${TERM_PROGRAM:-}" = "vscode" ] && return
+
 # Attach/create zellij session using the built-in welcome layout (when the zellij binary exists).
 if command -v zellij >/dev/null 2>&1; then
   exec zellij -l welcome
