@@ -1,0 +1,10 @@
+# This is Git's per-user configuration file.
+[user]
+	name = Karl M. Davis
+	email = karl@justdavis.com
+[credential "https://github.com"]
+	helper =
+	helper = !{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/gh{{ else if eq .chezmoi.osRelease.id "ubuntu" }}/home/linuxbrew/.linuxbrew/bin/gh{{ end }} auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !{{ if eq .chezmoi.os "darwin" }}/opt/homebrew/bin/gh{{ else if eq .chezmoi.osRelease.id "ubuntu" }}/home/linuxbrew/.linuxbrew/bin/gh{{ end }} auth git-credential
