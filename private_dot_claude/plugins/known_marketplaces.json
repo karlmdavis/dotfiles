@@ -1,0 +1,10 @@
+{
+  "superpowers-marketplace": {
+    "source": {
+      "source": "github",
+      "repo": "obra/superpowers-marketplace"
+    },
+    "installLocation": "/Users/karl/.claude/plugins/marketplaces/superpowers-marketplace",
+    "lastUpdated": "2025-10-20T05:08:46.353Z"
+  }
+}
