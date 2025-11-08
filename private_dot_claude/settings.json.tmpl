@@ -5,7 +5,7 @@
   "alwaysThinkingEnabled": true,
   "permissions": {
     "allow": [
-      {{/* === Git Operations === */}}
+      {{/* === Git Operations === */ -}}
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(git log:*)",
@@ -15,7 +15,7 @@
       "Bash(git pull:*)",
       "Bash(git commit:*)",
 
-      {{/* === GitHub CLI === */}}
+      {{/* === GitHub CLI === */ -}}
       "Bash(gh pr list:*)",
       "Bash(gh pr checks:*)",
       "Bash(gh pr view:*)",
@@ -28,7 +28,7 @@
       "Bash(gh workflow:*)",
       "Bash(gh issue create:*)",
 
-      {{/* === Common Unix Utilities === */}}
+      {{/* === Common Unix Utilities === */ -}}
       "Bash(mkdir:*)",
       "Bash(jq:*)",
       "Bash(grep:*)",
@@ -45,29 +45,29 @@
       "Bash(xargs jq:*)",
       "Bash(yq:*)",
 
-      {{/* === Development Tools - Rust === */}}
+      {{/* === Development Tools - Rust === */ -}}
       "Bash(cargo:*)",
       "Bash(rustc:*)",
 
-      {{/* === Development Tools - Python === */}}
+      {{/* === Development Tools - Python === */ -}}
       "Bash(uv sync:*)",
       "Bash(uv run pytest:*)",
       "Bash(uv run black:*)",
       "Bash(uv run ruff check:*)",
       "Bash(uv run mypy:*)",
 
-      {{/* === Development Tools - Node/JavaScript === */}}
+      {{/* === Development Tools - Node/JavaScript === */ -}}
       "Bash(npm test:*)",
       "Bash(npm run type-check:*)",
       "Bash(npx tsc:*)",
       "Bash(bun:*)",
 
-      {{/* === Data/CSV Tools === */}}
+      {{/* === Data/CSV Tools === */ -}}
       "Bash(csvcut:*)",
       "Bash(unzip -l:*)",
       "Bash(unzip -p:*)",
 
-      {{/* === DevOps/Infrastructure === */}}
+      {{/* === DevOps/Infrastructure === */ -}}
       "Bash(ansible-doc:*)",
       "Bash(yamllint:*)",
       "Bash(aws ec2 describe-instances:*)",
@@ -76,11 +76,11 @@
       "Bash(aws ec2 describe-instance-status:*)",
       "Bash(aws ec2 describe-instance-attribute:*)",
 
-      {{/* === Mobile/Platform Tools === */}}
+      {{/* === Mobile/Platform Tools === */ -}}
       "Bash(xcrun simctl:*)",
       "Bash(lcov:*)",
 
-      {{/* === Web Access === */}}
+      {{/* === Web Access === */ -}}
       "WebSearch",
       "WebFetch(domain:docs.helix-editor.com)",
       "WebFetch(domain:openapi-generator.tech)",
@@ -93,17 +93,17 @@
       "WebFetch(domain:biomejs.dev)",
       "WebFetch(domain:bun.sh)",
 
-      {{/* === Superpowers Skills === */}}
+      {{/* === Superpowers Skills === */ -}}
       "Skill(superpowers:*)",
 
-      {{/* === Slash Commands === */}}
+      {{/* === Slash Commands === */ -}}
       "SlashCommand(/pr-quality-loop)",
       "SlashCommand(/pr-merge)",
 
-      {{/* === MCP Tools === */}}
+      {{/* === MCP Tools === */ -}}
       "mcp__ide__getDiagnostics",
 
-      {{/* === Global Command Access === */}}
+      {{/* === Global Command Access === */ -}}
       "Read(//{{ .chezmoi.homeDir }}/.claude/commands/**)",
       "Read(//{{ .chezmoi.homeDir }}/.config/superpowers/skills/skills/collaboration/brainstorming/**)"
     ],
