@@ -86,8 +86,8 @@ if $is_focused && [[ $idle_seconds -lt 10 ]]; then
 
     idle_now=$(get_idle_seconds)
 
-    if $is_focused_now || [[ $idle_now -lt 10 ]]; then
-        # User is still present (either focused or active)
+    if $is_focused_now && [[ $idle_now -lt 10 ]]; then
+        # User is still present (both focused and active)
         exit 0  # Don't notify
     fi
 

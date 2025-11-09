@@ -26,7 +26,7 @@ teardown() {
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
 
     # Wait for background notification process (immediate since unfocused)
-    sleep 10
+    wait_for_notification 10
 
     # Assert: notification log was created
     [ -f "$NTFY_MOCK_LOG" ]
