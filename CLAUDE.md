@@ -170,3 +170,49 @@ Available commands after applying chezmoi configuration:
 - `/pr-merge` - Squash merge PR and clean up local branch
 
 Commands support bash command interpolation with `!`backticks`` for dynamic context.
+
+## Testing and Quality
+
+### Mise Task Runner
+
+This repository uses mise for task automation and testing.
+
+**Key tasks:**
+- `:lint` - Run shellcheck on all bash scripts
+- `:test` - Run E2E tests for notification system
+- `:test-bash` - Run bash script tests only (bats)
+- `:test-nu` - Run nushell hook tests only
+- `:ci` - Run complete CI suite (lint + test in parallel)
+- `:install-hooks` - Install git pre-commit hooks
+
+**Running tasks:**
+```bash
+mise run test
+mise run ci
+```
+
+**Note:** This is a dotfiles repo, not a monorepo. Task names use simple `:task` syntax (no `//` prefixes needed).
+
+### Testing Approach
+
+**Minimal E2E coverage** focused on happy paths:
+- Claude Code notification scenarios (focused vs unfocused terminal)
+- Nushell command notifications (long-running commands)
+- Mocked external dependencies (ntfy, AppleScript, ioreg)
+
+**Test files:**
+- `test/test_claude_hooks.bats` - Bash E2E tests using bats framework
+- `test/test_nushell_hooks.nu` - Nushell E2E tests
+- `test/mocks/` - Mock executables for testing (ntfy, osascript, ioreg)
+- `test/test_helpers.bash` - Shared test utilities
+
+**Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test).
+
+### Notification System Architecture
+
+The ntfy notification system consists of:
+- **Bash scripts** (`private_dot_local/bin/ntfy-*.sh`): Core notification logic with hybrid presence detection
+- **Nushell hooks** (`private_dot_local/lib/ntfy-nu-hooks.nu`): Command duration tracking, extracted for testability
+- **Mocks** (`test/mocks/`): Test doubles for external dependencies
+
+**Design principle:** Keep notification logic in testable scripts, not inline in config files. Nushell hooks are sourced from a separate file to enable isolation testing.

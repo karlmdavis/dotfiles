@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Run complete CI suite (lint + test)
+if ! mise run ci; then
+    echo ""
+    echo "❌ Pre-commit checks failed!"
+    echo "Fix the issues above or run 'git commit --no-verify' to skip checks."
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
+exit 0

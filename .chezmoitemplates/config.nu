@@ -158,3 +158,24 @@ if ($helix_bin | path exists) {
 
 # Make the `dirs` command available.
 use std/dirs
+
+
+##
+# Long Command Notifications
+#
+# Notify when commands take longer than 3 minutes to complete.
+# Uses hybrid focus detection to avoid spam when terminal is active.
+# Implementation in ~/.local/lib/ntfy-nu-hooks.nu
+##
+
+# Source ntfy notification hooks
+let ntfy_hooks = ($env.HOME | path join '.local' 'lib' 'ntfy-nu-hooks.nu')
+if ($ntfy_hooks | path exists) {
+    source $ntfy_hooks
+
+    # Configure hooks for command duration tracking
+    $env.config.hooks = {
+        pre_execution: [{ code: {|| ntfy-pre-execution-hook } }]
+        pre_prompt: [{ code: {|| ntfy-pre-prompt-hook } }]
+    }
+}

@@ -3,6 +3,16 @@
     "superpowers@superpowers-marketplace": true
   },
   "alwaysThinkingEnabled": true,
+  "hooks": {
+    "UserPromptSubmit": {
+      "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-user-prompt-submit.sh",
+      "args": ["${session_id}"]
+    },
+    "Stop": {
+      "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-stop.sh",
+      "args": ["${session_id}", "${cwd}"]
+    }
+  },
   "permissions": {
     "allow": [
       {{/* === Git Operations === */ -}}

@@ -2,7 +2,13 @@
 README.md
 LICENSE
 CLAUDE.md
+CONTRIBUTING.md
 dev/
+
+# Ignore testing and development files.
+.mise.toml
+.githooks/
+test/
 
 {{ if ne .chezmoi.os "darwin" }}
 # Only apply MacOS-only files when we're _actually_ on MacOS.
