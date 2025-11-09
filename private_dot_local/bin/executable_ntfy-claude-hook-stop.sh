@@ -7,12 +7,15 @@
 # - cwd (current working directory)
 #
 # It reads the start time/TTY from a temp file, calculates duration,
-# and spawns a background notification check if duration >= 30 seconds.
+# and spawns a background notification check if duration >= threshold.
 
 set -euo pipefail
 
 session_id="$1"
 cwd="${2:-.}"
+
+# Configuration defaults
+duration_threshold="${NTFY_CLAUDE_DURATION_THRESHOLD:-30}"
 
 # Directory for Claude temporary files
 claude_tmp="$HOME/.claude/tmp"
@@ -36,8 +39,9 @@ rm -f "$start_file"
 end_time=$(date +%s)
 duration=$((end_time - start_time))
 
-# Duration threshold: 30 seconds (also in ntfy-nu-hooks.nu:37)
-if [[ $duration -lt 30 ]]; then
+# Duration threshold (configurable via NTFY_CLAUDE_DURATION_THRESHOLD)
+# Use awk for comparison to support floating point thresholds
+if awk -v dur="$duration" -v thresh="$duration_threshold" 'BEGIN {exit !(dur < thresh)}'; then
     exit 0
 fi
 

@@ -5,7 +5,7 @@
 # Usage: ntfy-alert-if-unfocused.sh <tty-path> <title> <message> <duration> <project-name>
 #
 # Hybrid logic:
-# - If terminal focused AND user active (idle < 10s): wait 30s grace period, then recheck
+# - If terminal focused AND user active (idle < threshold): wait for grace period, then recheck
 # - Otherwise: notify immediately (user is clearly away)
 
 set -euo pipefail
@@ -15,6 +15,10 @@ title="$2"
 message="$3"
 duration="$4"
 project_name="${5:-}"
+
+# Configuration defaults
+grace_period="${NTFY_GRACE_PERIOD:-30}"
+idle_threshold="${NTFY_IDLE_THRESHOLD:-10}"
 
 # Read ntfy topic from config file
 topic_file="$HOME/.local/share/ntfy-topic"
@@ -74,11 +78,11 @@ is_terminal_focused "$tty_path" && is_focused=true
 idle_seconds=$(get_idle_seconds)
 
 # Hybrid decision logic
-# Idle threshold: 10 seconds (CANONICAL - also checked at line 88, documented in README.md:75)
-if $is_focused && [[ $idle_seconds -lt 10 ]]; then
+# Idle threshold (configurable via NTFY_IDLE_THRESHOLD)
+if $is_focused && [[ $idle_seconds -lt $idle_threshold ]]; then
     # Terminal focused AND recently active - user might be reading something
-    # Grace period: 30 seconds (CANONICAL - documented in README.md:74)
-    sleep 30
+    # Grace period (configurable via NTFY_GRACE_PERIOD)
+    sleep "$grace_period"
 
     # Re-check after grace period
     is_focused_now=false
@@ -86,7 +90,7 @@ if $is_focused && [[ $idle_seconds -lt 10 ]]; then
 
     idle_now=$(get_idle_seconds)
 
-    if $is_focused_now && [[ $idle_now -lt 10 ]]; then
+    if $is_focused_now && [[ $idle_now -lt $idle_threshold ]]; then
         # User is still present (both focused and active)
         exit 0  # Don't notify
     fi

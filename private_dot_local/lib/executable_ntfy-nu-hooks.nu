@@ -34,8 +34,11 @@ export def ntfy-pre-prompt-hook [] {
 
         let duration_sec = ($duration_ns / 1_000_000_000)
 
-        # Only notify if >= 30 seconds (also in ntfy-claude-hook-stop.sh:39)
-        if $duration_sec >= 30 {
+        # Configuration defaults
+        let duration_threshold = ($env.NTFY_NU_DURATION_THRESHOLD? | default 30)
+
+        # Duration threshold (configurable via NTFY_NU_DURATION_THRESHOLD)
+        if $duration_sec >= $duration_threshold {
             # Get the command that ran
             let cmd = if '__NOTIF_LAST_CMD' in $env {
                 $env.__NOTIF_LAST_CMD | str trim

@@ -5,6 +5,12 @@ load test_helpers
 
 setup() {
     setup_test_env
+
+    # Speed up tests with fast thresholds
+    export NTFY_CLAUDE_DURATION_THRESHOLD=0.1
+    export NTFY_GRACE_PERIOD=0.1
+    export NTFY_IDLE_THRESHOLD=5
+
     export MOCK_ITERM_FOCUSED=false
     export MOCK_IDLE_SECONDS=30
 }
@@ -20,7 +26,7 @@ teardown() {
 
     # Simulate UserPromptSubmit hook (record start time)
     local session_id="test-session-unfocused"
-    create_session_start "$session_id" "$(($(date +%s) - 40))" "/dev/ttys001"
+    create_session_start "$session_id" "$(($(date +%s) - 1))" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
@@ -48,13 +54,13 @@ teardown() {
 
     # Simulate UserPromptSubmit hook
     local session_id="test-session-focused"
-    create_session_start "$session_id" "$(($(date +%s) - 40))" "/dev/ttys001"
+    create_session_start "$session_id" "$(($(date +%s) - 1))" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
 
-    # Wait a bit for any potential notification
-    sleep 2
+    # Wait for grace period (0.1s) plus buffer
+    sleep 0.3
 
     # Assert: NO notification sent (file should not exist or be empty)
     if [[ -f "$NTFY_MOCK_LOG" ]]; then
@@ -68,15 +74,15 @@ teardown() {
     export MOCK_ITERM_FOCUSED=false
     export MOCK_IDLE_SECONDS=30
 
-    # Simulate UserPromptSubmit hook with recent start time (20 seconds ago)
+    # Simulate UserPromptSubmit hook with recent start time (~0 seconds ago)
     local session_id="test-session-short"
-    create_session_start "$session_id" "$(($(date +%s) - 20))" "/dev/ttys001"
+    create_session_start "$session_id" "$(date +%s)" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
 
-    # Wait a bit
-    sleep 2
+    # Wait briefly
+    sleep 0.3
 
     # Assert: NO notification sent (duration below threshold)
     if [[ -f "$NTFY_MOCK_LOG" ]]; then
