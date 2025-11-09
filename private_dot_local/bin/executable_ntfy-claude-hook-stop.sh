@@ -11,8 +11,10 @@
 
 set -euo pipefail
 
-session_id="$1"
-cwd="${2:-.}"
+# Read JSON input from stdin
+input_json=$(cat)
+session_id=$(echo "$input_json" | jq -r '.session_id')
+cwd=$(echo "$input_json" | jq -r '.cwd // "."')
 
 # Configuration defaults
 duration_threshold="${NTFY_CLAUDE_DURATION_THRESHOLD:-30}"

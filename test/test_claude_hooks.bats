@@ -28,8 +28,8 @@ teardown() {
     local session_id="test-session-unfocused"
     create_session_start "$session_id" "$(($(date +%s) - 1))" "/dev/ttys001"
 
-    # Simulate Stop hook
-    "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
+    # Simulate Stop hook (pass JSON via stdin)
+    echo "{\"session_id\": \"$session_id\", \"cwd\": \"$(pwd)\"}" | "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh"
 
     # Wait for background notification process (immediate since unfocused)
     wait_for_notification 10
@@ -56,8 +56,8 @@ teardown() {
     local session_id="test-session-focused"
     create_session_start "$session_id" "$(($(date +%s) - 1))" "/dev/ttys001"
 
-    # Simulate Stop hook
-    "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
+    # Simulate Stop hook (pass JSON via stdin)
+    echo "{\"session_id\": \"$session_id\", \"cwd\": \"$(pwd)\"}" | "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh"
 
     # Wait for grace period (0.1s) plus buffer
     sleep 0.3
@@ -78,8 +78,8 @@ teardown() {
     local session_id="test-session-short"
     create_session_start "$session_id" "$(date +%s)" "/dev/ttys001"
 
-    # Simulate Stop hook
-    "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
+    # Simulate Stop hook (pass JSON via stdin)
+    echo "{\"session_id\": \"$session_id\", \"cwd\": \"$(pwd)\"}" | "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh"
 
     # Wait briefly
     sleep 0.3

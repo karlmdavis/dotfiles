@@ -9,8 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-user-prompt-submit.sh",
-            "args": ["${session_id}"]
+            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-user-prompt-submit.sh"
           }
         ]
       }
@@ -20,8 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-stop.sh",
-            "args": ["${session_id}", "${cwd}"]
+            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-stop.sh"
           }
         ]
       }
