@@ -7,7 +7,7 @@
 # - cwd (current working directory)
 #
 # It reads the start time/TTY from a temp file, calculates duration,
-# and spawns a background notification check if duration >= 3 minutes.
+# and spawns a background notification check if duration >= 30 seconds.
 
 set -euo pipefail
 
@@ -36,8 +36,8 @@ rm -f "$start_file"
 end_time=$(date +%s)
 duration=$((end_time - start_time))
 
-# Only notify if >= 3 minutes (180 seconds)
-if [[ $duration -lt 180 ]]; then
+# Only notify if >= 30 seconds
+if [[ $duration -lt 30 ]]; then
     exit 0
 fi
 

@@ -37,8 +37,8 @@ export def ntfy-pre-prompt-hook [] {
 
     let duration_sec = ($duration_ns / 1_000_000_000)
 
-    # Only notify if >= 3 minutes (180 seconds)
-    if $duration_sec < 180 {
+    # Only notify if >= 30 seconds
+    if $duration_sec < 30 {
         return
     }
 

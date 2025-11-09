@@ -20,13 +20,13 @@ teardown() {
 
     # Simulate UserPromptSubmit hook (record start time)
     local session_id="test-session-unfocused"
-    create_session_start "$session_id" "$(($(date +%s) - 200))" "/dev/ttys001"
+    create_session_start "$session_id" "$(($(date +%s) - 40))" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
 
     # Wait for background notification process (immediate since unfocused)
-    sleep 3
+    sleep 10
 
     # Assert: notification log was created
     [ -f "$NTFY_MOCK_LOG" ]
@@ -48,7 +48,7 @@ teardown() {
 
     # Simulate UserPromptSubmit hook
     local session_id="test-session-focused"
-    create_session_start "$session_id" "$(($(date +%s) - 200))" "/dev/ttys001"
+    create_session_start "$session_id" "$(($(date +%s) - 40))" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"
@@ -63,14 +63,14 @@ teardown() {
     fi
 }
 
-@test "Claude: short session (< 3 min) → no notification" {
+@test "Claude: short session (< 30 sec) → no notification" {
     # Setup: Session too short to warrant notification
     export MOCK_ITERM_FOCUSED=false
     export MOCK_IDLE_SECONDS=30
 
-    # Simulate UserPromptSubmit hook with recent start time (60 seconds ago)
+    # Simulate UserPromptSubmit hook with recent start time (20 seconds ago)
     local session_id="test-session-short"
-    create_session_start "$session_id" "$(($(date +%s) - 60))" "/dev/ttys001"
+    create_session_start "$session_id" "$(($(date +%s) - 20))" "/dev/ttys001"
 
     # Simulate Stop hook
     "$ORIGINAL_HOME/.local/bin/ntfy-claude-hook-stop.sh" "$session_id" "$(pwd)"

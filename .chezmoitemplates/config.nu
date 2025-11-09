@@ -163,7 +163,7 @@ use std/dirs
 ##
 # Long Command Notifications
 #
-# Notify when commands take longer than 3 minutes to complete.
+# Notify when commands take longer than 30 seconds to complete.
 # Uses hybrid focus detection to avoid spam when terminal is active.
 # Implementation in ~/.local/lib/ntfy-nu-hooks.nu
 ##
