@@ -70,9 +70,9 @@ Notifications are delivered via [ntfy](https://ntfy.sh) to your phone/tablet.
 
 ### Configuration
 
-- **Duration threshold:** 30 seconds - configurable in hook scripts
-- **Grace period:** 30 seconds - configurable in `ntfy-alert-if-unfocused.sh`
-- **Idle threshold:** 10 seconds - configurable in `ntfy-alert-if-unfocused.sh`
+- **Duration threshold:** 30 seconds (see `ntfy-claude-hook-stop.sh:39` and `ntfy-nu-hooks.nu:37`)
+- **Grace period:** 30 seconds (see `ntfy-alert-if-unfocused.sh:80`)
+- **Idle threshold:** 10 seconds (see `ntfy-alert-if-unfocused.sh:77`)
 - **Topic file:** `~/.local/share/ntfy-topic` (NOT in git - regenerate with `chezmoi apply --force`)
 
 For implementation details, see `private_dot_local/bin/ntfy-*.sh` and `private_dot_local/lib/ntfy-nu-hooks.nu`.

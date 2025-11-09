@@ -36,7 +36,7 @@ rm -f "$start_file"
 end_time=$(date +%s)
 duration=$((end_time - start_time))
 
-# Only notify if >= 30 seconds
+# Duration threshold: 30 seconds (also in ntfy-nu-hooks.nu:37)
 if [[ $duration -lt 30 ]]; then
     exit 0
 fi

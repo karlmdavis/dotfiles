@@ -74,9 +74,10 @@ is_terminal_focused "$tty_path" && is_focused=true
 idle_seconds=$(get_idle_seconds)
 
 # Hybrid decision logic
+# Idle threshold: 10 seconds (CANONICAL - also checked at line 88, documented in README.md:75)
 if $is_focused && [[ $idle_seconds -lt 10 ]]; then
     # Terminal focused AND recently active - user might be reading something
-    # Wait 30 seconds grace period, then recheck
+    # Grace period: 30 seconds (CANONICAL - documented in README.md:74)
     sleep 30
 
     # Re-check after grace period

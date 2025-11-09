@@ -24,54 +24,53 @@ export def ntfy-pre-execution-hook [] {
 # Pre-prompt hook: Check duration and send notification if needed
 export def ntfy-pre-prompt-hook [] {
     # Only check if we have a recorded start time
-    if '__NOTIF_CMD_START_TIME' not-in $env {
-        return
+    if '__NOTIF_CMD_START_TIME' in $env {
+        # Get command duration (in nanoseconds)
+        let duration_ns = if 'CMD_DURATION_MS' in $env {
+            ($env.CMD_DURATION_MS * 1_000_000)  # Convert ms to ns
+        } else {
+            0
+        }
+
+        let duration_sec = ($duration_ns / 1_000_000_000)
+
+        # Only notify if >= 30 seconds (also in ntfy-claude-hook-stop.sh:39)
+        if $duration_sec >= 30 {
+            # Get the command that ran
+            let cmd = if '__NOTIF_LAST_CMD' in $env {
+                $env.__NOTIF_LAST_CMD | str trim
+            } else {
+                "unknown command"
+            }
+
+            # Filter out interactive editors and other noisy commands
+            let noisy_commands = ['hx', 'vim', 'nvim', 'emacs', 'nano', 'less', 'more', 'man', 'top', 'htop']
+            let is_noisy = ($noisy_commands | any {|noise| $cmd starts-with $noise})
+
+            if not $is_noisy {
+                # Get TTY path
+                let tty_path = if '__NOTIF_CMD_START_TTY' in $env {
+                    $env.__NOTIF_CMD_START_TTY
+                } else {
+                    "unknown"
+                }
+
+                # Format duration
+                let duration_formatted = (format-duration $duration_sec)
+
+                # Get project name (current directory basename)
+                let project_name = ($env.PWD | path basename)
+
+                # Spawn background notification check (detached)
+                # Using bash to properly detach the process
+                let notify_cmd = $"nohup '($env.HOME)/.local/bin/ntfy-alert-if-unfocused.sh' '($tty_path)' 'Command completed' '($cmd)' '($duration_formatted)' '($project_name)' </dev/null >/dev/null 2>&1 &"
+                bash -c $notify_cmd
+            }
+        }
     }
 
-    # Get command duration (in nanoseconds)
-    let duration_ns = if 'CMD_DURATION_MS' in $env {
-        ($env.CMD_DURATION_MS * 1_000_000)  # Convert ms to ns
-    } else {
-        0
-    }
-
-    let duration_sec = ($duration_ns / 1_000_000_000)
-
-    # Only notify if >= 30 seconds
-    if $duration_sec < 30 {
-        return
-    }
-
-    # Get the command that ran
-    let cmd = if '__NOTIF_LAST_CMD' in $env {
-        $env.__NOTIF_LAST_CMD | str trim
-    } else {
-        "unknown command"
-    }
-
-    # Filter out interactive editors and other noisy commands
-    let noisy_commands = ['hx', 'vim', 'nvim', 'emacs', 'nano', 'less', 'more', 'man', 'top', 'htop']
-    let is_noisy = ($noisy_commands | any {|noise| $cmd starts-with $noise})
-
-    if $is_noisy {
-        return
-    }
-
-    # Get TTY path
-    let tty_path = if '__NOTIF_CMD_START_TTY' in $env {
-        $env.__NOTIF_CMD_START_TTY
-    } else {
-        "unknown"
-    }
-
-    # Format duration
-    let duration_formatted = (format-duration $duration_sec)
-
-    # Get project name (current directory basename)
-    let project_name = ($env.PWD | path basename)
-
-    # Spawn background notification check (detached)
-    # Using bash to properly detach the process
-    let notify_cmd = $"nohup '($env.HOME)/.local/bin/ntfy-alert-if-unfocused.sh' '($tty_path)' 'Command completed' '($cmd)' '($duration_formatted)' '($project_name)' </dev/null >/dev/null 2>&1 &"
-    bash -c $notify_cmd
+    # Always clean up environment variables to prevent accumulation
+    hide-env __NOTIF_CMD_START_TIME
+    hide-env __NOTIF_CMD_START_TTY
+    hide-env __NOTIF_LAST_CMD
 }
