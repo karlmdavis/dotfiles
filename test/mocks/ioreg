@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Mock ioreg - returns user idle time from environment variable
+
+# Get idle seconds from env var, default to 0
+idle_seconds="${MOCK_IDLE_SECONDS:-0}"
+
+# Convert to nanoseconds (ioreg reports in nanoseconds)
+idle_nanoseconds=$((idle_seconds * 1000000000))
+
+# Output format matches real ioreg
+echo "HIDIdleTime = $idle_nanoseconds"

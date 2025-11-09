@@ -1,0 +1,70 @@
+# Mise configuration for dotfiles repository
+# Task runner for linting and testing
+
+[tools]
+shellcheck = "latest"
+bats = "latest"
+# Note: nushell is provided by system installation
+
+[tasks.lint]
+description = "Run shellcheck on all bash scripts"
+run = """
+echo "Running shellcheck..."
+shellcheck \
+  private_dot_local/bin/executable_ntfy-*.sh \
+  run_once_ntfy-generate-topic.sh \
+  test/test_helpers.bash \
+  test/mocks/*
+
+echo "✓ Shellcheck passed!"
+"""
+
+[tasks.test-bash]
+description = "Run bash script E2E tests"
+run = """
+echo "Running bash E2E tests (bats)..."
+bats test/test_claude_hooks.bats
+"""
+
+[tasks.test-nu]
+description = "Run nushell E2E tests"
+run = """
+echo "Running nushell E2E tests..."
+nu test/test_nushell_hooks.nu
+"""
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test-bash", "test-nu"]
+
+[tasks.ci]
+description = "Run complete CI suite (lint + test in parallel)"
+run = """
+mise run lint &
+LINT_PID=$!
+mise run test &
+TEST_PID=$!
+
+wait $LINT_PID
+LINT_EXIT=$?
+
+wait $TEST_PID
+TEST_EXIT=$?
+
+if [ $LINT_EXIT -ne 0 ] || [ $TEST_EXIT -ne 0 ]; then
+  echo ""
+  echo "❌ CI failed!"
+  exit 1
+fi
+
+echo ""
+echo "✓ All CI checks passed!"
+"""
+
+[tasks.install-hooks]
+description = "Install git pre-commit hooks"
+run = """
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+echo "✓ Git hooks installed. Pre-commit will run lint + test."
+"""

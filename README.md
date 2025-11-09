@@ -32,6 +32,52 @@ I've set chezmoi to automatically commit and push any changes to its managed fil
 There's obviously a surprise vs. consistency tradeoff there, but I think it's the safer move.
 See `[.chezmoi.toml.tmpl](./.chezmoi.toml.tmpl)` to adjust that, if needed.
 
+## Long-Running Task Notifications
+
+This dotfiles repo includes a notification system that alerts you when:
+- **Claude Code** finishes work after 3+ minutes
+- **Shell commands** complete after 3+ minutes
+
+### How It Works
+
+The system uses **hybrid presence detection** to avoid notification spam:
+- ✅ **Sends notification** when you're away (unfocused terminal OR idle for 10+ seconds)
+- ⏱️ **30-second grace period** if you're currently focused (gives you time to switch back)
+- ❌ **No notification** if you return within the grace period
+
+Notifications are delivered via [ntfy](https://ntfy.sh) to your phone/tablet.
+
+### Setup
+
+1. **Install ntfy app on your devices:**
+   - iOS: https://apps.apple.com/us/app/ntfy/id1625396347
+   - Android: https://play.google.com/store/apps/details?id=io.heckel.ntfy
+
+2. **Apply dotfiles:**
+   ```bash
+   chezmoi apply
+   ```
+   This generates a unique notification topic (stored in `~/.local/share/ntfy-topic`).
+
+3. **Subscribe to your topic:**
+   - Check the output from step 2 for your topic UUID
+   - Open ntfy app → tap **+** → paste your topic → Subscribe
+
+4. **You're done!** Notifications will appear automatically when:
+   - You walk away from a long-running task
+   - The terminal loses focus while work completes
+   - You go idle for 10+ seconds
+
+### Configuration
+
+- **Duration threshold (Claude):** 30 seconds (env: `NTFY_CLAUDE_DURATION_THRESHOLD`)
+- **Duration threshold (Nushell):** 30 seconds (env: `NTFY_NU_DURATION_THRESHOLD`)
+- **Grace period:** 30 seconds (env: `NTFY_GRACE_PERIOD`)
+- **Idle threshold:** 10 seconds (env: `NTFY_IDLE_THRESHOLD`)
+- **Topic file:** `~/.local/share/ntfy-topic` (NOT in git - regenerate with `chezmoi apply --force`)
+
+For implementation details, see `private_dot_local/bin/ntfy-*.sh` and `private_dot_local/lib/ntfy-nu-hooks.nu`.
+
 ## License
 
 This project is licensed under the [GNU General Public License, Version 3](./LICENSE).

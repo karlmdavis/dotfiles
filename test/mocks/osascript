@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Mock osascript - returns iTerm2 focus state from environment variable
+
+# Return focus state based on MOCK_ITERM_FOCUSED env var
+if [[ "${MOCK_ITERM_FOCUSED:-false}" == "true" ]]; then
+    echo "true"
+else
+    echo "false"
+fi
