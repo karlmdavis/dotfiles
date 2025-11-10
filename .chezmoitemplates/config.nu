@@ -169,7 +169,7 @@ use std/dirs
 ##
 
 # Source ntfy notification hooks
-let ntfy_hooks = ($env.HOME | path join '.local' 'lib' 'ntfy-nu-hooks.nu')
+const ntfy_hooks = '{{ .chezmoi.homeDir }}/.local/lib/ntfy-nu-hooks.nu'
 if ($ntfy_hooks | path exists) {
     source $ntfy_hooks
 

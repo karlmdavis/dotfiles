@@ -8,6 +8,7 @@ dev/
 # Ignore testing and development files.
 .mise.toml
 .githooks/
+docs/
 test/
 
 {{ if ne .chezmoi.os "darwin" }}

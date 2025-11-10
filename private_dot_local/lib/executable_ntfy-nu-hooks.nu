@@ -73,7 +73,13 @@ export def ntfy-pre-prompt-hook [] {
     }
 
     # Always clean up environment variables to prevent accumulation
-    hide-env __NOTIF_CMD_START_TIME
-    hide-env __NOTIF_CMD_START_TTY
-    hide-env __NOTIF_LAST_CMD
+    if '__NOTIF_CMD_START_TIME' in $env {
+        hide-env __NOTIF_CMD_START_TIME
+    }
+    if '__NOTIF_CMD_START_TTY' in $env {
+        hide-env __NOTIF_CMD_START_TTY
+    }
+    if '__NOTIF_LAST_CMD' in $env {
+        hide-env __NOTIF_LAST_CMD
+    }
 }
