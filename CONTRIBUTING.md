@@ -198,7 +198,7 @@ chezmoi status
 # See what would change
 chezmoi diff
 
-# Force apply (overwrites local changes)
+# Force apply only with explicit user approval (overwrites local changes)
 chezmoi apply --force
 ```
 
