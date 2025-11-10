@@ -173,6 +173,9 @@ const ntfy_hooks = '{{ .chezmoi.homeDir }}/.local/lib/ntfy-nu-hooks.nu'
 if ($ntfy_hooks | path exists) {
     source $ntfy_hooks
 
+    # Clean up old debug log files (runs once per shell startup)
+    cleanup-old-logs
+
     # Configure hooks for command duration tracking
     $env.config.hooks = {
         pre_execution: [{ code: {|| ntfy-pre-execution-hook } }]
