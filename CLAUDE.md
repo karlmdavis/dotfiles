@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Important**: Keep this file evergreen.
+Avoid adding point-in-time content (current sprint goals, active branches, temporary workarounds)
+  that wouldn't make sense if multiple workstreams, PRs, or branches were in progress simultaneously.
+Document general principles, workflows, and architecture — not transient project state.
+
 ## Overview
 
 This is a dotfiles repository managed by [chezmoi](https://www.chezmoi.io/), a dotfile manager that uses Go templates to handle cross-platform configurations. The repository manages shell configurations, terminal multiplexer settings, editor preferences, and system package installations across macOS and Ubuntu systems.
@@ -216,3 +221,63 @@ The ntfy notification system consists of:
 - **Mocks** (`test/mocks/`): Test doubles for external dependencies
 
 **Design principle:** Keep notification logic in testable scripts, not inline in config files. Nushell hooks are sourced from a separate file to enable isolation testing.
+
+## Documentation Standards
+
+### Markdown Formatting Guidelines
+
+All markdown files follow standardized formatting rules:
+- One sentence per line for better version control.
+- 110-character line wrap limit at natural break points.
+- Indent wrapped lines 2 spaces past where text begins (count prefix chars + 2):
+  - Regular prose: 2 spaces (no prefix, text at column 1, so indent to column 3).
+  - List items (`- ` = 2 chars, text at column 3): 4 spaces (indent to column 5).
+  - Checklist items (`- [ ] ` = 6 chars, text at column 7): 8 spaces (indent to column 9).
+- End all sentence-like lines with periods, including:
+  - Regular prose sentences.
+  - List items (bullet points and numbered lists).
+  - Checklist items (todo entries).
+  - Table cells containing full sentences.
+  - Code comments in markdown code blocks (follow language conventions).
+- Trailing whitespace removal (except when required by Markdown).
+- POSIX line endings.
+- Consistent formatting across all documentation files.
+
+**Examples of proper formatting:**
+
+Wrapping regular prose (2 spaces):
+```
+The quick brown fox
+  jumped over the lazy dog.
+```
+
+Wrapping list items (4 spaces - aligning with text after `- `):
+```
+- The quick brown fox
+    jumped over the lazy dog.
+```
+
+Wrapping checklist items (8 spaces - 2 spaces past text start):
+```
+- [ ] The quick brown fox
+        jumped over the lazy dog.
+```
+
+Visual guide for checklist indentation:
+```
+- [ ] Text starts here at column 7
+12345678^ (8 spaces - 2 past where text starts)
+```
+
+**Examples of lines that should end with periods:**
+- ✅ "This is a prose sentence."
+- ✅ "- List item describing a feature."
+- ✅ "1. Numbered instruction step."
+- ✅ "- [ ] Checklist item describing a task."
+- ❌ "This sentence is missing punctuation" (missing period)
+- ❌ "- List item without proper ending" (missing period)
+
+### Documentation Organization
+
+See `docs/README.md` for documentation structure and naming conventions.
+All dated documents use `YYYY-MM-DD-short-name` format with kebab-case.
