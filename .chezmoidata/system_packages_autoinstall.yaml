@@ -24,6 +24,10 @@ packages:
         - gh
         # Basic command line utility for downloading web content.
         - wget
+        # JSON parsing utility for shell scripts.
+        - jq
+        # Desktop notifications with click action support.
+        - terminal-notifier
         # Manage JS environments (Rust impl).
         - volta
         # More modern alternative to esbuild (Zig impl).
@@ -40,7 +44,9 @@ packages:
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
-    apt: []
+    apt:
+      # Desktop notifications (provides notify-send).
+      - libnotify-bin
     homebrew:
       taps:
         # More modern alternative to esbuild (Zig impl).
@@ -58,6 +64,8 @@ packages:
         - helix
         # GitHub CLI for managing repos, PRs, and issues from terminal.
         - gh
+        # JSON parsing utility for shell scripts.
+        - jq
         # Manage JS environments (Rust impl).
         - volta
         # More modern alternative to esbuild (Zig impl).
