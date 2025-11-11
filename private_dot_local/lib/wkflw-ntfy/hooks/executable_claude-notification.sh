@@ -53,6 +53,7 @@ env=$("$SCRIPT_DIR/../core/wkflw-ntfy-detect-env")
 strategy=$("$SCRIPT_DIR/../core/wkflw-ntfy-decide-strategy" "$env" "claude-notification" "$notification_type")
 
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "claude-notification" "Type: $notification_type, Environment: $env, Strategy: $strategy"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "claude-notification" "Notification: title='$title', body='$body'"
 
 case "$strategy" in
     progressive)

@@ -42,6 +42,7 @@ env=$("$SCRIPT_DIR/../core/wkflw-ntfy-detect-env")
 strategy=$("$SCRIPT_DIR/../core/wkflw-ntfy-decide-strategy" "$env" "claude-stop" "")
 
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "claude-stop" "Environment: $env, Strategy: $strategy"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "claude-stop" "Notification: title='$title', body='$body', cwd='$cwd', dir_name='$dir_name'"
 
 case "$strategy" in
     progressive)
