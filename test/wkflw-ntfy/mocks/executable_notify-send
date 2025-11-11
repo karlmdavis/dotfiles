@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Mock notify-send for testing
+# Logs invocations
+
+MOCK_LOG_DIR="${MOCK_LOG_DIR:-/tmp}"
+MOCK_LOG="$MOCK_LOG_DIR/notify-send.log"
+
+echo "$(date +%Y-%m-%dT%H:%M:%S) $0 $*" >> "$MOCK_LOG"
+
+exit 0

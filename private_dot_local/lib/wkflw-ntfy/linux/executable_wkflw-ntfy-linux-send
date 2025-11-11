@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-linux-send: Send desktop notification via notify-send
+#
+# Usage: wkflw-ntfy-linux-send <title> <body>
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+title="${1:-}"
+body="${2:-}"
+
+if [[ -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-linux-send <title> <body>" >&2
+    exit 1
+fi
+
+if ! command -v notify-send &>/dev/null; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "linux-send" "notify-send not found, falling back to push"
+    "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$title" "$body"
+    exit 0
+fi
+
+# Send notification
+notify-send "$title" "$body"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "linux-send" "Sent desktop notification: $title"

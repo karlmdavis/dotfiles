@@ -161,24 +161,39 @@ use std/dirs
 
 
 ##
-# Long Command Notifications
+# Workflow Notifications (wkflw-ntfy V2)
 #
-# Notify when commands take longer than 30 seconds to complete.
-# Uses hybrid focus detection to avoid spam when terminal is active.
-# Implementation in ~/.local/lib/ntfy-nu-hooks.nu
+# Notify when long-running commands complete.
+# Uses progressive escalation: desktop → mobile push if not acknowledged.
+# Implementation in ~/.local/lib/wkflw-ntfy/
 ##
 
-# Source ntfy notification hooks
-const ntfy_hooks = '{{ .chezmoi.homeDir }}/.local/lib/ntfy-nu-hooks.nu'
-if ($ntfy_hooks | path exists) {
-    source $ntfy_hooks
-
-    # Clean up old debug log files (runs once per shell startup)
-    cleanup-old-logs
-
-    # Configure hooks for command duration tracking
+const wkflw_ntfy_handler = '{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/nushell-handler.sh'
+if ($wkflw_ntfy_handler | path exists) {
+    # Track command start time and command text
     $env.config.hooks = {
-        pre_execution: [{ code: {|| ntfy-pre-execution-hook } }]
-        pre_prompt: [{ code: {|| ntfy-pre-prompt-hook } }]
+        pre_execution: [{
+            code: {||
+                $env.__WKFLW_NTFY_START = (date now | format date '%s')
+                $env.__WKFLW_NTFY_CMD = (commandline)
+            }
+        }]
+        pre_prompt: [{
+            code: {||
+                if '__WKFLW_NTFY_START' in $env {
+                    let duration = ((date now | format date '%s') | into int) - ($env.__WKFLW_NTFY_START | into int)
+                    let cmd = $env.__WKFLW_NTFY_CMD
+                    let exit_code = $env.LAST_EXIT_CODE
+                    let cwd = (pwd)
+
+                    # Call bash handler with command details
+                    bash $wkflw_ntfy_handler $cmd $duration $exit_code $cwd
+
+                    # Clean up
+                    hide-env __WKFLW_NTFY_START
+                    hide-env __WKFLW_NTFY_CMD
+                }
+            }
+        }]
     }
 }

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-callback: Callback invoked when notification clicked
+#
+# Usage: wkflw-ntfy-macos-callback <marker-file-path> [window-id]
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+marker_file="${1:-}"
+window_id="${2:-}"
+
+if [[ -z "$marker_file" ]]; then
+    echo "Usage: wkflw-ntfy-macos-callback <marker-file-path> [window-id]" >&2
+    exit 1
+fi
+
+# Delete marker (atomic claim - prevents escalation worker from sending push)
+"$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$marker_file"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-callback" "User acknowledged notification"
+
+# Focus window if ID provided
+if [[ -n "$window_id" ]]; then
+    "$SCRIPT_DIR/wkflw-ntfy-macos-focus" "$window_id"
+fi

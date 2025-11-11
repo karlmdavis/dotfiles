@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-marker-check: Check if marker file exists
+#
+# Usage: wkflw-ntfy-marker-check <marker-file-path>
+#
+# Exit codes:
+# - 0: Marker exists
+# - 1: Marker does not exist
+
+set -euo pipefail
+
+marker_file="${1:-}"
+
+if [[ -z "$marker_file" ]]; then
+    echo "Usage: wkflw-ntfy-marker-check <marker-file-path>" >&2
+    exit 1
+fi
+
+if [[ -f "$marker_file" ]]; then
+    exit 0
+else
+    exit 1
+fi

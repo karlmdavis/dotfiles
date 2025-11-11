@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-detect-env: Detect terminal environment
+#
+# Usage: wkflw-ntfy-detect-env
+#
+# Outputs one of:
+# - iterm: macOS iTerm2 session
+# - macos-gui: macOS GUI terminal (non-iTerm)
+# - linux-gui: Linux GUI session (X11/Wayland)
+# - nogui: Non-GUI session (SSH, headless, etc.)
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/wkflw-ntfy-config"
+
+# Check for iTerm2
+if [[ "${TERM_PROGRAM:-}" == "iTerm.app" ]]; then
+    "$SCRIPT_DIR/wkflw-ntfy-log" debug "detect-env" "Detected iTerm2 session"
+    echo "iterm"
+    exit 0
+fi
+
+# Check for macOS GUI (any terminal on macOS)
+if [[ "$(uname -s)" == "Darwin" ]] && [[ -n "${TERM_PROGRAM:-}" ]]; then
+    "$SCRIPT_DIR/wkflw-ntfy-log" debug "detect-env" "Detected macOS GUI (non-iTerm): $TERM_PROGRAM"
+    echo "macos-gui"
+    exit 0
+fi
+
+# Check for Linux GUI (X11 or Wayland)
+if [[ -n "${DISPLAY:-}" ]] || [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    "$SCRIPT_DIR/wkflw-ntfy-log" debug "detect-env" "Detected Linux GUI session"
+    echo "linux-gui"
+    exit 0
+fi
+
+# Default: no GUI (SSH, headless, etc.)
+"$SCRIPT_DIR/wkflw-ntfy-log" debug "detect-env" "Detected non-GUI session"
+echo "nogui"

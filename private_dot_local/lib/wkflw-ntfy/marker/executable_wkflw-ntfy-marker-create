@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-marker-create: Create marker file for progressive escalation
+#
+# Usage: wkflw-ntfy-marker-create <event-type> <cwd>
+#   event-type: claude-stop, claude-notification, nushell
+#   cwd: Current working directory
+#
+# Outputs: Full path to created marker file
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+event_type="${1:-}"
+cwd="${2:-}"
+
+if [[ -z "$event_type" || -z "$cwd" ]]; then
+    echo "Usage: wkflw-ntfy-marker-create <event-type> <cwd>" >&2
+    exit 1
+fi
+
+# Create markers directory
+markers_dir="$WKFLW_NTFY_STATE_DIR/markers"
+mkdir -p "$markers_dir"
+
+# Generate unique marker filename
+timestamp="$(date +%s)"
+marker_file="$markers_dir/${event_type}-${timestamp}-$$"
+
+# Write JSON payload
+cat > "$marker_file" <<EOF
+{
+  "event_type": "$event_type",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "pid": $$,
+  "cwd": "$cwd"
+}
+EOF
+
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "marker-create" "Created marker: $marker_file"
+echo "$marker_file"

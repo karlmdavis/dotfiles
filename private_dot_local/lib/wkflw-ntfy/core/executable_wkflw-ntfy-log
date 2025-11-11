@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-log: Logging utility for wkflw-ntfy components
+#
+# Usage: wkflw-ntfy-log <level> <component> <message>
+#   level: debug, warning, error
+#   component: Name of calling component (e.g., "marker-create", "macos-send")
+#   message: Log message
+#
+# Debug logs go to: $WKFLW_NTFY_STATE_DIR/debug-{pid}.log (only if WKFLW_NTFY_DEBUG=1)
+# Warnings/errors go to: $WKFLW_NTFY_STATE_DIR/warnings.log (always)
+
+set -euo pipefail
+
+# Load config
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/wkflw-ntfy-config"
+
+level="${1:-}"
+component="${2:-}"
+message="${3:-}"
+
+if [[ -z "$level" || -z "$component" || -z "$message" ]]; then
+    echo "Usage: wkflw-ntfy-log <level> <component> <message>" >&2
+    exit 1
+fi
+
+timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+log_line="[$timestamp] [$(echo "$level" | tr '[:lower:]' '[:upper:]')] [$component] $message"
+
+case "$level" in
+    debug)
+        if [[ "${WKFLW_NTFY_DEBUG:-0}" == "1" ]]; then
+            debug_log="$WKFLW_NTFY_STATE_DIR/debug-$$.log"
+            mkdir -p "$WKFLW_NTFY_STATE_DIR"
+            echo "$log_line" >> "$debug_log"
+        fi
+        ;;
+    warning|error)
+        warnings_log="$WKFLW_NTFY_STATE_DIR/warnings.log"
+        mkdir -p "$WKFLW_NTFY_STATE_DIR"
+        echo "$log_line" >> "$warnings_log"
+        ;;
+    *)
+        echo "Unknown log level: $level (use debug, warning, or error)" >&2
+        exit 1
+        ;;
+esac

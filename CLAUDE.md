@@ -183,10 +183,8 @@ Commands support bash command interpolation with `!`backticks`` for dynamic cont
 This repository uses mise for task automation and testing.
 
 **Key tasks:**
-- `:lint` - Run shellcheck on all bash scripts
-- `:test` - Run E2E tests for notification system
-- `:test-bash` - Run bash script tests only (bats)
-- `:test-nu` - Run nushell hook tests only
+- `:lint` - Run shellcheck on all bash scripts (V2 wkflw-ntfy scripts)
+- `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
 
@@ -200,27 +198,30 @@ mise run ci
 
 ### Testing Approach
 
-**Minimal E2E coverage** focused on happy paths:
-- Claude Code notification scenarios (focused vs unfocused terminal)
-- Nushell command notifications (long-running commands)
-- Mocked external dependencies (ntfy, AppleScript, ioreg)
+**Comprehensive unit test coverage:**
+- Component isolation testing (config, logging, environment, strategy, markers, escalation)
+- Platform-specific tests (macOS window ops, notifications, Linux)
+- Mock-based testing for external dependencies
 
-**Test files:**
-- `test/test_claude_hooks.bats` - Bash E2E tests using bats framework
-- `test/test_nushell_hooks.nu` - Nushell E2E tests
-- `test/mocks/` - Mock executables for testing (ntfy, osascript, ioreg)
-- `test/test_helpers.bash` - Shared test utilities
+**Test structure:**
+- `test/wkflw-ntfy/unit/` - Unit tests using bats framework
+- `test/wkflw-ntfy/mocks/` - Mock executables (osascript, terminal-notifier, curl, notify-send)
+- `test/wkflw-ntfy/helpers/` - Shared test utilities
 
-**Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test).
+**Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test in parallel).
 
-### Notification System Architecture
+### Notification System Architecture (V2)
 
-The ntfy notification system consists of:
-- **Bash scripts** (`private_dot_local/bin/ntfy-*.sh`): Core notification logic with hybrid presence detection
-- **Nushell hooks** (`private_dot_local/lib/ntfy-nu-hooks.nu`): Command duration tracking, extracted for testability
-- **Mocks** (`test/mocks/`): Test doubles for external dependencies
+The wkflw-ntfy V2 system uses composable bash scripts following Unix philosophy:
+- **Core utilities** (`private_dot_local/lib/wkflw-ntfy/core/`): Config, logging, environment detection,
+    strategy selection
+- **Markers** (`marker/`): Atomic operations for escalation tracking
+- **Platform support** (`macos/`, `linux/`): Desktop notifications and window management
+- **Push notifications** (`push/`): Mobile push via ntfy.sh
+- **Escalation** (`escalation/`): Progressive escalation (desktop → mobile)
+- **Hooks** (`hooks/`): Integration with Claude Code and nushell
 
-**Design principle:** Keep notification logic in testable scripts, not inline in config files. Nushell hooks are sourced from a separate file to enable isolation testing.
+See `private_dot_local/lib/wkflw-ntfy/README.md` for complete architecture documentation.
 
 ## Documentation Standards
 

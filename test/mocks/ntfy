@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Mock ntfy publish - records calls instead of sending notifications
-
-# Append to mock log file
-echo "$@" >> "${NTFY_MOCK_LOG:-/tmp/ntfy-mock.log}"
-
-# Return mock JSON response
-echo "{\"id\":\"mock123\",\"time\":$(date +%s),\"event\":\"message\",\"topic\":\"mock-topic\",\"message\":\"$*\"}"

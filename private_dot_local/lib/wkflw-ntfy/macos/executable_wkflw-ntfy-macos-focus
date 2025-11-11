@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-focus: Focus iTerm window by ID using AppleScript
+#
+# Usage: wkflw-ntfy-macos-focus <window-id>
+#   window-id: Numeric window ID from macos-get-window (e.g., "12345")
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+window_id="${1:-}"
+
+if [[ -z "$window_id" ]]; then
+    echo "Usage: wkflw-ntfy-macos-focus <window-id>" >&2
+    exit 1
+fi
+
+# Focus window via AppleScript
+if osascript -e "tell application \"iTerm2\" to select window id $window_id" 2>/dev/null; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-focus" "Focused window: $window_id"
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-focus" "Failed to focus window: $window_id"
+    exit 1
+fi

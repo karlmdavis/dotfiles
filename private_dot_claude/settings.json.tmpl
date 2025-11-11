@@ -4,22 +4,22 @@
   },
   "alwaysThinkingEnabled": true,
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-user-prompt-submit.sh"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/bin/ntfy-claude-hook-stop.sh"
+            "command": "{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/claude-stop.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/claude-notification.sh"
           }
         ]
       }

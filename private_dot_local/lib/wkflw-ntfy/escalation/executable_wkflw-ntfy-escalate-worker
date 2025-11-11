@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-escalate-worker: Background worker for progressive escalation
+#
+# Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body>
+#
+# Waits for escalation delay, then checks if marker still exists.
+# If marker exists: deletes it (atomic claim) and sends push notification.
+# If marker gone: user acknowledged desktop notification, exit silently.
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+marker_file="${1:-}"
+title="${2:-}"
+body="${3:-}"
+
+if [[ -z "$marker_file" || -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body>" >&2
+    exit 1
+fi
+
+# Wait for escalation delay
+delay="${WKFLW_NTFY_ESCALATION_DELAY:-120}"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Waiting ${delay}s before checking marker"
+sleep "$delay"
+
+# Check if marker still exists
+if ! "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-check" "$marker_file"; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Marker deleted, user acknowledged notification"
+    exit 0
+fi
+
+# Marker still exists: delete it (atomic claim) and send push
+"$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$marker_file"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Escalating to push notification"
+"$SCRIPT_DIR/../push/wkflw-ntfy-push" "$title" "$body"

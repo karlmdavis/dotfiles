@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Generate unique ntfy topic for this machine
+
+set -euo pipefail
+
+state_dir="$HOME/.local/state/wkflw-ntfy"
+config_file="$state_dir/config"
+
+# Skip if already generated (silent)
+if [[ -f "$config_file" ]]; then
+    exit 0
+fi
+
+# Generate unique topic
+hostname="{{ .chezmoi.hostname }}"
+username="{{ .chezmoi.username }}"
+random="{{ randInt 10000000 99999999 }}"
+topic="${hostname}-${username}-${random}"
+
+# Write config
+mkdir -p "$state_dir"
+echo "WKFLW_NTFY_TOPIC=$topic" > "$config_file"
+
+echo "Generated wkflw-ntfy topic: $topic"

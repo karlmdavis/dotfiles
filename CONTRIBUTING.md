@@ -37,10 +37,8 @@ mise tasks
 
 **Task reference:**
 
-- `:lint` - Run shellcheck on all bash scripts
-- `:test` - Run all E2E tests (bash + nushell)
-- `:test-bash` - Run bash script tests only
-- `:test-nu` - Run nushell hook tests only
+- `:lint` - Run shellcheck on all bash scripts (wkflw-ntfy V2)
+- `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
 
@@ -55,13 +53,13 @@ mise run ci
 
 ## Testing
 
-This project follows a **minimal E2E testing approach** focused on happy paths:
+This project follows a **comprehensive unit testing approach** with mock-based isolation:
 
 ### Test Strategy
 
-- **E2E Tests (Happy Path Only):** Test complete workflows with mocked external dependencies
-- **No Unit Tests:** Scripts are integration-focused; E2E coverage is sufficient
-- **Mocked Dependencies:** ntfy, iTerm2/AppleScript, ioreg (idle detection)
+- **Unit Tests:** Comprehensive coverage of all components in isolation.
+- **Mocked Dependencies:** osascript, terminal-notifier, curl, notify-send.
+- **No external dependencies:** Tests run completely offline.
 
 ### Running Tests
 
@@ -70,24 +68,25 @@ This project follows a **minimal E2E testing approach** focused on happy paths:
 mise run test
 ```
 
-**Run specific test suites:**
+**Run with linting:**
 ```bash
-mise run test-bash   # Claude hook tests (bats)
-mise run test-nu     # Nushell hook tests
+mise run ci                 # Lint + test in parallel
 ```
 
-**Test files:**
-- `test/test_claude_hooks.bats` - Tests for Claude Code notification scenarios
-- `test/test_nushell_hooks.nu` - Tests for nushell command notifications
-- `test/mocks/` - Mock executables for ntfy, osascript, ioreg
-- `test/test_helpers.bash` - Shared test utilities
+**Test structure:**
+- `test/wkflw-ntfy/unit/` - Component unit tests (bats).
+- `test/wkflw-ntfy/mocks/` - Mock executables for external dependencies.
+- `test/wkflw-ntfy/helpers/` - Shared test utilities.
 
 ### Test Coverage
 
-Tests focus on critical notification paths:
-1. **Claude unfocused → notify:** User away when Claude finishes long work
-2. **Claude focused → no notify:** User watching when Claude finishes
-3. **Nushell long command:** Notification after long shell command completes
+Unit tests cover all wkflw-ntfy V2 components:
+1. **Core:** Config loading, logging, environment detection, strategy selection.
+2. **Markers:** Create, check, delete operations for escalation tracking.
+3. **Platform:** macOS (window ops, notifications), Linux (notifications).
+4. **Push:** ntfy.sh integration.
+5. **Escalation:** Worker spawning and execution.
+6. **Hooks:** Claude Code and nushell integration.
 
 ## Pre-commit Hooks
 

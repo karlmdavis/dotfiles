@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-get-window: Get iTerm window ID via AppleScript
+#
+# Usage: wkflw-ntfy-macos-get-window
+#
+# Outputs: numeric window ID (e.g., "12345")
+# Exit codes:
+# - 0: Success
+# - 1: AppleScript error or iTerm not running
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+# Query iTerm for current window ID
+if ! window_id=$(osascript -e 'tell application "iTerm2" to id of current window' 2>/dev/null); then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-get-window" "Failed to get iTerm window ID"
+    exit 1
+fi
+
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Got window ID: $window_id"
+echo "$window_id"

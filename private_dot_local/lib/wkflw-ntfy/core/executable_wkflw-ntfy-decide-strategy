@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-decide-strategy: Choose notification strategy
+#
+# Usage: wkflw-ntfy-decide-strategy <environment> <event-type> <notification-type>
+#   environment: Output from wkflw-ntfy-detect-env
+#   event-type: claude-stop, claude-notification, nushell
+#   notification-type: For claude-notification: permission_prompt, idle_input, etc. (empty for others)
+#
+# Outputs one of:
+# - progressive: Desktop notification + escalation to push
+# - desktop-only: Desktop notification, no escalation
+# - push-only: Mobile push only
+# - none: No notification
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/wkflw-ntfy-config"
+
+environment="${1:-}"
+event_type="${2:-}"
+notification_type="${3:-}"
+
+if [[ -z "$environment" || -z "$event_type" ]]; then
+    echo "Usage: wkflw-ntfy-decide-strategy <environment> <event-type> <notification-type>" >&2
+    exit 1
+fi
+
+# Decision logic
+case "$environment" in
+    iterm)
+        # iTerm supports progressive escalation
+        if [[ "$event_type" == "claude-notification" && "$notification_type" == "permission_prompt" ]]; then
+            # Permission prompts don't escalate (user must be at desktop)
+            "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + permission_prompt → desktop-only"
+            echo "desktop-only"
+        else
+            # All other events: progressive escalation
+            "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + $event_type → progressive"
+            echo "progressive"
+        fi
+        ;;
+    macos-gui)
+        # macOS non-iTerm: desktop only (no window focusing, so no escalation)
+        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "macOS GUI → desktop-only"
+        echo "desktop-only"
+        ;;
+    linux-gui)
+        # Linux GUI: desktop only (not yet tested/proven for escalation)
+        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "Linux GUI → desktop-only"
+        echo "desktop-only"
+        ;;
+    nogui)
+        # No GUI: push only
+        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "No GUI → push-only"
+        echo "push-only"
+        ;;
+    *)
+        "$SCRIPT_DIR/wkflw-ntfy-log" error "decide-strategy" "Unknown environment: $environment"
+        echo "none"
+        exit 1
+        ;;
+esac
