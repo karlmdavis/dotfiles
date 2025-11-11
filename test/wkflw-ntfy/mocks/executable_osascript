@@ -12,6 +12,16 @@ if echo "$*" | grep -q "id of current window"; then
     echo "12345"
 fi
 
+# If checking for TTY (contains check), return yes
+if echo "$*" | grep -q "tty of s contains" && echo "$*" | grep -q "return.*yes"; then
+    echo "yes"
+fi
+
+# If getting window ID by TTY, return fake ID
+if echo "$*" | grep -q "tty of s contains" && echo "$*" | grep -q "return id of w"; then
+    echo "12345"
+fi
+
 # If selecting window, succeed silently
 if echo "$*" | grep -q "select window"; then
     exit 0

@@ -21,9 +21,9 @@ setup() {
     [[ "$result" == "progressive" ]]
 }
 
-@test "iTerm + claude-notification permission_prompt → desktop-only" {
+@test "iTerm + claude-notification permission_prompt → progressive" {
     result=$(wkflw-ntfy-decide-strategy "iterm" "claude-notification" "permission_prompt")
-    [[ "$result" == "desktop-only" ]]
+    [[ "$result" == "progressive" ]]
 }
 
 @test "iTerm + claude-notification idle_input → progressive" {

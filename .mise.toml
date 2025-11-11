@@ -13,7 +13,7 @@ echo "Running shellcheck..."
 shellcheck \
   private_dot_local/lib/wkflw-ntfy/core/executable_* \
   private_dot_local/lib/wkflw-ntfy/marker/executable_* \
-  private_dot_local/lib/wkflw-ntfy/macos/executable_* \
+  private_dot_local/lib/wkflw-ntfy/macos/executable_wkflw-ntfy-macos-* \
   private_dot_local/lib/wkflw-ntfy/linux/executable_* \
   private_dot_local/lib/wkflw-ntfy/push/executable_* \
   private_dot_local/lib/wkflw-ntfy/escalation/executable_* \

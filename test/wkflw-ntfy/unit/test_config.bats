@@ -2,6 +2,11 @@
 
 load '../helpers/test_helpers'
 
+setup() {
+    export WKFLW_NTFY_STATE_DIR="$BATS_TEST_TMPDIR/state"
+    mkdir -p "$WKFLW_NTFY_STATE_DIR"
+}
+
 @test "config loads defaults when env vars not set" {
     unset WKFLW_NTFY_SERVER
     unset WKFLW_NTFY_NUSHELL_THRESHOLD
