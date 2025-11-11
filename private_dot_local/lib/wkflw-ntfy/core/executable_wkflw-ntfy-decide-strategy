@@ -29,6 +29,7 @@ source "$SCRIPT_DIR/wkflw-ntfy-config"
 
 environment="${1:-}"
 event_type="${2:-}"
+# shellcheck disable=SC2034
 notification_type="${3:-}"
 
 if [[ -z "$environment" || -z "$event_type" ]]; then
@@ -39,16 +40,9 @@ fi
 # Decision logic
 case "$environment" in
     iterm)
-        # iTerm supports progressive escalation
-        if [[ "$event_type" == "claude-notification" && "$notification_type" == "permission_prompt" ]]; then
-            # Permission prompts don't escalate (user must be at desktop)
-            "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + permission_prompt → desktop-only"
-            echo "desktop-only"
-        else
-            # All other events: progressive escalation
-            "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + $event_type → progressive"
-            echo "progressive"
-        fi
+        # iTerm supports progressive escalation for all events
+        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + $event_type → progressive"
+        echo "progressive"
         ;;
     macos-gui)
         # macOS non-iTerm: desktop only (no window focusing, so no escalation)
