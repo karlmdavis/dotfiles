@@ -26,8 +26,11 @@ if [[ -z "$window_id" ]]; then
     exit 1
 fi
 
-# Focus window via AppleScript
-if osascript -e "tell application \"iTerm2\" to select window id $window_id" 2>/dev/null; then
+# Focus window via AppleScript (activate brings iTerm to front, select chooses window)
+if osascript -e "tell application \"iTerm2\"
+    activate
+    select window id $window_id
+end tell" 2>/dev/null; then
     "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-focus" "Focused window: $window_id"
 else
     "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-focus" "Failed to focus window: $window_id"
