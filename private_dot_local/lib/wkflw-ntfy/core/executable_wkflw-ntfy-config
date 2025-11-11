@@ -16,23 +16,23 @@ set -euo pipefail
 # State directory for config and marker files
 : "${WKFLW_NTFY_STATE_DIR:=$HOME/.local/state/wkflw-ntfy}"
 
-# Configuration with defaults
+# Read config file first (allows overriding defaults)
+config_file="$WKFLW_NTFY_STATE_DIR/config"
+if [[ -f "$config_file" ]]; then
+    # shellcheck disable=SC1090
+    source "$config_file"
+fi
+
+# Configuration with defaults (only set if not already set by config file)
 : "${WKFLW_NTFY_SERVER:=https://ntfy.sh}"
 : "${WKFLW_NTFY_NUSHELL_THRESHOLD:=90}"
 : "${WKFLW_NTFY_ESCALATION_DELAY:=120}"
 : "${WKFLW_NTFY_DEBUG:=0}"
 
-# Read ntfy topic from state file if not already set
+# Warn if topic not configured
 if [[ -z "${WKFLW_NTFY_TOPIC:-}" ]]; then
-    config_file="$WKFLW_NTFY_STATE_DIR/config"
-    if [[ -f "$config_file" ]]; then
-        # Source config file to load WKFLW_NTFY_TOPIC
-        # shellcheck disable=SC1090
-        source "$config_file"
-    else
-        echo "WARNING: WKFLW_NTFY_TOPIC not set and config file not found at $config_file" >&2
-        echo "Mobile push notifications will not work until topic is configured." >&2
-    fi
+    echo "WARNING: WKFLW_NTFY_TOPIC not set in $config_file" >&2
+    echo "Mobile push notifications will not work until topic is configured." >&2
 fi
 
 # Export all config for use by child processes
