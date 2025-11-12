@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-push: Send mobile push notification via ntfy
 #
-# Usage: wkflw-ntfy-push <title> <body>
+# Usage: wkflw-ntfy-push <session-id> <title> <body>
 
 set -euo pipefail
 
@@ -18,21 +18,22 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 
-title="${1:-}"
-body="${2:-}"
+session_id="${1:-}"
+title="${2:-}"
+body="${3:-}"
 
-if [[ -z "$title" || -z "$body" ]]; then
-    echo "Usage: wkflw-ntfy-push <title> <body>" >&2
+if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-push <session-id> <title> <body>" >&2
     exit 1
 fi
 
 if [[ -z "${WKFLW_NTFY_TOPIC:-}" ]]; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" error "push" "WKFLW_NTFY_TOPIC not set"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" error "push" "WKFLW_NTFY_TOPIC not set"
     exit 1
 fi
 
 if ! command -v curl &>/dev/null; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "push" "curl not found, cannot send push notification"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" warning "push" "curl not found, cannot send push notification"
     exit 1
 fi
 
@@ -44,8 +45,8 @@ if curl -X POST "$url" \
     -d "$body" \
     --silent --show-error --fail \
     >/dev/null 2>&1; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "push" "Sent push notification: $title"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "push" "Sent push notification: $title"
 else
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "push" "Failed to send push notification (server unreachable?)"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" warning "push" "Failed to send push notification (server unreachable?)"
     exit 1
 fi

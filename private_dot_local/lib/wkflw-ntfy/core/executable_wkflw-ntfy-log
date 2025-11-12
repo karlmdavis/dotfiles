@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-log: Logging utility for wkflw-ntfy components
 #
-# Usage: wkflw-ntfy-log <level> <component> <message>
+# Usage: wkflw-ntfy-log <session-id> <level> <component> <message>
+#   session-id: Unique session identifier (e.g., "2025-11-12T00-07-49-dd02d9aa")
 #   level: debug, warning, error
 #   component: Name of calling component (e.g., "marker-create", "macos-send")
 #   message: Log message
 #
-# Debug logs go to: $WKFLW_NTFY_STATE_DIR/debug-{pid}.log (only if WKFLW_NTFY_DEBUG=1)
+# Debug logs go to: $WKFLW_NTFY_STATE_DIR/logs/{session-id}.log (only if WKFLW_NTFY_DEBUG=1)
 # Warnings/errors go to: $WKFLW_NTFY_STATE_DIR/warnings.log (always)
 
 set -euo pipefail
@@ -24,12 +25,13 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/wkflw-ntfy-config"
 
-level="${1:-}"
-component="${2:-}"
-message="${3:-}"
+session_id="${1:-}"
+level="${2:-}"
+component="${3:-}"
+message="${4:-}"
 
-if [[ -z "$level" || -z "$component" || -z "$message" ]]; then
-    echo "Usage: wkflw-ntfy-log <level> <component> <message>" >&2
+if [[ -z "$session_id" || -z "$level" || -z "$component" || -z "$message" ]]; then
+    echo "Usage: wkflw-ntfy-log <session-id> <level> <component> <message>" >&2
     exit 1
 fi
 
@@ -39,8 +41,8 @@ log_line="[$timestamp] [$(echo "$level" | tr '[:lower:]' '[:upper:]')] [$compone
 case "$level" in
     debug)
         if [[ "${WKFLW_NTFY_DEBUG:-0}" == "1" ]]; then
-            debug_log="$WKFLW_NTFY_STATE_DIR/debug-$$.log"
-            mkdir -p "$WKFLW_NTFY_STATE_DIR"
+            debug_log="$WKFLW_NTFY_STATE_DIR/logs/${session_id}.log"
+            mkdir -p "$WKFLW_NTFY_STATE_DIR/logs"
             echo "$log_line" >> "$debug_log"
         fi
         ;;

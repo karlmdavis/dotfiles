@@ -4,7 +4,7 @@
 # Traverses process graph starting from current PID to find processes with
 # valid iTerm TTYs. Handles zellij multiplexer by following client connections.
 #
-# Usage: wkflw-ntfy-macos-get-window
+# Usage: wkflw-ntfy-macos-get-window <session-id>
 #
 # Outputs: numeric window ID (e.g., "12345")
 # Exit codes:
@@ -25,6 +25,12 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+SESSION_ID="${1:-}"
+if [[ -z "$SESSION_ID" ]]; then
+    echo "Usage: wkflw-ntfy-macos-get-window <session-id>" >&2
+    exit 1
+fi
 
 # Helper: Check if PID has valid iTerm TTY
 # Returns TTY string via stdout if valid, exit code 0
@@ -64,7 +70,7 @@ get_zellij_clients() {
 
     # Check if it's a zellij server
     if ps -p "$pid" -o args= 2>/dev/null | grep -q "zellij.*--server"; then
-        "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "PID $pid is zellij server, querying clients"
+        "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "PID $pid is zellij server, querying clients"
         # Use Python script to get clients (stderr not suppressed for debug logging)
         if client_data=$(python3 "$SCRIPT_DIR/wkflw-ntfy-zellij-clients.py" "$pid"); then
             # Extract client PIDs (space-separated on stdout)
@@ -85,7 +91,7 @@ declare -a queue=("$START_PID")
 visited_pids="" # Space-separated list of PIDs
 declare -a matching_pids=()
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Starting graph traversal from PID $START_PID"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "Starting graph traversal from PID $START_PID"
 
 while [ ${#queue[@]} -gt 0 ]; do
     # Pop first element from queue
@@ -99,18 +105,18 @@ while [ ${#queue[@]} -gt 0 ]; do
 
     # Mark as visited
     visited_pids="$visited_pids $current_pid"
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Checking PID $current_pid"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "Checking PID $current_pid"
 
     # Check if this PID has a valid iTerm TTY
     if tty=$(has_valid_iterm_tty "$current_pid"); then
-        "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "PID $current_pid has valid TTY: $tty"
+        "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "PID $current_pid has valid TTY: $tty"
         matching_pids+=("$current_pid:$tty")
     fi
 
     # Check if this is a zellij server with clients
     if client_pids=$(get_zellij_clients "$current_pid"); then
         for client_pid in $client_pids; do
-            "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Found zellij client PID: $client_pid"
+            "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "Found zellij client PID: $client_pid"
             queue+=("$client_pid")
         done
     fi
@@ -125,7 +131,7 @@ done
 
 # Pick first matching PID's TTY
 if [ ${#matching_pids[@]} -eq 0 ]; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-get-window" "No valid iTerm TTY found in process graph"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" warning "macos-get-window" "No valid iTerm TTY found in process graph"
     exit 1
 fi
 
@@ -134,7 +140,7 @@ first_match="${matching_pids[0]}"
 pid_with_tty="${first_match%%:*}"
 tty="${first_match#*:}"
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Using TTY $tty from PID $pid_with_tty"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "Using TTY $tty from PID $pid_with_tty"
 
 # Find iTerm window by TTY
 window_id=$(osascript -e "tell application \"iTerm2\"
@@ -150,9 +156,9 @@ window_id=$(osascript -e "tell application \"iTerm2\"
 end tell" 2>/dev/null)
 
 if [[ -z "$window_id" ]]; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-get-window" "Failed to get window ID for TTY $tty"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" warning "macos-get-window" "Failed to get window ID for TTY $tty"
     exit 1
 fi
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-get-window" "Got window ID: $window_id"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "Got window ID: $window_id"
 echo "$window_id"

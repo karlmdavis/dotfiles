@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-marker-create: Create marker file for progressive escalation
 #
-# Usage: wkflw-ntfy-marker-create <event-type> <cwd>
+# Usage: wkflw-ntfy-marker-create <session-id> <event-type> <cwd>
+#   session-id: Unique session identifier
 #   event-type: claude-stop, claude-notification, nushell
 #   cwd: Current working directory
 #
@@ -22,11 +23,12 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 
-event_type="${1:-}"
-cwd="${2:-}"
+session_id="${1:-}"
+event_type="${2:-}"
+cwd="${3:-}"
 
-if [[ -z "$event_type" || -z "$cwd" ]]; then
-    echo "Usage: wkflw-ntfy-marker-create <event-type> <cwd>" >&2
+if [[ -z "$session_id" || -z "$event_type" || -z "$cwd" ]]; then
+    echo "Usage: wkflw-ntfy-marker-create <session-id> <event-type> <cwd>" >&2
     exit 1
 fi
 
@@ -34,13 +36,13 @@ fi
 markers_dir="$WKFLW_NTFY_STATE_DIR/markers"
 mkdir -p "$markers_dir"
 
-# Generate unique marker filename
-timestamp="$(date +%s)"
-marker_file="$markers_dir/${event_type}-${timestamp}-$$"
+# Marker filename based on session ID
+marker_file="$markers_dir/${session_id}"
 
 # Write JSON payload
 cat > "$marker_file" <<EOF
 {
+  "session_id": "$session_id",
   "event_type": "$event_type",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "pid": $$,
@@ -48,5 +50,5 @@ cat > "$marker_file" <<EOF
 }
 EOF
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "marker-create" "Created marker: $marker_file"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-create" "Created marker: $marker_file"
 echo "$marker_file"

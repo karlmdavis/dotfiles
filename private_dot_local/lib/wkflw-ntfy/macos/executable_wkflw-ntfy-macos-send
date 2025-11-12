@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-macos-send: Send desktop notification via terminal-notifier
 #
-# Usage: wkflw-ntfy-macos-send <title> <body> [callback-script]
+# Usage: wkflw-ntfy-macos-send <session-id> <title> <body>
 
 set -euo pipefail
 
@@ -18,29 +18,32 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 
-title="${1:-}"
-body="${2:-}"
-callback_script="${3:-}"
+session_id="${1:-}"
+title="${2:-}"
+body="${3:-}"
 
-if [[ -z "$title" || -z "$body" ]]; then
-    echo "Usage: wkflw-ntfy-macos-send <title> <body> [callback-script]" >&2
+if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-macos-send <session-id> <title> <body>" >&2
     exit 1
 fi
 
 if ! command -v terminal-notifier &>/dev/null; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" warning "macos-send" "terminal-notifier not found, falling back to push"
-    "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$title" "$body"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" warning "macos-send" "terminal-notifier not found, falling back to push"
+    "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$session_id" "$title" "$body"
     exit 0
 fi
+
+# Construct callback script path from session ID
+callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${session_id}.sh"
 
 # Build terminal-notifier command
 cmd=(terminal-notifier -title "$title" -message "$body")
 
-# Add callback if provided
-if [[ -n "$callback_script" ]]; then
+# Add callback if it exists
+if [[ -f "$callback_script" ]]; then
     cmd+=(-execute "bash '$callback_script'")
 fi
 
 # Send notification
 "${cmd[@]}"
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "macos-send" "Sent desktop notification: $title"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-send" "Sent desktop notification: $title"

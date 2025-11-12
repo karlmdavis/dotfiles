@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-decide-strategy: Choose notification strategy
 #
-# Usage: wkflw-ntfy-decide-strategy <environment> <event-type> <notification-type>
+# Usage: wkflw-ntfy-decide-strategy <session-id> <environment> <event-type> <notification-type>
+#   session-id: Unique session identifier
 #   environment: Output from wkflw-ntfy-detect-env
 #   event-type: claude-stop, claude-notification, nushell
 #   notification-type: For claude-notification: permission_prompt, idle_input, etc. (empty for others)
@@ -27,13 +28,14 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/wkflw-ntfy-config"
 
-environment="${1:-}"
-event_type="${2:-}"
+session_id="${1:-}"
+environment="${2:-}"
+event_type="${3:-}"
 # shellcheck disable=SC2034
-notification_type="${3:-}"
+notification_type="${4:-}"
 
-if [[ -z "$environment" || -z "$event_type" ]]; then
-    echo "Usage: wkflw-ntfy-decide-strategy <environment> <event-type> <notification-type>" >&2
+if [[ -z "$session_id" || -z "$environment" || -z "$event_type" ]]; then
+    echo "Usage: wkflw-ntfy-decide-strategy <session-id> <environment> <event-type> <notification-type>" >&2
     exit 1
 fi
 
@@ -41,26 +43,26 @@ fi
 case "$environment" in
     iterm)
         # iTerm supports progressive escalation for all events
-        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "iTerm + $event_type → progressive"
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" debug "decide-strategy" "iTerm + $event_type → progressive"
         echo "progressive"
         ;;
     macos-gui)
         # macOS non-iTerm: desktop only (no window focusing, so no escalation)
-        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "macOS GUI → desktop-only"
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" debug "decide-strategy" "macOS GUI → desktop-only"
         echo "desktop-only"
         ;;
     linux-gui)
         # Linux GUI: desktop only (not yet tested/proven for escalation)
-        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "Linux GUI → desktop-only"
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" debug "decide-strategy" "Linux GUI → desktop-only"
         echo "desktop-only"
         ;;
     nogui)
         # No GUI: push only
-        "$SCRIPT_DIR/wkflw-ntfy-log" debug "decide-strategy" "No GUI → push-only"
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" debug "decide-strategy" "No GUI → push-only"
         echo "push-only"
         ;;
     *)
-        "$SCRIPT_DIR/wkflw-ntfy-log" error "decide-strategy" "Unknown environment: $environment"
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" error "decide-strategy" "Unknown environment: $environment"
         echo "none"
         exit 1
         ;;

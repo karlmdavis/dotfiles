@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-session-id: Generate unique session identifier
+#
+# Usage: wkflw-ntfy-session-id
+#
+# Outputs: YYYY-MM-DDTHH-MM-SS-xxxxxxxx
+#   Where xxxxxxxx is 8 random hex digits (32 bits)
+#
+# Session IDs are used to correlate all state for a notification event:
+#   - logs/SESSION_ID.log
+#   - markers/SESSION_ID
+#   - callbacks/SESSION_ID.sh
+
+set -euo pipefail
+
+# Generate timestamp (ISO-8601-ish, filesystem safe)
+timestamp=$(date '+%Y-%m-%dT%H-%M-%S')
+
+# Generate 8 random hex digits (32 bits)
+# Using /dev/urandom for cryptographic randomness
+random_suffix=$(od -An -N4 -tx4 /dev/urandom | tr -d ' ')
+
+# Output session ID
+echo "${timestamp}-${random_suffix}"
