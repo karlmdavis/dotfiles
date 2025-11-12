@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-escalate-worker: Background worker for progressive escalation
 #
-# Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body>
+# Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body> [callback-script]
 #
 # Waits for escalation delay, then checks if marker still exists.
 # If marker exists: deletes it (atomic claim) and sends push notification.
 # If marker gone: user acknowledged desktop notification, exit silently.
+# Also cleans up callback script if provided.
 
 set -euo pipefail
 
@@ -25,9 +26,10 @@ source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 marker_file="${1:-}"
 title="${2:-}"
 body="${3:-}"
+callback_script="${4:-}"
 
 if [[ -z "$marker_file" || -z "$title" || -z "$body" ]]; then
-    echo "Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body>" >&2
+    echo "Usage: wkflw-ntfy-escalate-worker <marker-file-path> <title> <body> [callback-script]" >&2
     exit 1
 fi
 
@@ -39,6 +41,10 @@ sleep "$delay"
 # Check if marker still exists
 if ! "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-check" "$marker_file"; then
     "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Marker deleted, user acknowledged notification"
+    # Clean up callback script (notification was clicked)
+    if [[ -n "$callback_script" && -f "$callback_script" ]]; then
+        rm -f "$callback_script"
+    fi
     exit 0
 fi
 
@@ -46,3 +52,9 @@ fi
 "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$marker_file"
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Escalating to push notification"
 "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$title" "$body"
+
+# Clean up callback script (notification was dismissed)
+if [[ -n "$callback_script" && -f "$callback_script" ]]; then
+    rm -f "$callback_script"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-worker" "Cleaned up callback script"
+fi

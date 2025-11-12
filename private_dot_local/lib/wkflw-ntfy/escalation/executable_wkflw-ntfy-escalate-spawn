@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-escalate-spawn: Spawn background escalation worker
 #
-# Usage: wkflw-ntfy-escalate-spawn <marker-file-path> <title> <body>
+# Usage: wkflw-ntfy-escalate-spawn <marker-file-path> <title> <body> [callback-script]
 #
 # Spawns escalate-worker as detached background process.
 
@@ -23,14 +23,15 @@ source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 marker_file="${1:-}"
 title="${2:-}"
 body="${3:-}"
+callback_script="${4:-}"
 
 if [[ -z "$marker_file" || -z "$title" || -z "$body" ]]; then
-    echo "Usage: wkflw-ntfy-escalate-spawn <marker-file-path> <title> <body>" >&2
+    echo "Usage: wkflw-ntfy-escalate-spawn <marker-file-path> <title> <body> [callback-script]" >&2
     exit 1
 fi
 
 # Spawn worker in background (detached)
-nohup "$SCRIPT_DIR/wkflw-ntfy-escalate-worker" "$marker_file" "$title" "$body" \
+nohup "$SCRIPT_DIR/wkflw-ntfy-escalate-worker" "$marker_file" "$title" "$body" "$callback_script" \
     >/dev/null 2>&1 &
 
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "escalate-spawn" "Spawned escalation worker (PID: $!)"

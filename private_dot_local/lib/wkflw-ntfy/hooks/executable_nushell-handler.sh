@@ -30,7 +30,7 @@ cwd="${4:-unknown}"
 # Check threshold
 threshold="${WKFLW_NTFY_NUSHELL_THRESHOLD:-90}"
 if (( duration < threshold )); then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "nushell" "Command duration ${duration}s below threshold ${threshold}s"
+    # "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "nushell" "Command duration ${duration}s below threshold ${threshold}s"
     exit 0
 fi
 
@@ -77,14 +77,15 @@ case "$strategy" in
         cat > "$callback_script" <<EOF
 #!/usr/bin/env bash
 "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-callback" "$marker" "$window_id"
+rm -f "$callback_script"
 EOF
         chmod +x "$callback_script"
 
         # Send desktop notification with callback
         "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$title" "$body" "$callback_script"
 
-        # Spawn escalation worker
-        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$marker" "$title" "$body"
+        # Spawn escalation worker with callback script path
+        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$marker" "$title" "$body" "$callback_script"
         ;;
 
     desktop-only)

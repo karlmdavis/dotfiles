@@ -65,3 +65,37 @@ setup() {
     # Push should be sent
     assert_mock_called "curl"
 }
+
+@test "escalate-worker cleans up callback script if dismissed" {
+    marker_path=$(wkflw-ntfy-marker-create "test" "/test")
+    callback_script="$WKFLW_NTFY_STATE_DIR/callback-test"
+    touch "$callback_script"
+
+    wkflw-ntfy-escalate-worker "$marker_path" "Test Title" "Test body" "$callback_script"
+
+    # Marker should be deleted
+    [ ! -f "$marker_path" ]
+
+    # Callback script should be cleaned up
+    [ ! -f "$callback_script" ]
+
+    # Push should be sent
+    assert_mock_called "curl"
+}
+
+@test "escalate-worker cleans up callback script if acknowledged" {
+    marker_path=$(wkflw-ntfy-marker-create "test" "/test")
+    callback_script="$WKFLW_NTFY_STATE_DIR/callback-test"
+    touch "$callback_script"
+
+    # Delete marker first (simulating user clicked notification)
+    wkflw-ntfy-marker-delete "$marker_path"
+
+    wkflw-ntfy-escalate-worker "$marker_path" "Test Title" "Test body" "$callback_script"
+
+    # Callback script should still be cleaned up
+    [ ! -f "$callback_script" ]
+
+    # Push should NOT be sent
+    assert_mock_not_called "curl"
+}
