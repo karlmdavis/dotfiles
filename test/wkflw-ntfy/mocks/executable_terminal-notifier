@@ -5,7 +5,7 @@
 MOCK_LOG_DIR="${MOCK_LOG_DIR:-/tmp}"
 MOCK_LOG="$MOCK_LOG_DIR/terminal-notifier.log"
 
-echo "$(date +%Y-%m-%dT%H:%M:%S) $0 $*" >> "$MOCK_LOG"
+printf "[%s] %s %s\n" "$EPOCHSECONDS" "$0" "$*" >> "$MOCK_LOG"
 
 # Extract -execute callback if present
 for i in "$@"; do

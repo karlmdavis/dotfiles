@@ -6,17 +6,27 @@ setup_file() {
     # Use BATS_FILE_TMPDIR which is set during setup_file
     export WKFLW_NTFY_TEST_DIR="$BATS_FILE_TMPDIR/deployed"
 
-    # Create destination directory
-    mkdir -p "$WKFLW_NTFY_TEST_DIR"
+    # Create destination directory structure
+    mkdir -p "$WKFLW_NTFY_TEST_DIR/.local/lib"
 
-    # Deploy wkflw-ntfy scripts to temp directory
-    # This gives us the actual deployed file structure (without executable_ prefix)
+    # Fast deploy: Copy only wkflw-ntfy scripts (not entire dotfile repo)
+    # This is ~16x faster than full chezmoi apply (150ms vs 2500ms)
     local repo_root
     repo_root="$(git rev-parse --show-toplevel)"
 
-    # Use --source to specify source directory explicitly
-    # This prevents chezmoi from looking at the actual home directory
-    chezmoi apply --source "$repo_root" --destination "$WKFLW_NTFY_TEST_DIR"
+    # Copy wkflw-ntfy tree
+    cp -r "$repo_root/private_dot_local/lib/wkflw-ntfy" "$WKFLW_NTFY_TEST_DIR/.local/lib/"
+
+    # Rename executable_ files to deployed names
+    find "$WKFLW_NTFY_TEST_DIR/.local/lib/wkflw-ntfy" -type f -name "executable_*" | while read -r f; do
+        local dir
+        dir="$(dirname "$f")"
+        local base
+        base="$(basename "$f")"
+        local newname="${base#executable_}"
+        mv "$f" "$dir/$newname"
+        chmod +x "$dir/$newname"
+    done
 
     # BATS will automatically clean up $BATS_FILE_TMPDIR when tests complete
 }

@@ -51,8 +51,13 @@ setup() {
     # Spawn worker (should return immediately)
     wkflw-ntfy-escalate-spawn "$marker_path" "Test Title" "Test body"
 
-    # Give worker a moment to run (delay is 0 in tests, but need time for background process)
-    sleep 2
+    # Wait for worker to delete marker (with timeout)
+    timeout=30  # 3 seconds max
+    elapsed=0
+    while [ -f "$marker_path" ] && [ $elapsed -lt $timeout ]; do
+        sleep 0.1
+        elapsed=$((elapsed + 1))
+    done
 
     # Marker should be gone (worker ran)
     [ ! -f "$marker_path" ]
