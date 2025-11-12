@@ -22,6 +22,9 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 
+# Generate session ID for this notification event
+SESSION_ID=$("$SCRIPT_DIR/../core/wkflw-ntfy-session-id")
+
 cmd="${1:-}"
 duration="${2:-0}"
 exit_code="${3:-0}"
@@ -30,7 +33,7 @@ cwd="${4:-unknown}"
 # Check threshold
 threshold="${WKFLW_NTFY_NUSHELL_THRESHOLD:-90}"
 if (( duration < threshold )); then
-    # "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "nushell" "Command duration ${duration}s below threshold ${threshold}s"
+    # "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "nushell" "Command duration ${duration}s below threshold ${threshold}s"
     exit 0
 fi
 
@@ -39,7 +42,7 @@ filtered_cmds=("hx" "vim" "nvim" "nano" "emacs" "bash" "zsh" "fish" "nu" "htop" 
 cmd_base=$(echo "$cmd" | awk '{print $1}')
 for filtered in "${filtered_cmds[@]}"; do
     if [[ "$cmd_base" == "$filtered" ]]; then
-        "$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "nushell" "Command $cmd_base is filtered"
+        "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "nushell" "Command $cmd_base is filtered"
         exit 0
     fi
 done
@@ -56,54 +59,55 @@ title="Command Complete"
 body="$dir_name: $cmd ($duration_min min, $status)"
 
 # Detect environment and choose strategy
-env=$("$SCRIPT_DIR/../core/wkflw-ntfy-detect-env")
-strategy=$("$SCRIPT_DIR/../core/wkflw-ntfy-decide-strategy" "$env" "nushell" "")
+env=$("$SCRIPT_DIR/../core/wkflw-ntfy-detect-env" "$SESSION_ID")
+strategy=$("$SCRIPT_DIR/../core/wkflw-ntfy-decide-strategy" "$SESSION_ID" "$env" "nushell" "")
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" debug "nushell" "Command: $cmd, Duration: ${duration}s, Environment: $env, Strategy: $strategy"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "nushell" "Command: $cmd, Duration: ${duration}s, Environment: $env, Strategy: $strategy"
 
 case "$strategy" in
     progressive)
         # Create marker for progressive escalation
-        marker=$("$SCRIPT_DIR/../marker/wkflw-ntfy-marker-create" "nushell" "$cwd")
+        "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-create" "$SESSION_ID" "nushell" "$cwd" >/dev/null
 
         # Get window ID (if iTerm)
         window_id=""
         if [[ "$env" == "iterm" ]]; then
-            window_id=$("$SCRIPT_DIR/../macos/wkflw-ntfy-macos-get-window" || echo "")
+            window_id=$("$SCRIPT_DIR/../macos/wkflw-ntfy-macos-get-window" "$SESSION_ID" || echo "")
         fi
 
         # Create callback script
-        callback_script="$WKFLW_NTFY_STATE_DIR/callback-$$"
+        mkdir -p "$WKFLW_NTFY_STATE_DIR/callbacks"
+        callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${SESSION_ID}.sh"
         cat > "$callback_script" <<EOF
 #!/usr/bin/env bash
-"$SCRIPT_DIR/../macos/wkflw-ntfy-macos-callback" "$marker" "$window_id"
+"$SCRIPT_DIR/../macos/wkflw-ntfy-macos-callback" "$SESSION_ID" "$window_id"
 rm -f "$callback_script"
 EOF
         chmod +x "$callback_script"
 
         # Send desktop notification with callback
-        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$title" "$body" "$callback_script"
+        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body"
 
         # Spawn escalation worker with callback script path
-        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$marker" "$title" "$body" "$callback_script"
+        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$SESSION_ID" "$title" "$body"
         ;;
 
     desktop-only)
         # Send desktop notification (no escalation)
         if [[ "$env" == "linux-gui" ]]; then
-            "$SCRIPT_DIR/../linux/wkflw-ntfy-linux-send" "$title" "$body"
+            "$SCRIPT_DIR/../linux/wkflw-ntfy-linux-send" "$SESSION_ID" "$title" "$body"
         else
-            "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$title" "$body"
+            "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body"
         fi
         ;;
 
     push-only)
         # Send push notification
-        "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$title" "$body"
+        "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$SESSION_ID" "$title" "$body"
         ;;
 
     *)
-        "$SCRIPT_DIR/../core/wkflw-ntfy-log" error "nushell" "Unknown strategy: $strategy"
+        "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" error "nushell" "Unknown strategy: $strategy"
         exit 1
         ;;
 esac
