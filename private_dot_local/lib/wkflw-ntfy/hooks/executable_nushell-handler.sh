@@ -64,40 +64,11 @@ strategy=$("$SCRIPT_DIR/../core/wkflw-ntfy-decide-strategy" "$SESSION_ID" "$env"
 
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "nushell" "Command: $cmd, Duration: ${duration}s, Environment: $env, Strategy: $strategy"
 
-case "$strategy" in
-    progressive)
-        # Create marker for progressive escalation
-        "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-create" "$SESSION_ID" "nushell" "$cwd" >/dev/null
+# Capture window ID in hook context (if iTerm) - must be done before dispatch
+window_id=""
+if [[ "$env" == "iterm" ]]; then
+    window_id=$("$SCRIPT_DIR/../macos/wkflw-ntfy-macos-get-window" "$SESSION_ID" || echo "")
+fi
 
-        # Get window ID (if iTerm) - must be captured in hook context before process exits
-        window_id=""
-        if [[ "$env" == "iterm" ]]; then
-            window_id=$("$SCRIPT_DIR/../macos/wkflw-ntfy-macos-get-window" "$SESSION_ID" || echo "")
-        fi
-
-        # Send desktop notification with window_id for callback
-        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body" "$window_id"
-
-        # Spawn escalation worker
-        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$SESSION_ID" "$title" "$body"
-        ;;
-
-    desktop-only)
-        # Send desktop notification (no escalation)
-        if [[ "$env" == "linux-gui" ]]; then
-            "$SCRIPT_DIR/../linux/wkflw-ntfy-linux-send" "$SESSION_ID" "$title" "$body"
-        else
-            "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body"
-        fi
-        ;;
-
-    push-only)
-        # Send push notification
-        "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$SESSION_ID" "$title" "$body"
-        ;;
-
-    *)
-        "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" error "nushell" "Unknown strategy: $strategy"
-        exit 1
-        ;;
-esac
+# Dispatch to shared strategy handler
+"$SCRIPT_DIR/../core/wkflw-ntfy-dispatch" "$SESSION_ID" "nushell" "$env" "$strategy" "$title" "$body" "$cwd" "$window_id"

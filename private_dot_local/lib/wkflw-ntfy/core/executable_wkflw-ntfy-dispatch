@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-dispatch: Dispatch notification based on strategy
+#
+# Usage: wkflw-ntfy-dispatch <session-id> <event-type> <env> <strategy> <title> <body> <cwd> [window-id]
+#
+# Handles the strategy-based dispatch logic shared by all hooks:
+# - progressive: Desktop notification with escalation to push
+# - desktop-only: Desktop notification only (no escalation)
+# - push-only: Push notification only
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/wkflw-ntfy-config"
+
+session_id="${1:-}"
+event_type="${2:-}"
+env="${3:-}"
+strategy="${4:-}"
+title="${5:-}"
+body="${6:-}"
+cwd="${7:-}"
+window_id="${8:-}"
+
+if [[ -z "$session_id" || -z "$event_type" || -z "$env" || -z "$strategy" || -z "$title" || -z "$body" || -z "$cwd" ]]; then
+    echo "Usage: wkflw-ntfy-dispatch <session-id> <event-type> <env> <strategy> <title> <body> <cwd> [window-id]" >&2
+    exit 1
+fi
+
+case "$strategy" in
+    progressive)
+        # Create marker for progressive escalation
+        "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-create" "$session_id" "$event_type" "$cwd" >/dev/null
+
+        # Send desktop notification with window_id for callback
+        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$session_id" "$title" "$body" "$window_id"
+
+        # Spawn escalation worker
+        "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$session_id" "$title" "$body"
+        ;;
+
+    desktop-only)
+        # Send desktop notification (no escalation)
+        if [[ "$env" == "linux-gui" ]]; then
+            "$SCRIPT_DIR/../linux/wkflw-ntfy-linux-send" "$session_id" "$title" "$body"
+        else
+            "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$session_id" "$title" "$body"
+        fi
+        ;;
+
+    push-only)
+        # Send push notification
+        "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$session_id" "$title" "$body"
+        ;;
+
+    *)
+        "$SCRIPT_DIR/wkflw-ntfy-log" "$session_id" error "dispatch" "Unknown strategy: $strategy"
+        exit 1
+        ;;
+esac
