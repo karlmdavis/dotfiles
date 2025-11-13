@@ -41,7 +41,9 @@ cmd=(terminal-notifier -title "$title" -message "$body")
 
 # Add callback if it exists
 if [[ -f "$callback_script" ]]; then
-    cmd+=(-execute "bash '$callback_script'")
+    # Use printf %q for proper shell escaping (handles paths with special chars)
+    escaped_callback=$(printf %q "$callback_script")
+    cmd+=(-execute "bash $escaped_callback")
 fi
 
 # Send notification
