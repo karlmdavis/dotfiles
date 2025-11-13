@@ -4,7 +4,6 @@ load '../helpers/test_helpers'
 
 setup() {
     export WKFLW_NTFY_STATE_DIR="$BATS_TEST_TMPDIR/state"
-    mkdir -p "$WKFLW_NTFY_STATE_DIR/callbacks"
     export WKFLW_NTFY_DEBUG=0
     setup_mocks
 
@@ -33,15 +32,13 @@ setup() {
 }
 
 @test "macos-send includes callback when provided" {
-    # With session ID system, callback path is constructed automatically
-    # Create the callback script first so macos-send will use it
-    callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${TEST_SESSION_ID}.sh"
-    touch "$callback_script"
+    # Pass window_id as 4th argument - macos-send constructs callback internally
+    window_id="window id 12345"
 
-    wkflw-ntfy-macos-send "$TEST_SESSION_ID" "Title" "Body"
+    wkflw-ntfy-macos-send "$TEST_SESSION_ID" "Title" "Body" "$window_id"
 
     assert_file_contains "$MOCK_LOG_DIR/terminal-notifier.log" "execute"
-    assert_file_contains "$MOCK_LOG_DIR/terminal-notifier.log" "${TEST_SESSION_ID}.sh"
+    assert_file_contains "$MOCK_LOG_DIR/terminal-notifier.log" "wkflw-ntfy-macos-callback"
 }
 
 @test "macos-callback deletes marker and focuses window" {

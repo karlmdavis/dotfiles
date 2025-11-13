@@ -6,7 +6,6 @@
 # Waits for escalation delay, then checks if marker still exists.
 # If marker exists: deletes it (atomic claim) and sends push notification.
 # If marker gone: user acknowledged desktop notification, exit silently.
-# Also cleans up callback script.
 
 set -euo pipefail
 
@@ -32,9 +31,6 @@ if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
     exit 1
 fi
 
-# Construct paths from session ID
-callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${session_id}.sh"
-
 # Wait for escalation delay
 delay="${WKFLW_NTFY_ESCALATION_DELAY:-120}"
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Waiting ${delay}s before checking marker"
@@ -43,10 +39,6 @@ sleep "$delay"
 # Check if marker still exists
 if ! "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-check" "$session_id"; then
     "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Marker deleted, user acknowledged notification"
-    # Clean up callback script (notification was clicked)
-    if [[ -f "$callback_script" ]]; then
-        rm -f "$callback_script"
-    fi
     exit 0
 fi
 
@@ -54,9 +46,3 @@ fi
 "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Escalating to push notification"
 "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$session_id" "$title" "$body"
-
-# Clean up callback script (notification was dismissed)
-if [[ -f "$callback_script" ]]; then
-    rm -f "$callback_script"
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Cleaned up callback script"
-fi

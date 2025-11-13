@@ -69,26 +69,16 @@ case "$strategy" in
         # Create marker for progressive escalation
         "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-create" "$SESSION_ID" "nushell" "$cwd" >/dev/null
 
-        # Get window ID (if iTerm)
+        # Get window ID (if iTerm) - must be captured in hook context before process exits
         window_id=""
         if [[ "$env" == "iterm" ]]; then
             window_id=$("$SCRIPT_DIR/../macos/wkflw-ntfy-macos-get-window" "$SESSION_ID" || echo "")
         fi
 
-        # Create callback script
-        mkdir -p "$WKFLW_NTFY_STATE_DIR/callbacks"
-        callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${SESSION_ID}.sh"
-        cat > "$callback_script" <<EOF
-#!/usr/bin/env bash
-"$SCRIPT_DIR/../macos/wkflw-ntfy-macos-callback" "$SESSION_ID" "$window_id"
-rm -f "$callback_script"
-EOF
-        chmod +x "$callback_script"
+        # Send desktop notification with window_id for callback
+        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body" "$window_id"
 
-        # Send desktop notification with callback
-        "$SCRIPT_DIR/../macos/wkflw-ntfy-macos-send" "$SESSION_ID" "$title" "$body"
-
-        # Spawn escalation worker with callback script path
+        # Spawn escalation worker
         "$SCRIPT_DIR/../escalation/wkflw-ntfy-escalate-spawn" "$SESSION_ID" "$title" "$body"
         ;;
 

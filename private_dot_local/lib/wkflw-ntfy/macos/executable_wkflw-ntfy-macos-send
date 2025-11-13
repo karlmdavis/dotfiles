@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # wkflw-ntfy-macos-send: Send desktop notification via terminal-notifier
 #
-# Usage: wkflw-ntfy-macos-send <session-id> <title> <body>
+# Usage: wkflw-ntfy-macos-send <session-id> <title> <body> [window-id]
+#
+# If window-id is provided, a callback will be attached to focus that window when clicked.
 
 set -euo pipefail
 
@@ -21,9 +23,10 @@ source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 session_id="${1:-}"
 title="${2:-}"
 body="${3:-}"
+window_id="${4:-}"
 
 if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
-    echo "Usage: wkflw-ntfy-macos-send <session-id> <title> <body>" >&2
+    echo "Usage: wkflw-ntfy-macos-send <session-id> <title> <body> [window-id]" >&2
     exit 1
 fi
 
@@ -33,17 +36,15 @@ if ! command -v terminal-notifier &>/dev/null; then
     exit 0
 fi
 
-# Construct callback script path from session ID
-callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${session_id}.sh"
-
 # Build terminal-notifier command
 cmd=(terminal-notifier -title "$title" -message "$body")
 
-# Add callback if it exists
-if [[ -f "$callback_script" ]]; then
-    # Use printf %q for proper shell escaping (handles paths with special chars)
-    escaped_callback=$(printf %q "$callback_script")
-    cmd+=(-execute "bash $escaped_callback")
+# Add callback if window_id provided
+if [[ -n "$window_id" ]]; then
+    # Construct callback command (properly escaped for shell execution)
+    callback_path="$SCRIPT_DIR/wkflw-ntfy-macos-callback"
+    callback_cmd="$(printf %q "$callback_path") $(printf %q "$session_id") $(printf %q "$window_id")"
+    cmd+=(-execute "$callback_cmd")
 fi
 
 # Send notification

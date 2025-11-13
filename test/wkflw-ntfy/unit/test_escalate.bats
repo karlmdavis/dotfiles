@@ -5,7 +5,6 @@ load '../helpers/test_helpers'
 setup() {
     export WKFLW_NTFY_STATE_DIR="$BATS_TEST_TMPDIR/state"
     mkdir -p "$WKFLW_NTFY_STATE_DIR/markers"
-    mkdir -p "$WKFLW_NTFY_STATE_DIR/callbacks"
     export WKFLW_NTFY_DEBUG=0
     export WKFLW_NTFY_TOPIC="test-topic"
     export WKFLW_NTFY_ESCALATION_DELAY=0  # No delay in tests
@@ -68,38 +67,4 @@ setup() {
 
     # Push should be sent
     assert_mock_called "curl"
-}
-
-@test "escalate-worker cleans up callback script if dismissed" {
-    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "test" "/test")
-    callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${TEST_SESSION_ID}.sh"
-    touch "$callback_script"
-
-    wkflw-ntfy-escalate-worker "$TEST_SESSION_ID" "Test Title" "Test body"
-
-    # Marker should be deleted
-    [ ! -f "$marker_path" ]
-
-    # Callback script should be cleaned up
-    [ ! -f "$callback_script" ]
-
-    # Push should be sent
-    assert_mock_called "curl"
-}
-
-@test "escalate-worker cleans up callback script if acknowledged" {
-    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "test" "/test")
-    callback_script="$WKFLW_NTFY_STATE_DIR/callbacks/${TEST_SESSION_ID}.sh"
-    touch "$callback_script"
-
-    # Delete marker first (simulating user clicked notification)
-    wkflw-ntfy-marker-delete "$TEST_SESSION_ID"
-
-    wkflw-ntfy-escalate-worker "$TEST_SESSION_ID" "Test Title" "Test body"
-
-    # Callback script should still be cleaned up
-    [ ! -f "$callback_script" ]
-
-    # Push should NOT be sent
-    assert_mock_not_called "curl"
 }
