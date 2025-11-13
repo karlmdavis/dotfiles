@@ -7,6 +7,9 @@ setup() {
     mkdir -p "$WKFLW_NTFY_STATE_DIR"
     export WKFLW_NTFY_DEBUG=0
 
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
+
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
     mkdir -p "$bin_dir"
@@ -17,36 +20,36 @@ setup() {
 }
 
 @test "iTerm + claude-stop → progressive" {
-    result=$(wkflw-ntfy-decide-strategy "iterm" "claude-stop" "")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "iterm" "claude-stop" "")
     [[ "$result" == "progressive" ]]
 }
 
 @test "iTerm + claude-notification permission_prompt → progressive" {
-    result=$(wkflw-ntfy-decide-strategy "iterm" "claude-notification" "permission_prompt")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "iterm" "claude-notification" "permission_prompt")
     [[ "$result" == "progressive" ]]
 }
 
 @test "iTerm + claude-notification idle_input → progressive" {
-    result=$(wkflw-ntfy-decide-strategy "iterm" "claude-notification" "idle_input")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "iterm" "claude-notification" "idle_input")
     [[ "$result" == "progressive" ]]
 }
 
 @test "iTerm + nushell → progressive" {
-    result=$(wkflw-ntfy-decide-strategy "iterm" "nushell" "")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "iterm" "nushell" "")
     [[ "$result" == "progressive" ]]
 }
 
 @test "macos-gui + any event → desktop-only" {
-    result=$(wkflw-ntfy-decide-strategy "macos-gui" "claude-stop" "")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "macos-gui" "claude-stop" "")
     [[ "$result" == "desktop-only" ]]
 }
 
 @test "linux-gui + any event → desktop-only" {
-    result=$(wkflw-ntfy-decide-strategy "linux-gui" "claude-stop" "")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "linux-gui" "claude-stop" "")
     [[ "$result" == "desktop-only" ]]
 }
 
 @test "nogui + any event → push-only" {
-    result=$(wkflw-ntfy-decide-strategy "nogui" "claude-stop" "")
+    result=$(wkflw-ntfy-decide-strategy "$TEST_SESSION_ID" "nogui" "claude-stop" "")
     [[ "$result" == "push-only" ]]
 }

@@ -8,6 +8,9 @@ setup() {
     export WKFLW_NTFY_DEBUG=0
     setup_mocks
 
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
+
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
     mkdir -p "$bin_dir"
@@ -21,7 +24,7 @@ setup() {
 }
 
 @test "linux-send calls notify-send with title and body" {
-    wkflw-ntfy-linux-send "Test Title" "Test body"
+    wkflw-ntfy-linux-send "$TEST_SESSION_ID" "Test Title" "Test body"
 
     assert_mock_called "notify-send"
     assert_file_contains "$MOCK_LOG_DIR/notify-send.log" "Test Title"
@@ -33,7 +36,7 @@ setup() {
     # Remove notify-send mock but keep other mocks
     rm -f "$BATS_TEST_TMPDIR/mock-bin/notify-send"
 
-    wkflw-ntfy-linux-send "Title" "Body"
+    wkflw-ntfy-linux-send "$TEST_SESSION_ID" "Title" "Body"
 
     # Should call curl (push) as fallback
     assert_mock_called "curl"

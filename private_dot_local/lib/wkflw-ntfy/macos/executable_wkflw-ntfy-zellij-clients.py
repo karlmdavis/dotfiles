@@ -10,10 +10,11 @@ tool uses lsof to match Unix domain socket addresses between processes.
 
 USAGE
 =====
-    python3 zellij-clients.py <PID>
-    uv run zellij-clients.py <PID>
+    python3 zellij-clients.py <SESSION_ID> <PID>
+    uv run zellij-clients.py <SESSION_ID> <PID>
 
 Arguments:
+    SESSION_ID: Session ID for logging (correlates logs with notification event)
     PID: Process ID to inspect (must be a Zellij server)
 
 Output:
@@ -180,11 +181,12 @@ class Output(TypedDict, total=False):
 # Logging Support
 # ================
 
-def log_debug(component: str, message: str) -> None:
+def log_debug(session_id: str, component: str, message: str) -> None:
     """
     Log a debug message using the wkflw-ntfy logging system.
 
     Args:
+        session_id: Session ID for correlating logs
         component: Component name (e.g., "zellij-clients")
         message: Log message
 
@@ -196,12 +198,17 @@ def log_debug(component: str, message: str) -> None:
     script_dir = Path(__file__).parent.parent / "core"
     log_script = script_dir / "wkflw-ntfy-log"
 
-    subprocess.run(
-        [str(log_script), "debug", component, message],
-        capture_output=True,
-        timeout=2,
-        check=True
-    )
+    try:
+        # Call logging script with session ID
+        subprocess.run(
+            [str(log_script), session_id, "debug", component, message],
+            capture_output=True,
+            timeout=2,
+            check=False  # Don't fail on logging errors
+        )
+    except Exception:
+        # Silently ignore logging failures - don't break the main functionality
+        pass
 
 
 # Helper Functions
@@ -521,16 +528,17 @@ def main() -> int:
         Exit code (0 for success, 1 for failure)
     """
     # Parse arguments
-    if len(sys.argv) != 2:
-        print("Usage: zellij-clients.py <PID>", file=sys.stderr)
+    if len(sys.argv) != 3:
+        print("Usage: zellij-clients.py <SESSION_ID> <PID>", file=sys.stderr)
         return 1
 
+    session_id = sys.argv[1]
     try:
-        origin_pid = int(sys.argv[1])
+        origin_pid = int(sys.argv[2])
     except ValueError:
         output: Output = {
             'origin': create_empty_origin(0),
-            'error': f"Invalid PID argument: {sys.argv[1]!r} is not a number"
+            'error': f"Invalid PID argument: {sys.argv[2]!r} is not a number"
         }
         print(json.dumps(output, indent=2))
         return 1
@@ -538,12 +546,12 @@ def main() -> int:
     warnings: list[str] = []
 
     try:
-        log_debug("zellij-clients", f"Checking PID {origin_pid}")
+        log_debug(session_id, "zellij-clients", f"Checking PID {origin_pid}")
 
         # Get lsof data (needed for session name extraction and client finding)
         lsof_lines, error = get_lsof_data()
         if error:
-            log_debug("zellij-clients", f"lsof failed: {error}")
+            log_debug(session_id, "zellij-clients", f"lsof failed: {error}")
             output = {
                 'origin': create_empty_origin(origin_pid),
                 'error': error
@@ -557,7 +565,7 @@ def main() -> int:
         origin_details, error = get_process_details(origin_pid, lsof_lines)
         if error:
             # Process not found or inaccessible
-            log_debug("zellij-clients", f"Failed to get process details: {error}")
+            log_debug(session_id, "zellij-clients", f"Failed to get process details: {error}")
             output = {
                 'origin': create_empty_origin(origin_pid),
                 'error': f"Process {origin_pid} not found or inaccessible: {error}"
@@ -568,7 +576,7 @@ def main() -> int:
         assert origin_details is not None, "origin_details should not be None after successful get_process_details"
 
         classifier = origin_details['classifier']
-        log_debug("zellij-clients", f"PID {origin_pid} classifier: {classifier}")
+        log_debug(session_id, "zellij-clients", f"PID {origin_pid} classifier: {classifier}")
 
         # Build origin with empty clients list
         origin: OriginDetails = {
@@ -579,22 +587,22 @@ def main() -> int:
         # If origin is a server, find connected clients
         if origin_details['classifier'] == 'zellij-server':
             session_name = origin_details.get('zellij_session', 'unknown')
-            log_debug("zellij-clients", f"PID {origin_pid} is zellij server (session: {session_name})")
+            log_debug(session_id, "zellij-clients", f"PID {origin_pid} is zellij server (session: {session_name})")
 
             server_sockets = extract_server_sockets(origin_pid, lsof_lines)
             client_pids = find_client_pids(server_sockets, lsof_lines, origin_pid)
-            log_debug("zellij-clients", f"Found {len(client_pids)} client PIDs: {sorted(client_pids)}")
+            log_debug(session_id, "zellij-clients", f"Found {len(client_pids)} client PIDs: {sorted(client_pids)}")
 
             # Get details for each client
             for client_pid in sorted(client_pids):
                 client_details, error = get_process_details(client_pid, lsof_lines)
                 if error:
-                    log_debug("zellij-clients", f"Failed to get client {client_pid} details: {error}")
+                    log_debug(session_id, "zellij-clients", f"Failed to get client {client_pid} details: {error}")
                     warnings.append(error)
                 elif client_details is not None:
                     origin['clients'].append(client_details)
         else:
-            log_debug("zellij-clients", f"PID {origin_pid} is not a zellij server")
+            log_debug(session_id, "zellij-clients", f"PID {origin_pid} is not a zellij server")
 
         # Build output
         output: Output = {'origin': origin}

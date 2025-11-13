@@ -72,7 +72,7 @@ get_zellij_clients() {
     if ps -p "$pid" -o args= 2>/dev/null | grep -q "zellij.*--server"; then
         "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "PID $pid is zellij server, querying clients"
         # Use Python script to get clients (stderr not suppressed for debug logging)
-        if client_data=$(python3 "$SCRIPT_DIR/wkflw-ntfy-zellij-clients.py" "$pid"); then
+        if client_data=$(python3 "$SCRIPT_DIR/wkflw-ntfy-zellij-clients.py" "$SESSION_ID" "$pid"); then
             # Extract client PIDs (space-separated on stdout)
             echo "$client_data" | jq -r '.origin.clients[].pid' 2>/dev/null
         fi

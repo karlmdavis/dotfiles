@@ -4,7 +4,10 @@ load '../helpers/test_helpers'
 
 setup() {
     export WKFLW_NTFY_STATE_DIR="$BATS_TEST_TMPDIR/state"
-    mkdir -p "$WKFLW_NTFY_STATE_DIR"
+    mkdir -p "$WKFLW_NTFY_STATE_DIR/logs"
+
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
 
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
@@ -16,10 +19,10 @@ setup() {
 
 @test "log debug writes to debug log when debug enabled" {
     export WKFLW_NTFY_DEBUG=1
-    wkflw-ntfy-log debug "test-component" "test message"
+    wkflw-ntfy-log "$TEST_SESSION_ID" debug "test-component" "test message"
 
-    # Find the debug log file (will have the PID of wkflw-ntfy-log process)
-    debug_log=$(find "$WKFLW_NTFY_STATE_DIR" -name "debug-*.log" -type f)
+    # Check the session-specific log file
+    debug_log="$WKFLW_NTFY_STATE_DIR/logs/${TEST_SESSION_ID}.log"
     [ -f "$debug_log" ]
     grep -q "test message" "$debug_log"
     grep -q "test-component" "$debug_log"
@@ -27,14 +30,14 @@ setup() {
 
 @test "log debug does nothing when debug disabled" {
     export WKFLW_NTFY_DEBUG=0
-    wkflw-ntfy-log debug "test-component" "test message"
+    wkflw-ntfy-log "$TEST_SESSION_ID" debug "test-component" "test message"
 
-    debug_log="$WKFLW_NTFY_STATE_DIR/debug-$$.log"
+    debug_log="$WKFLW_NTFY_STATE_DIR/logs/${TEST_SESSION_ID}.log"
     [ ! -f "$debug_log" ]
 }
 
 @test "log warning writes to warnings log" {
-    wkflw-ntfy-log warning "test-component" "test warning"
+    wkflw-ntfy-log "$TEST_SESSION_ID" warning "test-component" "test warning"
 
     warnings_log="$WKFLW_NTFY_STATE_DIR/warnings.log"
     [ -f "$warnings_log" ]
@@ -43,7 +46,7 @@ setup() {
 }
 
 @test "log error writes to warnings log" {
-    wkflw-ntfy-log error "test-component" "test error"
+    wkflw-ntfy-log "$TEST_SESSION_ID" error "test-component" "test error"
 
     warnings_log="$WKFLW_NTFY_STATE_DIR/warnings.log"
     [ -f "$warnings_log" ]

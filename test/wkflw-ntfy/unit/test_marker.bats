@@ -7,6 +7,9 @@ setup() {
     mkdir -p "$WKFLW_NTFY_STATE_DIR/markers"
     export WKFLW_NTFY_DEBUG=0
 
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
+
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
     mkdir -p "$bin_dir"
@@ -19,17 +22,15 @@ setup() {
 }
 
 @test "marker-create creates file with correct name pattern" {
-    marker_path=$(wkflw-ntfy-marker-create "claude-stop" "/test/dir")
+    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "claude-stop" "/test/dir")
 
     [ -f "$marker_path" ]
-    [[ "$marker_path" == *"claude-stop-"* ]]
-    # Check it has a PID suffix (numeric)
-    basename=$(basename "$marker_path")
-    [[ "$basename" =~ -[0-9]+$ ]]
+    # Check it uses the session ID as the filename
+    [[ "$marker_path" == *"$TEST_SESSION_ID" ]]
 }
 
 @test "marker-create writes JSON payload" {
-    marker_path=$(wkflw-ntfy-marker-create "nushell" "/home/user/project")
+    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "nushell" "/home/user/project")
 
     grep -q '"event_type": "nushell"' "$marker_path"
     grep -q '"cwd": "/home/user/project"' "$marker_path"
@@ -37,27 +38,28 @@ setup() {
 }
 
 @test "marker-check returns 0 for existing marker" {
-    marker_path=$(wkflw-ntfy-marker-create "test" "/test")
-    wkflw-ntfy-marker-check "$marker_path"
+    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "test" "/test")
+    wkflw-ntfy-marker-check "$TEST_SESSION_ID"
 }
 
 @test "marker-check returns 1 for missing marker" {
-    run wkflw-ntfy-marker-check "/nonexistent/marker"
+    run wkflw-ntfy-marker-check "nonexistent-session-id"
     [ "$status" -eq 1 ]
 }
 
 @test "marker-delete removes marker file" {
-    marker_path=$(wkflw-ntfy-marker-create "test" "/test")
+    marker_path=$(wkflw-ntfy-marker-create "$TEST_SESSION_ID" "test" "/test")
     [ -f "$marker_path" ]
 
-    wkflw-ntfy-marker-delete "$marker_path"
+    wkflw-ntfy-marker-delete "$TEST_SESSION_ID"
     [ ! -f "$marker_path" ]
 }
 
 @test "marker-delete is idempotent" {
-    marker_path="$WKFLW_NTFY_STATE_DIR/markers/test-marker"
+    test_session="test-marker-session"
+    marker_path="$WKFLW_NTFY_STATE_DIR/markers/$test_session"
     touch "$marker_path"
 
-    wkflw-ntfy-marker-delete "$marker_path"
-    wkflw-ntfy-marker-delete "$marker_path"  # Should not error
+    wkflw-ntfy-marker-delete "$test_session"
+    wkflw-ntfy-marker-delete "$test_session"  # Should not error
 }

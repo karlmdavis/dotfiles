@@ -10,6 +10,9 @@ setup() {
     export WKFLW_NTFY_DEBUG=0
     setup_mocks
 
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
+
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
     mkdir -p "$bin_dir"
@@ -21,14 +24,14 @@ setup() {
 }
 
 @test "macos-get-window calls osascript and returns window ID" {
-    result=$(wkflw-ntfy-macos-get-window)
+    result=$(wkflw-ntfy-macos-get-window "$TEST_SESSION_ID")
 
     assert_mock_called "osascript"
     [[ "$result" == "12345" ]]
 }
 
 @test "macos-focus calls osascript with window ID" {
-    wkflw-ntfy-macos-focus "12345"
+    wkflw-ntfy-macos-focus "$TEST_SESSION_ID" "12345"
 
     assert_mock_called "osascript"
     assert_file_contains "$MOCK_LOG_DIR/osascript.log" "window id 12345"
@@ -46,5 +49,5 @@ setup() {
     ln -sf "$PWD/test/wkflw-ntfy/mocks/executable_curl" "$mock_no_osascript/curl"
 
     # Run with restricted PATH that doesn't include system /usr/bin
-    PATH="$bin_dir:$mock_no_osascript" run -127 wkflw-ntfy-macos-get-window
+    PATH="$bin_dir:$mock_no_osascript" run -127 wkflw-ntfy-macos-get-window "$TEST_SESSION_ID"
 }

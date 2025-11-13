@@ -10,6 +10,9 @@ setup() {
     export WKFLW_NTFY_SERVER="https://ntfy.sh"
     setup_mocks
 
+    # Generate test session ID
+    export TEST_SESSION_ID="2025-11-12T00-00-00-test0001"
+
     # Create symlinks without executable_ prefix for PATH usage
     local bin_dir="$BATS_TEST_TMPDIR/bin"
     mkdir -p "$bin_dir"
@@ -20,7 +23,7 @@ setup() {
 }
 
 @test "push sends notification via curl to ntfy server" {
-    wkflw-ntfy-push "Test Title" "Test body message"
+    wkflw-ntfy-push "$TEST_SESSION_ID" "Test Title" "Test body message"
 
     assert_mock_called "curl"
     assert_file_contains "$MOCK_LOG_DIR/curl.log" "https://ntfy.sh/test-topic-12345"
@@ -28,7 +31,7 @@ setup() {
 }
 
 @test "push includes title and body in request" {
-    wkflw-ntfy-push "My Title" "My body"
+    wkflw-ntfy-push "$TEST_SESSION_ID" "My Title" "My body"
 
     assert_file_contains "$MOCK_LOG_DIR/curl.log" "My Title"
     assert_file_contains "$MOCK_LOG_DIR/curl.log" "My body"
@@ -37,6 +40,6 @@ setup() {
 @test "push handles missing topic gracefully" {
     unset WKFLW_NTFY_TOPIC
 
-    run wkflw-ntfy-push "Title" "Body"
+    run wkflw-ntfy-push "$TEST_SESSION_ID" "Title" "Body"
     [ "$status" -ne 0 ]
 }
