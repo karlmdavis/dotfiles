@@ -30,7 +30,18 @@ if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
 fi
 
 # Spawn worker in background (detached)
+# Temporarily disable errexit to catch nohup failures
+set +e
 nohup "$SCRIPT_DIR/wkflw-ntfy-escalate-worker" "$session_id" "$title" "$body" \
     >/dev/null 2>&1 &
+spawn_status=$?
+worker_pid=$!
+set -e
 
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-spawn" "Spawned escalation worker (PID: $!)"
+# Check if spawn succeeded
+if [ $spawn_status -ne 0 ]; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" error "escalate-spawn" "Failed to spawn escalation worker (exit code: $spawn_status)"
+    exit 1
+fi
+
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-spawn" "Spawned escalation worker (PID: $worker_pid)"
