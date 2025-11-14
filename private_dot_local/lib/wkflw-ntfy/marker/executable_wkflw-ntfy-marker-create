@@ -39,16 +39,19 @@ mkdir -p "$markers_dir"
 # Marker filename based on session ID
 marker_file="$markers_dir/${session_id}"
 
-# Write JSON payload
-cat > "$marker_file" <<EOF
-{
-  "session_id": "$session_id",
-  "event_type": "$event_type",
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "pid": $$,
-  "cwd": "$cwd"
-}
-EOF
+# Write JSON payload using jq for safe escaping (prevents injection)
+jq -n \
+  --arg session "$session_id" \
+  --arg event "$event_type" \
+  --arg cwd "$cwd" \
+  --argjson pid $$ \
+  '{
+    session_id: $session,
+    event_type: $event,
+    timestamp: (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
+    pid: $pid,
+    cwd: $cwd
+  }' > "$marker_file"
 
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-create" "Created marker: $marker_file"
 echo "$marker_file"
