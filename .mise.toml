@@ -29,7 +29,7 @@ echo "✓ Shellcheck passed!"
 description = "Run wkflw-ntfy unit tests"
 run = """
 echo "Running wkflw-ntfy unit tests..."
-# Note: Add --jobs 4 for parallel execution (requires GNU parallel: brew install parallel)
+# Note: Add --jobs 4 for parallel execution (Bats 1.0+ has native parallel support)
 bats test/wkflw-ntfy/unit/
 """
 

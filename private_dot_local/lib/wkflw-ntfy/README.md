@@ -45,6 +45,23 @@ Each script does one thing well, tested in isolation.
 - `claude-notification.sh` - Claude Code Notification hook (needs attention)
 - `nushell-handler.sh` - Nushell long-running command handler
 
+## Dependencies
+
+**Required:**
+- `bash` - Shell scripts use bash features
+- `jq` - JSON processing (config, markers, hook parsing)
+
+**Platform-specific:**
+- **macOS**: `terminal-notifier` for desktop notifications, `python3` for zellij client detection
+- **Linux**: `notify-send` (libnotify-bin) for desktop notifications
+
+**Optional:**
+- `curl` - For push notifications via ntfy.sh (only needed if push-only or progressive strategy used)
+
+All dependencies are included in `.chezmoidata/system_packages_autoinstall.yaml` and installed
+automatically via chezmoi. The Python script uses system python3 (not uv) via `#!/usr/bin/env python3`
+shebang for portability.
+
 ## Configuration
 
 Environment variables (all optional, have defaults):
