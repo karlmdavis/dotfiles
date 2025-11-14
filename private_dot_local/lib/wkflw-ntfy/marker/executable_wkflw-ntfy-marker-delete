@@ -31,13 +31,15 @@ fi
 
 # Construct marker path from session ID
 marker_file="$WKFLW_NTFY_STATE_DIR/markers/${session_id}"
+claimed_file="${marker_file}.claimed"
 
-# Atomic delete: only succeeds if file exists
-if [[ -f "$marker_file" ]]; then
-    rm -f "$marker_file"
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Deleted marker: $marker_file"
+# Atomic claim using mv: only one process can successfully rename the file
+# This is truly atomic - kernel guarantees only one mv succeeds
+if mv "$marker_file" "$claimed_file" 2>/dev/null; then
+    rm -f "$claimed_file"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Claimed and deleted marker: $marker_file"
     exit 0
 else
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Marker already deleted: $marker_file"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Marker already claimed by another process: $marker_file"
     exit 1
 fi
