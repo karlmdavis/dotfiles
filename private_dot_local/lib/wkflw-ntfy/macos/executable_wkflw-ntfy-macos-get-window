@@ -71,6 +71,13 @@ get_zellij_clients() {
     # Check if it's a zellij server
     if ps -p "$pid" -o args= 2>/dev/null | grep -q "zellij.*--server"; then
         "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" debug "macos-get-window" "PID $pid is zellij server, querying clients"
+
+        # Verify python3 is available
+        if ! command -v python3 &>/dev/null; then
+            "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$SESSION_ID" warning "macos-get-window" "python3 not found, cannot detect zellij clients"
+            return 1
+        fi
+
         # Use Python script to get clients (stderr not suppressed for debug logging)
         if client_data=$(python3 "$SCRIPT_DIR/wkflw-ntfy-zellij-clients.py" "$SESSION_ID" "$pid"); then
             # Extract client PIDs (space-separated on stdout)
