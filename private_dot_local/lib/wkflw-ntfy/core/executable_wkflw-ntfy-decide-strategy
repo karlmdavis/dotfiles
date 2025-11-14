@@ -31,11 +31,9 @@ source "$SCRIPT_DIR/wkflw-ntfy-config"
 session_id="${1:-}"
 environment="${2:-}"
 event_type="${3:-}"
-# shellcheck disable=SC2034  # notification_type used in strategy logic, not referenced directly
-notification_type="${4:-}"
 
 if [[ -z "$session_id" || -z "$environment" || -z "$event_type" ]]; then
-    echo "Usage: wkflw-ntfy-decide-strategy <session-id> <environment> <event-type> <notification-type>" >&2
+    echo "Usage: wkflw-ntfy-decide-strategy <session-id> <environment> <event-type>" >&2
     exit 1
 fi
 
