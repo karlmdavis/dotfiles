@@ -19,7 +19,7 @@ set -euo pipefail
 # Read config file first (allows overriding defaults)
 config_file="$WKFLW_NTFY_STATE_DIR/config"
 if [[ -f "$config_file" ]]; then
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090  # Config file path is dynamic (user state directory)
     source "$config_file"
 fi
 

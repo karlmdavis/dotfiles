@@ -18,7 +18,7 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
-# shellcheck disable=SC1091
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
 source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
 
 # Generate session ID for this notification event

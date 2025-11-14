@@ -25,13 +25,13 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
-# shellcheck disable=SC1091
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
 source "$SCRIPT_DIR/wkflw-ntfy-config"
 
 session_id="${1:-}"
 environment="${2:-}"
 event_type="${3:-}"
-# shellcheck disable=SC2034
+# shellcheck disable=SC2034  # notification_type used in strategy logic, not referenced directly
 notification_type="${4:-}"
 
 if [[ -z "$session_id" || -z "$environment" || -z "$event_type" ]]; then
