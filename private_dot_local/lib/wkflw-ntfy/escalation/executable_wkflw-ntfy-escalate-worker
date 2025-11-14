@@ -36,13 +36,13 @@ delay="${WKFLW_NTFY_ESCALATION_DELAY:-120}"
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Waiting ${delay}s before checking marker"
 sleep "$delay"
 
-# Check if marker still exists
-if ! "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-check" "$session_id"; then
-    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Marker deleted, user acknowledged notification"
+# Atomic marker delete: only proceeds if we successfully claim it
+# Exit code 0 = we won the race, exit code 1 = already deleted by user
+if ! "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Marker already deleted, user acknowledged notification"
     exit 0
 fi
 
-# Marker still exists: delete it (atomic claim) and send push
-"$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"
+# We claimed the marker, send push notification
 "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-worker" "Escalating to push notification"
 "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$session_id" "$title" "$body"

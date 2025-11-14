@@ -55,11 +55,15 @@ setup() {
     [ ! -f "$marker_path" ]
 }
 
-@test "marker-delete is idempotent" {
+@test "marker-delete returns 1 if marker already deleted" {
     test_session="test-marker-session"
     marker_path="$WKFLW_NTFY_STATE_DIR/markers/$test_session"
     touch "$marker_path"
 
+    # First delete succeeds (returns 0)
     wkflw-ntfy-marker-delete "$test_session"
-    wkflw-ntfy-marker-delete "$test_session"  # Should not error
+
+    # Second delete fails (returns 1 - marker already gone)
+    run wkflw-ntfy-marker-delete "$test_session"
+    [ "$status" -eq 1 ]
 }

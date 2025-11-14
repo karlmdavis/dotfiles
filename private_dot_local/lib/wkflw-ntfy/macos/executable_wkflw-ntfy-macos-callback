@@ -27,8 +27,12 @@ if [[ -z "$session_id" ]]; then
 fi
 
 # Delete marker (atomic claim - prevents escalation worker from sending push)
-"$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-callback" "User acknowledged notification"
+# Ignore errors if marker already deleted (race with escalation worker)
+if "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-callback" "User acknowledged notification (claimed marker)"
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-callback" "User acknowledged notification (marker already deleted)"
+fi
 
 # Focus window if ID provided
 if [[ -n "$window_id" ]]; then

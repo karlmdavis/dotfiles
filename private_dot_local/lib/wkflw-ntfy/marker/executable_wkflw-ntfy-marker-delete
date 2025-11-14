@@ -3,7 +3,9 @@
 #
 # Usage: wkflw-ntfy-marker-delete <session-id>
 #
-# Idempotent: Succeeds even if file already deleted
+# Exit codes:
+# - 0: Marker existed and was deleted (caller won the race)
+# - 1: Marker didn't exist (already deleted by another process)
 
 set -euo pipefail
 
@@ -30,6 +32,12 @@ fi
 # Construct marker path from session ID
 marker_file="$WKFLW_NTFY_STATE_DIR/markers/${session_id}"
 
-# Delete marker (idempotent with -f)
-rm -f "$marker_file"
-"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Deleted marker: $marker_file"
+# Atomic delete: only succeeds if file exists
+if [[ -f "$marker_file" ]]; then
+    rm -f "$marker_file"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Deleted marker: $marker_file"
+    exit 0
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Marker already deleted: $marker_file"
+    exit 1
+fi
