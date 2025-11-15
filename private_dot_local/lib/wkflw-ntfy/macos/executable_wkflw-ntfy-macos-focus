@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-focus: Focus iTerm window by ID using AppleScript
+#
+# Usage: wkflw-ntfy-macos-focus <session-id> <window-id>
+#   session-id: Unique session identifier
+#   window-id: Numeric window ID from macos-get-window (e.g., "12345")
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+session_id="${1:-}"
+window_id="${2:-}"
+
+if [[ -z "$session_id" || -z "$window_id" ]]; then
+    echo "Usage: wkflw-ntfy-macos-focus <session-id> <window-id>" >&2
+    exit 1
+fi
+
+# Focus window via AppleScript (activate brings iTerm to front, select chooses window)
+if osascript -e "tell application \"iTerm2\"
+    activate
+    select window id $window_id
+end tell" 2>/dev/null; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-focus" "Focused window: $window_id"
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" warning "macos-focus" "Failed to focus window: $window_id"
+    exit 1
+fi

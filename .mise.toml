@@ -11,31 +11,27 @@ description = "Run shellcheck on all bash scripts"
 run = """
 echo "Running shellcheck..."
 shellcheck \
-  private_dot_local/bin/executable_ntfy-*.sh \
-  run_once_ntfy-generate-topic.sh \
-  test/test_helpers.bash \
-  test/mocks/*
+  private_dot_local/lib/wkflw-ntfy/core/executable_* \
+  private_dot_local/lib/wkflw-ntfy/marker/executable_* \
+  private_dot_local/lib/wkflw-ntfy/macos/executable_wkflw-ntfy-macos-* \
+  private_dot_local/lib/wkflw-ntfy/linux/executable_* \
+  private_dot_local/lib/wkflw-ntfy/push/executable_* \
+  private_dot_local/lib/wkflw-ntfy/escalation/executable_* \
+  private_dot_local/lib/wkflw-ntfy/hooks/executable_* \
+  run_once_after_wkflw-ntfy-generate-topic.sh.tmpl \
+  test/wkflw-ntfy/helpers/*.bash \
+  test/wkflw-ntfy/mocks/executable_*
 
 echo "✓ Shellcheck passed!"
 """
 
-[tasks.test-bash]
-description = "Run bash script E2E tests"
-run = """
-echo "Running bash E2E tests (bats)..."
-bats test/test_claude_hooks.bats
-"""
-
-[tasks.test-nu]
-description = "Run nushell E2E tests"
-run = """
-echo "Running nushell E2E tests..."
-nu test/test_nushell_hooks.nu
-"""
-
 [tasks.test]
-description = "Run all tests"
-depends = ["test-bash", "test-nu"]
+description = "Run wkflw-ntfy unit tests"
+run = """
+echo "Running wkflw-ntfy unit tests..."
+# Note: Add --jobs 4 for parallel execution (Bats 1.0+ has native parallel support)
+bats test/wkflw-ntfy/unit/
+"""
 
 [tasks.ci]
 description = "Run complete CI suite (lint + test in parallel)"

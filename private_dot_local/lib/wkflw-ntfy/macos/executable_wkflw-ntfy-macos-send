@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-send: Send desktop notification via terminal-notifier
+#
+# Usage: wkflw-ntfy-macos-send <session-id> <title> <body> [window-id]
+#
+# If window-id is provided, a callback will be attached to focus that window when clicked.
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+session_id="${1:-}"
+title="${2:-}"
+body="${3:-}"
+window_id="${4:-}"
+
+if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-macos-send <session-id> <title> <body> [window-id]" >&2
+    exit 1
+fi
+
+if ! command -v terminal-notifier &>/dev/null; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" warning "macos-send" "terminal-notifier not found, falling back to push"
+    "$SCRIPT_DIR/../push/wkflw-ntfy-push" "$session_id" "$title" "$body"
+    exit 0
+fi
+
+# Build terminal-notifier command
+cmd=(terminal-notifier -title "$title" -message "$body")
+
+# Add callback if window_id provided
+if [[ -n "$window_id" ]]; then
+    # Construct callback command (properly escaped for shell execution)
+    callback_path="$SCRIPT_DIR/wkflw-ntfy-macos-callback"
+    callback_cmd="$(printf %q "$callback_path") $(printf %q "$session_id") $(printf %q "$window_id")"
+    cmd+=(-execute "$callback_cmd")
+fi
+
+# Send notification
+"${cmd[@]}"
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-send" "Sent desktop notification: $title"

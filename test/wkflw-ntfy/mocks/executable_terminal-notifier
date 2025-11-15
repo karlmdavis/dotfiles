@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Mock terminal-notifier for testing
+# Logs all invocations to terminal-notifier.log
+
+MOCK_LOG_DIR="${MOCK_LOG_DIR:-/tmp}"
+MOCK_LOG="$MOCK_LOG_DIR/terminal-notifier.log"
+
+printf "[%s] %s %s\n" "$EPOCHSECONDS" "$0" "$*" >> "$MOCK_LOG"
+
+# Extract -execute callback if present
+for i in "$@"; do
+    if [[ "$execute_next" == "1" ]]; then
+        # Log the callback script path
+        echo "CALLBACK: $i" >> "$MOCK_LOG"
+
+        # Execute the callback if MOCK_EXEC_CALLBACKS is set
+        if [[ "${MOCK_EXEC_CALLBACKS:-}" == "1" ]]; then
+            bash "$i"
+        fi
+        execute_next=0
+    fi
+
+    if [[ "$i" == "-execute" ]]; then
+        execute_next=1
+    fi
+done
+
+exit 0

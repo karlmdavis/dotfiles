@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-macos-callback: Callback invoked when notification clicked
+#
+# Usage: wkflw-ntfy-macos-callback <session-id> [window-id]
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+session_id="${1:-}"
+window_id="${2:-}"
+
+if [[ -z "$session_id" ]]; then
+    echo "Usage: wkflw-ntfy-macos-callback <session-id> [window-id]" >&2
+    exit 1
+fi
+
+# Delete marker (atomic claim - prevents escalation worker from sending push)
+# Ignore errors if marker already deleted (race with escalation worker)
+if "$SCRIPT_DIR/../marker/wkflw-ntfy-marker-delete" "$session_id"; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-callback" "User acknowledged notification (claimed marker)"
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "macos-callback" "User acknowledged notification (marker already deleted)"
+fi
+
+# Focus window if ID provided
+if [[ -n "$window_id" ]]; then
+    "$SCRIPT_DIR/wkflw-ntfy-macos-focus" "$session_id" "$window_id"
+fi

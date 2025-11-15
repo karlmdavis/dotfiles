@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-config: Load configuration from environment variables
+#
+# Usage: source wkflw-ntfy-config
+#
+# Sets environment variables with defaults:
+# - WKFLW_NTFY_SERVER (default: https://ntfy.sh)
+# - WKFLW_NTFY_NUSHELL_THRESHOLD (default: 90)
+# - WKFLW_NTFY_ESCALATION_DELAY (default: 120)
+# - WKFLW_NTFY_DEBUG (default: 0)
+# - WKFLW_NTFY_TOPIC (from state file or env)
+# - WKFLW_NTFY_STATE_DIR (default: ~/.local/state/wkflw-ntfy)
+
+set -euo pipefail
+
+# State directory for config and marker files
+: "${WKFLW_NTFY_STATE_DIR:=$HOME/.local/state/wkflw-ntfy}"
+
+# Read config file first (allows overriding defaults)
+config_file="$WKFLW_NTFY_STATE_DIR/config"
+if [[ -f "$config_file" ]]; then
+    # shellcheck disable=SC1090  # Config file path is dynamic (user state directory)
+    source "$config_file"
+fi
+
+# Configuration with defaults (only set if not already set by config file)
+: "${WKFLW_NTFY_SERVER:=https://ntfy.sh}"
+: "${WKFLW_NTFY_NUSHELL_THRESHOLD:=90}"
+: "${WKFLW_NTFY_ESCALATION_DELAY:=120}"
+: "${WKFLW_NTFY_DEBUG:=0}"
+
+# Warn if topic not configured
+if [[ -z "${WKFLW_NTFY_TOPIC:-}" ]]; then
+    echo "WARNING: WKFLW_NTFY_TOPIC not set in $config_file" >&2
+    echo "Mobile push notifications will not work until topic is configured." >&2
+fi
+
+# Export all config for use by child processes
+export WKFLW_NTFY_STATE_DIR
+export WKFLW_NTFY_SERVER
+export WKFLW_NTFY_NUSHELL_THRESHOLD
+export WKFLW_NTFY_ESCALATION_DELAY
+export WKFLW_NTFY_DEBUG
+export WKFLW_NTFY_TOPIC

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Mock curl for testing
+# Logs invocations (ntfy push simulation)
+
+MOCK_LOG_DIR="${MOCK_LOG_DIR:-/tmp}"
+MOCK_LOG="$MOCK_LOG_DIR/curl.log"
+
+printf "[%s] %s %s\n" "$EPOCHSECONDS" "$0" "$*" >> "$MOCK_LOG"
+
+# Simulate successful POST
+exit 0

@@ -80,9 +80,7 @@ min_time = 0
 format = "[\ueba2 $duration]($style)"
 style = "bg:#1d2230"
 show_milliseconds = true
-# Enable desktop notifications for longer commands.
-#
-# Note: On sway, this requires `mako`, with the following fix:
-# <https://github.com/emersion/mako/issues/257#issuecomment-1049087860>.
-show_notifications = true
-min_time_to_notify = 45_000
+# Desktop notifications are handled by nushell hooks (ntfy-nu-hooks.nu)
+# which provide better focus detection and session-specific notifications.
+show_notifications = false
+# min_time_to_notify = 45_000

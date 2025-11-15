@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-marker-delete: Delete marker file (atomic claim)
+#
+# Usage: wkflw-ntfy-marker-delete <session-id>
+#
+# Exit codes:
+# - 0: Marker existed and was deleted (caller won the race)
+# - 1: Marker didn't exist (already deleted by another process)
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+session_id="${1:-}"
+
+if [[ -z "$session_id" ]]; then
+    echo "Usage: wkflw-ntfy-marker-delete <session-id>" >&2
+    exit 1
+fi
+
+# Construct marker path from session ID
+marker_file="$WKFLW_NTFY_STATE_DIR/markers/${session_id}"
+claimed_file="${marker_file}.claimed"
+
+# Atomic claim using mv: only one process can successfully rename the file
+# This is truly atomic - kernel guarantees only one mv succeeds
+if mv "$marker_file" "$claimed_file" 2>/dev/null; then
+    rm -f "$claimed_file"
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Claimed and deleted marker: $marker_file"
+    exit 0
+else
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "marker-delete" "Marker already claimed by another process: $marker_file"
+    exit 1
+fi

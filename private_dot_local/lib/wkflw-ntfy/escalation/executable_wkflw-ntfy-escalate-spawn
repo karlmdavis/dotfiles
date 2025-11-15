@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# wkflw-ntfy-escalate-spawn: Spawn background escalation worker
+#
+# Usage: wkflw-ntfy-escalate-spawn <session-id> <title> <body>
+#
+# Spawns escalate-worker as detached background process.
+
+set -euo pipefail
+
+# Load config and logging
+# Resolve symlinks to find actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# shellcheck disable=SC1091  # Config path is dynamic (resolved from symlink)
+source "$SCRIPT_DIR/../core/wkflw-ntfy-config"
+
+session_id="${1:-}"
+title="${2:-}"
+body="${3:-}"
+
+if [[ -z "$session_id" || -z "$title" || -z "$body" ]]; then
+    echo "Usage: wkflw-ntfy-escalate-spawn <session-id> <title> <body>" >&2
+    exit 1
+fi
+
+# Spawn worker in background (detached)
+# Temporarily disable errexit to catch nohup failures
+set +e
+nohup "$SCRIPT_DIR/wkflw-ntfy-escalate-worker" "$session_id" "$title" "$body" \
+    >/dev/null 2>&1 &
+spawn_status=$?
+worker_pid=$!
+set -e
+
+# Check if spawn succeeded
+if [ $spawn_status -ne 0 ]; then
+    "$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" error "escalate-spawn" "Failed to spawn escalation worker (exit code: $spawn_status)"
+    exit 1
+fi
+
+"$SCRIPT_DIR/../core/wkflw-ntfy-log" "$session_id" debug "escalate-spawn" "Spawned escalation worker (PID: $worker_pid)"
