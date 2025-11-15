@@ -14,7 +14,7 @@ fi
 # Generate unique topic
 hostname="{{ .chezmoi.hostname }}"
 username="{{ .chezmoi.username }}"
-random="{{ randInt 10000000 99999999 }}"
+random=$((10000000 + $(od -An -N4 -tu4 < /dev/urandom | tr -d ' ') % 90000000))
 topic="${hostname}-${username}-${random}"
 
 # Write config
