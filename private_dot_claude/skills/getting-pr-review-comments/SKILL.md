@@ -13,6 +13,23 @@ Retrieve Claude Code review bot comments from a PR and extract actionable recomm
 
 **Automatic dependency:** This skill automatically waits for workflows (including Claude review) to complete before fetching comments.
 
+## CRITICAL: Scope Guardrails
+
+**This skill ONLY extracts and reports review recommendations. It NEVER fixes issues.**
+
+When you find review recommendations:
+- ✅ Extract the recommendations from the Claude bot comment
+- ✅ Format them as a numbered list with severity and location
+- ✅ Return the concise summary
+- ❌ DO NOT investigate the recommendations
+- ❌ DO NOT read the code files mentioned
+- ❌ DO NOT propose fixes
+- ❌ DO NOT make any code changes
+
+**Why:** This skill runs in a subagent to save tokens. Addressing recommendations should happen in main
+  context with user approval, not automatically in the subagent. Return the recommendations and let the
+  caller decide what to do.
+
 ## When to Use
 
 Use when you need:
@@ -35,7 +52,7 @@ Read and execute the `awaiting-pr-workflows` skill's workflow to:
 - Check for unpushed commits
 - Verify PR exists and commit correlation
 - Wait for workflows to start (up to 30s)
-- Wait for workflows to complete (up to 20 minutes)
+- Wait for workflows to complete (up to 1 minute)
 
 Once all workflows (including Claude Code Review) are complete, proceed to Step 1 below.
 

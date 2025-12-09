@@ -13,6 +13,23 @@ Get workflow job results and provide commands to retrieve logs, without loading 
 
 **Automatic dependency:** This skill automatically waits for workflows to complete before fetching results.
 
+## CRITICAL: Scope Guardrails
+
+**This skill ONLY reports workflow status. It NEVER fixes issues.**
+
+When you find failures:
+- ✅ Report which jobs failed
+- ✅ Provide commands to retrieve logs
+- ✅ Suggest grep patterns to search logs
+- ❌ DO NOT read the logs yourself
+- ❌ DO NOT investigate the root cause
+- ❌ DO NOT propose fixes
+- ❌ DO NOT make any code changes
+
+**Why:** This skill runs in a subagent to save tokens. Fixing issues should happen in main context with
+  user approval, not automatically in the subagent. Return the status report and let the caller decide
+  what to do.
+
 ## When to Use
 
 Use when you need:
@@ -35,7 +52,7 @@ Read and execute that skill's workflow to:
 - Check for unpushed commits
 - Verify PR exists and commit correlation
 - Wait for workflows to start (up to 30s)
-- Wait for workflows to complete (up to 20 minutes)
+- Wait for workflows to complete (up to 1 minute)
 
 Once all workflows are complete, proceed to Step 1 below.
 

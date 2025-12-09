@@ -24,8 +24,6 @@ I would like you to check the current PR's quality and readiness for merge, then
        - Overall PR status (ready to merge / needs fixes).
    2.b. List all issues/recommendations by number (e.g., "Issue 1: Test failure in...", "Issue 2: Review
          suggests...").
-   2.c. CRITICAL: The subagents should ONLY report status, NEVER fix issues.
-         Fixing happens in step 3 with user approval, not during data gathering.
 
 3. **Address Each Issue Interactively**
    3.a. For each issue/recommendation from the summary:
