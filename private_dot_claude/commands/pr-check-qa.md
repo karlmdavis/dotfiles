@@ -21,10 +21,11 @@ I would like you to check the current PR's quality and readiness for merge, then
    3.a. For each issue/recommendation from the summary:
        - Discuss the specific issue in detail.
        - Investigate the root cause (fetch logs, read relevant code, etc.).
-       - Propose and implement a fix.
-       - Commit the fix with a clear message referencing the issue.
+       - Propose a fix, ask the user about the proposal, and proceed per their direction.
+       - If changes are made to address the issue, commit those changes with a clear message referencing
+           the issue.
    3.b. Work through all issues sequentially until all are addressed.
-   3.c. DO NOT ask for permission for individual commits - just make them.
+   3.c. DO NOT ask for permission for individual commits - just make them after implementing fixes.
 
 4. **Final Push**
    4.a. After all issues are fixed and committed, verify the branch is ready.
