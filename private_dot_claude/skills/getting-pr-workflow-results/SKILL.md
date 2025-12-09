@@ -80,7 +80,27 @@ gh run view $RUN_ID --json jobs --jq '.jobs[] | {
 }'
 ```
 
-### Step 3: Extract Error Messages from Failed Jobs
+### Step 3: Check for Artifacts
+
+Check if the run has artifacts that might help with debugging:
+
+```bash
+# List artifacts for this run
+gh run view $RUN_ID --json artifacts --jq '.artifacts[] | {
+  name: .name,
+  size: .size_in_bytes,
+  expired: .expired
+}'
+```
+
+**Common useful artifacts:**
+- Test reports (JUnit XML, HTML reports)
+- Screenshots (for UI test failures)
+- Crash logs
+- Coverage reports
+- Build artifacts
+
+### Step 4: Extract Error Messages from Failed Jobs
 
 For failed jobs, retrieve the logs and extract key errors:
 
@@ -106,16 +126,17 @@ LOGS=$(gh run view $RUN_ID --log-failed)
 - Debug output
 - Passing tests
 
-### Step 4: Build Return Summary
+### Step 5: Build Return Summary
 
 For each job, return:
 
 1. **Job name and result**
 2. **Actual error messages/failures** (extracted from logs)
 3. **Context** (what was happening when it failed)
-4. **Location in repo** (workflow file path + line if applicable)
-5. **gh command** to retrieve full logs (for deeper investigation)
-6. **grep suggestions** for common issues
+4. **Artifacts** (if any exist for the run)
+5. **Location in repo** (workflow file path + line if applicable)
+6. **gh commands** to retrieve full logs and download artifacts
+7. **grep suggestions** for common issues
 
 ## Return Format
 
@@ -141,6 +162,22 @@ testHealthCheckE2E FAILED
 testSettingsE2E FAILED
   Error: Element not found: settingsButton
   at SettingsTests.swift:87
+```
+
+**Artifacts available:**
+- `ios-test-results` (2.4 MB) - Test result bundle with screenshots
+- `test-logs` (156 KB) - Detailed test logs
+
+**Download artifacts:**
+```bash
+# Download all artifacts from this run:
+gh run download 19727163744
+
+# Download specific artifact:
+gh run download 19727163744 -n ios-test-results
+
+# Or view/download from web:
+# https://github.com/{owner}/{repo}/actions/runs/19727163744
 ```
 
 **Retrieve full logs:**
@@ -176,6 +213,9 @@ error: unused import in src/simulator.rs
 warning: variable does not need to be mutable
   --> src/main.rs:42:9
 ```
+
+**Artifacts available:**
+None
 
 **Retrieve full logs:**
 ```bash
@@ -297,6 +337,9 @@ done
 | Get run details | `gh run view $RUN_ID --json jobs` |
 | Get failed logs only | `gh run view $RUN_ID --log-failed` |
 | Get specific job log | `gh run view $RUN_ID --job $JOB_ID --log` |
+| List artifacts | `gh run view $RUN_ID --json artifacts` |
+| Download all artifacts | `gh run download $RUN_ID` |
+| Download specific artifact | `gh run download $RUN_ID -n $ARTIFACT_NAME` |
 | List workflows | `gh api repos/{owner}/{repo}/actions/workflows` |
 
 ## Use Subagents
