@@ -1,6 +1,6 @@
 ---
 name: awaiting-pr-workflows
-description: Use when needing to check PR workflow status, especially under time pressure or after pushing commits - ensures verification of unpushed changes, commit correlation, and patient waiting for workflows to complete (up to 1 minute)
+description: Use when needing to check PR workflow status, especially under time pressure or after pushing commits - ensures verification of unpushed changes, commit correlation, and patient waiting for workflows to complete (up to 20 minutes)
 ---
 
 # Awaiting PR Workflows
@@ -144,7 +144,7 @@ if [ "$INCOMPLETE" -eq 0 ]; then
   echo "✅ All workflows already complete!"
 else
   # Wait with exponential backoff
-  MAX_WAIT=60    # 1 minute in seconds
+  MAX_WAIT=1200  # 20 minutes in seconds
   INTERVAL=5     # Start with 5 seconds
   elapsed=0
 
@@ -156,7 +156,7 @@ else
       break
     fi
 
-    echo "⏳ $INCOMPLETE workflow(s) still running... (${elapsed}s elapsed)"
+    echo "⏳ $INCOMPLETE workflow(s) still running... (${elapsed}s elapsed, max ${MAX_WAIT}s)"
     sleep $INTERVAL
     elapsed=$((elapsed + INTERVAL))
 
@@ -168,22 +168,22 @@ else
   done
 
   if [ $elapsed -ge $MAX_WAIT ]; then
-    echo "⚠️  Workflows still running after 1 minute."
+    echo "⚠️  Workflows still running after 20 minutes."
     # Report current state and let caller decide what to do
   fi
 fi
 ```
 
-**If timeout reached (1 min):**
+**If timeout reached (20 min):**
 ```
-⚠️  Some workflows are still running after 1 minute:
+⚠️  Some workflows are still running after 20 minutes:
 
 [List incomplete workflows with gh run list]
 
-Workflows are still in progress. Caller should decide whether to:
+This is unusually long. Caller should decide whether to:
 1. Wait longer
 2. Proceed with current results
-3. Check workflow logs
+3. Check workflow logs for stuck jobs
 ```
 
 ## Quick Reference
@@ -222,7 +222,7 @@ Workflows are still in progress. Caller should decide whether to:
 | "They need results ASAP, skip git status" | Takes 1 second. Wrong results waste minutes. |
 | "The PR probably has latest commits" | Probably ≠ definitely. Verify with SHAs. |
 | "No runs found, must be disabled" | GitHub queues workflows. Wait 30s. |
-| "Been 2 minutes, that's long enough" | Some workflows take longer. Max wait is 1 min before reporting. |
+| "Been 2 minutes, that's long enough" | Workflows take 5-15 min normally. Max is 20. |
 | "I'll just check current status quickly" | Quick check = wrong answer if commits don't match. |
 | "User wants answer now, not questions" | Wrong answer now < right answer in 2 seconds. |
 
@@ -232,7 +232,7 @@ Workflows are still in progress. Caller should decide whether to:
 - "They need results quickly, I'll skip git status" → NO. Always check.
 - "The PR probably has the latest commits" → NO. Verify with commit SHAs.
 - "No runs found, workflows must be disabled" → NO. Wait 30s first.
-- "It's been 2 minutes, that's long enough" → NO. Max wait is 1 minute before reporting.
+- "It's been 2 minutes, that's long enough" → NO. Max wait is 20 minutes.
 - "I'll answer quickly without all the steps" → NO. Fast wrong answer helps nobody.
 
 **These are rationalizations. Follow the process.**

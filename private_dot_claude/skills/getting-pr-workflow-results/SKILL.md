@@ -15,20 +15,20 @@ Get workflow job results and provide commands to retrieve logs, without loading 
 
 ## CRITICAL: Scope Guardrails
 
-**This skill ONLY reports workflow status. It NEVER fixes issues.**
+**This skill reports workflow status with error details. It NEVER fixes issues.**
 
 When you find failures:
 - ✅ Report which jobs failed
-- ✅ Provide commands to retrieve logs
+- ✅ Extract actual error messages and test failures from logs
+- ✅ Include context (what operation was in progress when it failed)
+- ✅ Provide commands to retrieve full logs for deeper investigation
 - ✅ Suggest grep patterns to search logs
-- ❌ DO NOT read the logs yourself
-- ❌ DO NOT investigate the root cause
+- ❌ DO NOT investigate root causes beyond what's in the error messages
 - ❌ DO NOT propose fixes
 - ❌ DO NOT make any code changes
 
-**Why:** This skill runs in a subagent to save tokens. Fixing issues should happen in main context with
-  user approval, not automatically in the subagent. Return the status report and let the caller decide
-  what to do.
+**Why:** This skill runs in a subagent to save tokens. It extracts actionable error information but
+  doesn't try to fix anything. Return the error details and let the caller decide what to do.
 
 ## When to Use
 
@@ -52,7 +52,7 @@ Read and execute that skill's workflow to:
 - Check for unpushed commits
 - Verify PR exists and commit correlation
 - Wait for workflows to start (up to 30s)
-- Wait for workflows to complete (up to 1 minute)
+- Wait for workflows to complete (up to 20 minutes)
 
 Once all workflows are complete, proceed to Step 1 below.
 
@@ -80,14 +80,42 @@ gh run view $RUN_ID --json jobs --jq '.jobs[] | {
 }'
 ```
 
-### Step 3: Build Return Summary
+### Step 3: Extract Error Messages from Failed Jobs
+
+For failed jobs, retrieve the logs and extract key errors:
+
+```bash
+# Get failed logs
+LOGS=$(gh run view $RUN_ID --log-failed)
+
+# Extract pertinent errors (examples):
+# - Test failures: grep for "FAILED", "✗", test names
+# - Build errors: grep for "error:", "fatal:", compiler messages
+# - Lint errors: grep for "warning:", "expected", actual vs expected
+# - Runtime errors: grep for "Exception", "Error:", stack traces
+```
+
+**What to extract:**
+- Specific test names that failed
+- Error messages (first few lines of stack traces, not full traces)
+- What operation was in progress (e.g., "compiling", "running test X")
+- Exit codes if non-zero
+
+**What NOT to extract:**
+- Full logs (too verbose)
+- Debug output
+- Passing tests
+
+### Step 4: Build Return Summary
 
 For each job, return:
 
 1. **Job name and result**
-2. **Location in repo** (workflow file path + line if applicable)
-3. **gh command** to retrieve logs
-4. **grep suggestions** for common issues
+2. **Actual error messages/failures** (extracted from logs)
+3. **Context** (what was happening when it failed)
+4. **Location in repo** (workflow file path + line if applicable)
+5. **gh command** to retrieve full logs (for deeper investigation)
+6. **grep suggestions** for common issues
 
 ## Return Format
 
@@ -103,7 +131,19 @@ PR #{number} Workflow Results (commit {sha}):
 
 ### 1. iOS Test (failed after 7m28s)
 **Workflow:** `.github/workflows/ci.yml:45`
-**Retrieve logs:**
+
+**Errors found:**
+```
+testHealthCheckE2E FAILED
+  Error: Timeout waiting for health endpoint after 30s
+  at HealthCheckTests.swift:142
+
+testSettingsE2E FAILED
+  Error: Element not found: settingsButton
+  at SettingsTests.swift:87
+```
+
+**Retrieve full logs:**
 ```bash
 gh run view 19727163744 --log-failed
 # OR specific job:
@@ -112,7 +152,7 @@ gh run view 19727163744 --job 56520688201 --log
 
 **Search suggestions:**
 ```bash
-# Find errors:
+# Find all errors:
 gh run view 19727163744 --log | grep -i error
 
 # Find test failures:
@@ -124,7 +164,20 @@ gh run view 19727163744 --log | grep "testHealthCheckE2E"
 
 ### 2. workstation-lint (failed after 35s)
 **Workflow:** `.github/workflows/workstation-ci.yml:12`
-**Retrieve logs:**
+
+**Errors found:**
+```
+error: unused import in src/simulator.rs
+  --> src/simulator.rs:5:5
+   |
+ 5 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> src/main.rs:42:9
+```
+
+**Retrieve full logs:**
 ```bash
 gh run view 19727163743 --log-failed
 ```
@@ -216,12 +269,20 @@ done
 
 ## Common Mistakes
 
-**Loading logs into context**
-- **Problem:** Logs can be 100k+ tokens
-- **Fix:** Return commands, not logs
+**Loading full logs into context**
+- **Problem:** Full logs can be 100k+ tokens
+- **Fix:** Extract only pertinent errors/failures, provide commands for full logs
+
+**Not extracting actual error messages**
+- **Problem:** User gets "test failed" without knowing what failed or why
+- **Fix:** Extract specific test names, error messages, and context from logs
+
+**Extracting too much log content**
+- **Problem:** Including full stack traces or debug output bloats the response
+- **Fix:** First few lines of errors only, not full traces
 
 **Not providing grep patterns**
-- **Problem:** User has to figure out how to search
+- **Problem:** User has to figure out how to search full logs
 - **Fix:** Include job-type-specific grep examples
 
 **Checking runs without commit correlation**

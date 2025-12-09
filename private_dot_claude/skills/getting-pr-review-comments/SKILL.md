@@ -52,7 +52,7 @@ Read and execute the `awaiting-pr-workflows` skill's workflow to:
 - Check for unpushed commits
 - Verify PR exists and commit correlation
 - Wait for workflows to start (up to 30s)
-- Wait for workflows to complete (up to 1 minute)
+- Wait for workflows to complete (up to 20 minutes)
 
 Once all workflows (including Claude Code Review) are complete, proceed to Step 1 below.
 
