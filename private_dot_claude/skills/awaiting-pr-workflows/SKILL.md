@@ -134,30 +134,43 @@ Would you like me to:
 
 ### Step 2: Wait for Workflows to Complete
 
-**Poll every 30 seconds, up to 20 minutes:**
+**First check if already complete, then poll with exponential backoff up to 20 minutes:**
 
 ```bash
-MAX_WAIT=1200  # 20 minutes in seconds
-INTERVAL=30
-elapsed=0
+# Check if workflows are already complete
+INCOMPLETE=$(gh run list --commit $PR_COMMIT --status in_progress,queued --json databaseId | jq 'length')
 
-while [ $elapsed -lt $MAX_WAIT ]; do
-  # Check if all runs are complete
-  INCOMPLETE=$(gh run list --commit $PR_COMMIT --json status --jq '[.[] | select(.status != "completed")] | length')
+if [ "$INCOMPLETE" -eq 0 ]; then
+  echo "✅ All workflows already complete!"
+else
+  # Wait with exponential backoff
+  MAX_WAIT=1200  # 20 minutes in seconds
+  INTERVAL=5     # Start with 5 seconds
+  elapsed=0
 
-  if [ "$INCOMPLETE" -eq 0 ]; then
-    echo "✅ All workflows complete!"
-    break
+  while [ $elapsed -lt $MAX_WAIT ]; do
+    INCOMPLETE=$(gh run list --commit $PR_COMMIT --status in_progress,queued --json databaseId | jq 'length')
+
+    if [ "$INCOMPLETE" -eq 0 ]; then
+      echo "✅ All workflows complete!"
+      break
+    fi
+
+    echo "⏳ $INCOMPLETE workflow(s) still running... (${elapsed}s elapsed, max ${MAX_WAIT}s)"
+    sleep $INTERVAL
+    elapsed=$((elapsed + INTERVAL))
+
+    # Exponential backoff: 5s, 10s, 20s, 40s, then cap at 60s
+    INTERVAL=$((INTERVAL * 2))
+    if [ $INTERVAL -gt 60 ]; then
+      INTERVAL=60
+    fi
+  done
+
+  if [ $elapsed -ge $MAX_WAIT ]; then
+    echo "⚠️  Workflows still running after 20 minutes."
+    # Report current state and ask user
   fi
-
-  echo "⏳ $INCOMPLETE workflow(s) still running... (${elapsed}s elapsed, max ${MAX_WAIT}s)"
-  sleep $INTERVAL
-  elapsed=$((elapsed + INTERVAL))
-done
-
-if [ $elapsed -ge $MAX_WAIT ]; then
-  echo "⚠️  Workflows still running after 20 minutes."
-  # Report current state and ask user
 fi
 ```
 
