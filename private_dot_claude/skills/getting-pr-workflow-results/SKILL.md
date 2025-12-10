@@ -47,8 +47,6 @@ Use when you need:
 Before fetching results, ensure all workflows are complete by following the `awaiting-pr-workflows` skill.
 
 **Skill location:** `~/.claude/skills/awaiting-pr-workflows/SKILL.md`
-*(In dotfiles repo: `private_dot_claude/skills/awaiting-pr-workflows/SKILL.md` - chezmoi deploys to
-  `~/.claude/skills/`)*
 
 Read and execute that skill's workflow to:
 - Check for unpushed commits
