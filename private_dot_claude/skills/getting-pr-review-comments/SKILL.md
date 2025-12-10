@@ -47,6 +47,8 @@ Use when you need:
 Before fetching review comments, ensure all workflows are complete (Claude review is a workflow job).
 
 **Skill location:** `~/.claude/skills/awaiting-pr-workflows/SKILL.md`
+*(In dotfiles repo: `private_dot_claude/skills/awaiting-pr-workflows/SKILL.md` - chezmoi deploys to
+  `~/.claude/skills/`)*
 
 Read and execute the `awaiting-pr-workflows` skill's workflow to:
 - Check for unpushed commits
