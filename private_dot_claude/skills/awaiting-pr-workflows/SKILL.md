@@ -138,7 +138,7 @@ Would you like me to:
 
 ```bash
 # Check if workflows are already complete
-INCOMPLETE=$(gh run list --commit $PR_COMMIT --status in_progress,queued --json databaseId | jq 'length')
+INCOMPLETE=$(gh run list --commit "$PR_COMMIT" --status in_progress,queued --json databaseId | jq 'length')
 
 if [ "$INCOMPLETE" -eq 0 ]; then
   echo "✅ All workflows already complete!"
@@ -149,7 +149,7 @@ else
   elapsed=0
 
   while [ $elapsed -lt $MAX_WAIT ]; do
-    INCOMPLETE=$(gh run list --commit $PR_COMMIT --status in_progress,queued --json databaseId | jq 'length')
+    INCOMPLETE=$(gh run list --commit "$PR_COMMIT" --status in_progress,queued --json databaseId | jq 'length')
 
     if [ "$INCOMPLETE" -eq 0 ]; then
       echo "✅ All workflows complete!"
