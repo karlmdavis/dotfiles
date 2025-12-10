@@ -72,7 +72,7 @@ Would you like me to create one? (y/n)
 
 ```bash
 # Get PR head commit
-PR_COMMIT=$(gh pr view $PR_NUMBER --json headRefOid -q '.headRefOid')
+PR_COMMIT=$(gh pr view "$PR_NUMBER" --json headRefOid -q '.headRefOid')
 
 # Get local HEAD commit
 LOCAL_COMMIT=$(git rev-parse HEAD)
