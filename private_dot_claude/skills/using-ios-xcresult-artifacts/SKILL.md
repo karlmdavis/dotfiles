@@ -161,9 +161,9 @@ xcrun xcresulttool get object --legacy --format json --path "$XCRESULT" | \
 
 echo ""
 echo "=== Test Duration ==="
-xcrun xcresulttool get object --legacy --format json --path "$XCRESULT" | \
-  jq -r '.actions._values[0].actionResult.testsRef' | \
-  # Parse duration from test metadata
+# TODO: Parse duration from test metadata
+# xcrun xcresulttool get object --legacy --format json --path "$XCRESULT" | \
+#   jq -r '.actions._values[0].actionResult.testsRef | ...'
 
 echo ""
 echo "=== Activities ==="
