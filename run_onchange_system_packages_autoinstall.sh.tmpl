@@ -21,10 +21,8 @@ cask {{ . | quote }}
 EOF
 
 {{ else if eq .chezmoi.osRelease.id "ubuntu" -}}
-{{- with .packages.ubuntu.apt }}
 # Install all of the APT packages at once.
 sudo apt-get install {{ range .packages.ubuntu.apt }}{{ . }}{{ end }}
-{{- end }}
 
 # Use `brew bundle ...` to install all of the taps, formulae, and casks at once.
 brew bundle --no-upgrade --file=/dev/stdin <<EOF
