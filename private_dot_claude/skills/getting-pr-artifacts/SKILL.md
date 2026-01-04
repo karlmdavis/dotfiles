@@ -11,7 +11,7 @@ Find workflow jobs that produced artifacts and provide commands to download them
 
 **Core principle:** Return download commands, not artifacts themselves. Artifacts can be large (100MB+).
 
-**REQUIRED BACKGROUND:** Use `awaiting-pr-workflows` first to ensure workflows are complete.
+**REQUIRED BACKGROUND:** Use `awaiting-pr-workflow-results` first to ensure workflows are complete.
 
 ## When to Use
 
@@ -21,7 +21,7 @@ Use when you need:
 - Info about artifact contents (name, size)
 
 **When NOT to use:**
-- Workflows still running (use `awaiting-pr-workflows`)
+- Workflows still running (use `awaiting-pr-workflow-results`)
 - Need to actually download/analyze artifacts (use returned commands)
 
 ## Workflow

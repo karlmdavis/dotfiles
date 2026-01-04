@@ -44,15 +44,14 @@ Use when you need:
 
 ### Step 0: Wait for Workflows to Complete (Automatic)
 
-Before fetching results, ensure all workflows are complete by following the `awaiting-pr-workflows` skill.
+Before fetching results, ensure all workflows are complete using the `awaiting-pr-workflow-results` skill.
 
-**Skill location:** `~/.claude/skills/awaiting-pr-workflows/SKILL.md`
-
-Read and execute that skill's workflow to:
-- Check for unpushed commits
-- Verify PR exists and commit correlation
-- Wait for workflows to start (up to 30s)
-- Wait for workflows to complete (up to 20 minutes)
+The skill runs `scripts/check_pr_workflows.py` which:
+- Checks for unpushed commits
+- Verifies PR exists and commit correlation
+- Waits for workflows to start (up to 30s)
+- Waits for workflows to complete (up to 20 minutes)
+- Returns TOON-formatted results with workflow status and URLs
 
 Once all workflows are complete, proceed to Step 1 below.
 

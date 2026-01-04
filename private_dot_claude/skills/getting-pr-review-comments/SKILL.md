@@ -46,13 +46,12 @@ Use when you need:
 
 Before fetching review comments, ensure all workflows are complete (Claude review is a workflow job).
 
-**Skill location:** `~/.claude/skills/awaiting-pr-workflows/SKILL.md`
-
-Read and execute the `awaiting-pr-workflows` skill's workflow to:
+Use the `awaiting-pr-workflow-results` skill which runs `scripts/check_pr_workflows.py` to:
 - Check for unpushed commits
 - Verify PR exists and commit correlation
 - Wait for workflows to start (up to 30s)
 - Wait for workflows to complete (up to 20 minutes)
+- Return TOON-formatted results with workflow status
 
 Once all workflows (including Claude Code Review) are complete, proceed to Step 1 below.
 
@@ -153,7 +152,7 @@ COMMENT_BODY=$(echo "$LATEST_COMMENT" | jq -r '.body')
 
 **Not waiting for review to complete**
 - **Problem:** Review job may still be running
-- **Fix:** Use `awaiting-pr-workflows` first
+- **Fix:** Use `awaiting-pr-workflow-results` first
 
 **Returning raw JSON/markdown**
 - **Problem:** Hard to parse in main context
