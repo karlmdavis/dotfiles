@@ -261,37 +261,8 @@ def get_github_reviews(pr_number: int, commit_sha: str) -> list[GitHubReview]:
 
 
 def get_unresolved_threads(pr_number: int, current_commit: str) -> list[UnresolvedThread]:
-    """Get unresolved review threads from earlier commits."""
+    """Get unresolved review threads from earlier commits with pagination."""
     log_info("Fetching unresolved review threads...")
-
-    # Use GraphQL to get review threads
-    # Note: Fetches first 100 threads. Pagination not implemented as
-    # most PRs have <100 review threads. If needed in the future,
-    # implement cursor-based pagination using the 'after' parameter
-    # and 'pageInfo.hasNextPage' fields.
-    query = """
-    query($owner: String!, $repo: String!, $number: Int!) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $number) {
-          reviewThreads(first: 100) {
-            nodes {
-              id
-              isResolved
-              comments(first: 1) {
-                nodes {
-                  author { login }
-                  body
-                  createdAt
-                  url
-                  commit { oid }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    """
 
     # Get owner/repo from gh
     repo_info = run_cmd(
@@ -307,55 +278,109 @@ def get_unresolved_threads(pr_number: int, current_commit: str) -> list[Unresolv
         log_error(f"Failed to parse repo info: {e}")
         return []
 
-    # Run GraphQL query
-    graphql_cmd = [
-        "gh", "api", "graphql",
-        "-f", f"query={query}",
-        "-F", f"owner={owner}",
-        "-F", f"repo={repo}",
-        "-F", f"number={pr_number}"
-    ]
+    # Fetch all threads with cursor-based pagination
+    # GitHub's GraphQL API uses cursor-based pagination for performance
+    all_threads = []
+    has_next_page = True
+    cursor = None
+    page_count = 0
 
-    output = run_cmd_optional(graphql_cmd)
-    if not output:
-        log_info("Could not fetch review threads via GraphQL")
-        return []
+    while has_next_page:
+        page_count += 1
+        log_info(f"Fetching review threads page {page_count}...")
 
-    try:
-        data = json.loads(output)
-        threads = data.get("data", {}).get("repository", {}).get("pullRequest", {}).get("reviewThreads", {}).get("nodes", [])
+        # Build query with optional cursor for pagination
+        after_clause = f', after: "{cursor}"' if cursor else ""
+        query = f"""
+        query($owner: String!, $repo: String!, $number: Int!) {{
+          repository(owner: $owner, name: $repo) {{
+            pullRequest(number: $number) {{
+              reviewThreads(first: 100{after_clause}) {{
+                pageInfo {{
+                  hasNextPage
+                  endCursor
+                }}
+                nodes {{
+                  id
+                  isResolved
+                  comments(first: 1) {{
+                    nodes {{
+                      author {{ login }}
+                      body
+                      createdAt
+                      url
+                      commit {{ oid }}
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+        """
 
-        unresolved: list[UnresolvedThread] = []
-        for thread in threads:
-            # Skip resolved threads
-            if thread.get("isResolved", True):
-                continue
+        # Run GraphQL query
+        graphql_cmd = [
+            "gh", "api", "graphql",
+            "-f", f"query={query}",
+            "-F", f"owner={owner}",
+            "-F", f"repo={repo}",
+            "-F", f"number={pr_number}"
+        ]
 
-            comments = thread.get("comments", {}).get("nodes", [])
-            if not comments:
-                continue
+        output = run_cmd_optional(graphql_cmd)
+        if not output:
+            log_info("Could not fetch review threads via GraphQL")
+            break
 
-            first_comment = comments[0]
-            comment_commit = first_comment.get("commit", {}).get("oid", "")
+        try:
+            data = json.loads(output)
+            review_threads = data.get("data", {}).get("repository", {}).get("pullRequest", {}).get("reviewThreads", {})
 
-            # Skip threads on current commit (those are handled by github_reviews)
-            if comment_commit == current_commit:
-                continue
+            # Get pagination info
+            page_info = review_threads.get("pageInfo", {})
+            has_next_page = page_info.get("hasNextPage", False)
+            cursor = page_info.get("endCursor")
 
-            unresolved.append(UnresolvedThread(
-                link=first_comment.get("url", ""),
-                reviewer=first_comment.get("author", {}).get("login", "unknown"),
-                created_at=first_comment.get("createdAt", ""),
-                body=first_comment.get("body", ""),
-                resolved=False
-            ))
+            # Accumulate threads from this page
+            threads = review_threads.get("nodes", [])
+            all_threads.extend(threads)
+            log_info(f"Page {page_count}: Found {len(threads)} threads (total: {len(all_threads)})")
 
-        log_info(f"Found {len(unresolved)} unresolved threads from earlier commits")
-        return unresolved
+        except (json.JSONDecodeError, KeyError) as e:
+            log_error(f"Failed to parse review threads: {e}")
+            break
 
-    except (json.JSONDecodeError, KeyError) as e:
-        log_error(f"Failed to parse review threads: {e}")
-        return []
+    log_info(f"Fetched {len(all_threads)} total review threads across {page_count} page(s)")
+
+    # Process all accumulated threads
+    unresolved: list[UnresolvedThread] = []
+    for thread in all_threads:
+        # Skip resolved threads
+        if thread.get("isResolved", True):
+            continue
+
+        comments = thread.get("comments", {}).get("nodes", [])
+        if not comments:
+            continue
+
+        first_comment = comments[0]
+        comment_commit = first_comment.get("commit", {}).get("oid", "")
+
+        # Skip threads on current commit (those are handled by github_reviews)
+        if comment_commit == current_commit:
+            continue
+
+        unresolved.append(UnresolvedThread(
+            link=first_comment.get("url", ""),
+            reviewer=first_comment.get("author", {}).get("login", "unknown"),
+            created_at=first_comment.get("createdAt", ""),
+            body=first_comment.get("body", ""),
+            resolved=False
+        ))
+
+    log_info(f"Found {len(unresolved)} unresolved threads from earlier commits")
+    return unresolved
 
 
 def dataclass_to_dict(obj) -> dict:
