@@ -17,6 +17,7 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -306,12 +307,22 @@ def calculate_duration(created_at: str, updated_at: str, status: str) -> int | N
 
 def wait_for_completion(
     commit: str,
-    max_wait: int = 1200,
+    max_wait: int | None = None,
     initial_interval: int = 5,
     max_interval: int = 60
 ) -> WorkflowSummary:
-    """Wait for workflows to complete with exponential backoff."""
-    log_info("Waiting for workflows to complete (max 20 minutes)...")
+    """Wait for workflows to complete with exponential backoff.
+
+    Args:
+        max_wait: Maximum seconds to wait. Defaults to 1200 (20 minutes).
+                  Can be overridden with CLAUDE_WORKFLOW_TIMEOUT env var.
+    """
+    # Allow environment variable override for projects with long-running workflows
+    if max_wait is None:
+        max_wait = int(os.getenv('CLAUDE_WORKFLOW_TIMEOUT', '1200'))
+
+    max_wait_minutes = max_wait // 60
+    log_info(f"Waiting for workflows to complete (max {max_wait_minutes} minutes)...")
     start_time = time.time()
     interval = initial_interval
 

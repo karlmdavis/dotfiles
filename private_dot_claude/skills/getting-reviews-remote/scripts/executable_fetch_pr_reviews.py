@@ -68,7 +68,8 @@ class TOONOutput(TypedDict):
     """TOON output structure for type safety."""
     status: str
     pr_number: int
-    current_commit: str
+    current_commit_short: str
+    current_commit_full: str
     commit_pushed_at: str
     claude_bot_comment: dict | None
     github_reviews: list[dict]
@@ -264,6 +265,10 @@ def get_unresolved_threads(pr_number: int, current_commit: str) -> list[Unresolv
     log_info("Fetching unresolved review threads...")
 
     # Use GraphQL to get review threads
+    # Note: Fetches first 100 threads. Pagination not implemented as
+    # most PRs have <100 review threads. If needed in the future,
+    # implement cursor-based pagination using the 'after' parameter
+    # and 'pageInfo.hasNextPage' fields.
     query = """
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -386,7 +391,8 @@ def main() -> int:
         result: TOONOutput = {
             "status": "success",
             "pr_number": pr_number,
-            "current_commit": commit_sha[:7],
+            "current_commit_short": commit_sha[:7],
+            "current_commit_full": commit_sha,
             "commit_pushed_at": commit_pushed_at,
             "claude_bot_comment": dataclass_to_dict(claude_comment) if claude_comment else None,
             "github_reviews": [dataclass_to_dict(r) for r in github_reviews],
