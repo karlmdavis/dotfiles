@@ -5,11 +5,50 @@ description: Iteratively address local feedback (build + review) before committi
 I would like you to address all local feedback (build failures and code review) interactively until
   everything is clean and ready to commit or create a PR:
 
+## 0. Determine Review Context
+
+**CRITICAL:** Before gathering feedback, determine what changes to review.
+
+**0.a.** Check current branch and comparison base:
+
+```bash
+# Get current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Determine main/master branch
+MAIN_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "master")
+
+# Check if on main branch
+if [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ]; then
+    REVIEW_SCOPE="staged_or_unstaged"
+    CHANGED_FILES=$(git diff --staged --name-only || git diff --name-only)
+else
+    REVIEW_SCOPE="branch_vs_main"
+    CHANGED_FILES=$(git diff $MAIN_BRANCH...HEAD --name-only)
+fi
+```
+
+**0.b.** Review scope interpretation:
+- **On main/master branch** → Review staged changes (or unstaged if nothing staged)
+- **On feature branch** → Review all changes on branch vs main/master
+- **User can override** by specifying explicit comparison in the command
+
+**0.c.** Pass this context to the feedback gathering subagent:
+- Provide the list of changed files
+- Specify the comparison base (staged, unstaged, or branch vs main)
+- This ensures build relatedness analysis and code review focus on the right changes
+
 ## 1. Gather Complete Local Feedback
 
 **1.a.** Spawn a subagent using the Task tool with `subagent_type='general-purpose'` and
   `description="Get complete local feedback"`.
 - The subagent prompt should use the `getting-feedback-local` skill.
+- **CRITICAL:** Pass the review context from step 0:
+  ```
+  Review scope: [branch_vs_main|staged_or_unstaged]
+  Changed files:
+  [list files from step 0]
+  ```
 - This orchestrates: running local CI, parsing build results, performing code review, parsing review feedback.
 - Wait for the subagent to return unified TOON output with complete local feedback.
 
