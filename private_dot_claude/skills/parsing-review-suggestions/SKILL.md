@@ -26,6 +26,88 @@ Use when you need to:
 - Need to fetch reviews (use getting-reviews-* skills first)
 - Reviews already structured
 
+## Concrete Example
+
+**Input (raw Claude bot review comment):**
+
+```markdown
+## Code Review
+
+Great work on the authentication refactor! The overall structure is solid.
+Found a few issues that need attention:
+
+### 🔴 Critical Issues
+
+1. **Null pointer risk** (src/api.ts:42)
+   The user object may be null here. Add null check before accessing properties.
+
+   Suggested fix:
+   ```typescript
+   if (!user) {
+     throw new Error('User not found');
+   }
+   return user.id;
+   ```
+
+### 💡 Suggestions
+
+1. **Consider error handling** (src/api.ts:89)
+   Database call should have try/catch for better error handling.
+
+Recommendation: Address the critical issue before merging.
+```
+
+**Output (parsed TOON):**
+
+```toon
+status: success
+pr_number: 123
+current_commit: a1b2c3d
+
+claude_bot_review:
+  updated_at: 2026-01-04T15:30:00Z
+  link: https://github.com/.../issuecomment-123
+  overall_summary: |
+    Great work on the authentication refactor! The overall structure is solid.
+    Found a few issues that need attention.
+
+    Recommendation: Address the critical issue before merging.
+
+  issues[2]:
+    severity: critical
+    link: https://github.com/.../issuecomment-123#issue-1
+    code_references[1]:
+      file: src/api.ts
+      line: 42
+    description: |
+      **Null pointer risk**
+
+      The user object may be null here. Add null check before accessing
+      properties.
+
+      Suggested fix:
+      ```typescript
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return user.id;
+      ```
+
+    severity: suggestion
+    link: https://github.com/.../issuecomment-123#issue-2
+    code_references[1]:
+      file: src/api.ts
+      line: 89
+    description: |
+      **Consider error handling**
+
+      Database call should have try/catch for better error handling.
+
+github_reviews[0]:
+
+unresolved_earlier[0]:
+```
+
 ## What to Extract
 
 ### 1. Claude Bot Review

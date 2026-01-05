@@ -27,6 +27,71 @@ Use when you need to:
 - Need to fetch logs (use getting-build-results-* skills first)
 - Already have structured test results
 
+## Concrete Example
+
+**Input (raw build log from npm test):**
+
+```
+> npm test
+
+PASS tests/utils.test.ts
+  ✓ should format dates correctly (5ms)
+  ✓ should handle null inputs (2ms)
+
+FAIL tests/api.test.ts
+  ✓ should validate request body
+  ✕ should handle null user (15ms)
+
+  ● should handle null user
+
+    TypeError: Cannot read property 'id' of null
+
+      42 |   const handler = (user) => {
+      43 |     return user.id;
+         |                 ^
+      44 |   }
+         |
+      at handler (src/api.ts:43)
+      at processRequest (src/api.ts:89)
+
+Tests: 1 failed, 3 passed, 4 total
+Time: 2.5s
+```
+
+**Changed files (provided by caller):**
+- src/api.ts
+- tests/api.test.ts
+
+**Output (parsed TOON):**
+
+```toon
+status: fail_related
+
+ci_commands[1]:
+  id: 1
+  command: npm test
+  exit_code: 1
+  duration_seconds: 3
+
+failures[1]:
+  type: test
+  location: tests/api.test.ts:42
+  source_command_id: 1
+  related_to_changes: true
+  reasoning: |
+    Test file tests/api.test.ts was modified in the current changeset.
+    The failure is in code that was changed.
+  messages[2]:
+    |
+      FAIL tests/api.test.ts
+        ✕ should handle null user
+    |
+      TypeError: Cannot read property 'id' of null
+        at handler (src/api.ts:43)
+
+recommendation: fix_related_first
+```
+
 ## What to Extract
 
 ### 1. CI Commands
