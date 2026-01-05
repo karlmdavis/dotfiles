@@ -116,7 +116,8 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
             cmd,
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            timeout=60  # Prevent indefinite hangs
         )
 
         if result.returncode != 0:
@@ -129,6 +130,9 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
 
         return result.stdout.strip()
 
+    except subprocess.TimeoutExpired:
+        log_error(f"Command timed out after 60s: {' '.join(cmd)}")
+        raise CommandError(f"Command timeout: {error_msg}") from None
     except FileNotFoundError as e:
         log_error(f"Command not found: {cmd[0]}")
         log_error(f"Ensure {cmd[0]} is installed and in PATH")
@@ -141,8 +145,16 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
 def run_cmd_optional(cmd: list[str]) -> str | None:
     """Run command and return stdout, returning None on failure."""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60  # Prevent indefinite hangs
+        )
         return result.stdout.strip() if result.returncode == 0 else None
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
     except Exception:
         return None
 

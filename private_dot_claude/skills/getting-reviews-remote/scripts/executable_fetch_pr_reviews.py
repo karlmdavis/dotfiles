@@ -25,7 +25,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TypedDict
 
 from toon_format import encode
@@ -93,7 +93,8 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
             cmd,
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            timeout=60  # Prevent indefinite hangs
         )
 
         if result.returncode != 0:
@@ -106,6 +107,9 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
 
         return result.stdout.strip()
 
+    except subprocess.TimeoutExpired:
+        log_error(f"Command timed out after 60s: {' '.join(cmd)}")
+        raise CommandError(f"Command timeout: {error_msg}") from None
     except FileNotFoundError as e:
         log_error(f"Command not found: {cmd[0]}")
         log_error(f"Ensure {cmd[0]} is installed and in PATH")
@@ -118,8 +122,16 @@ def run_cmd(cmd: list[str], error_msg: str) -> str:
 def run_cmd_optional(cmd: list[str]) -> str | None:
     """Run command and return stdout, returning None on failure."""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60  # Prevent indefinite hangs
+        )
         return result.stdout.strip() if result.returncode == 0 else None
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
     except Exception:
         return None
 
@@ -158,13 +170,13 @@ def get_commit_push_timestamp(pr_number: int, commit_sha: str) -> str:
         # - Commit is in local branch but not yet in PR
         # Using current time ensures we get the latest reviews
         log_info(f"Commit {commit_sha[:7]} not found in PR timeline, using current time")
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(timezone.utc).isoformat()
 
     except (json.JSONDecodeError, KeyError) as e:
         log_error(f"Failed to parse commit timeline: {e}")
         # Fallback to current time - better to be conservative and get recent reviews
         # than to fail or use an incorrect timestamp
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(timezone.utc).isoformat()
 
 
 def get_claude_bot_comment(pr_number: int, after_timestamp: str) -> ClaudeBotComment | None:
@@ -284,42 +296,43 @@ def get_unresolved_threads(pr_number: int, current_commit: str) -> list[Unresolv
     has_next_page = True
     cursor = None
     page_count = 0
+    MAX_PAGES = 50  # Safety limit to prevent excessive API calls
 
-    while has_next_page:
+    while has_next_page and page_count < MAX_PAGES:
         page_count += 1
         log_info(f"Fetching review threads page {page_count}...")
 
-        # Build query with optional cursor for pagination
-        after_clause = f', after: "{cursor}"' if cursor else ""
-        query = f"""
-        query($owner: String!, $repo: String!, $number: Int!) {{
-          repository(owner: $owner, name: $repo) {{
-            pullRequest(number: $number) {{
-              reviewThreads(first: 100{after_clause}) {{
-                pageInfo {{
+        # Build GraphQL query with parameterized cursor to prevent injection
+        # Using GraphQL variables instead of string interpolation
+        query = """
+        query($owner: String!, $repo: String!, $number: Int!, $after: String) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $number) {
+              reviewThreads(first: 100, after: $after) {
+                pageInfo {
                   hasNextPage
                   endCursor
-                }}
-                nodes {{
+                }
+                nodes {
                   id
                   isResolved
-                  comments(first: 1) {{
-                    nodes {{
-                      author {{ login }}
+                  comments(first: 1) {
+                    nodes {
+                      author { login }
                       body
                       createdAt
                       url
-                      commit {{ oid }}
-                    }}
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
+                      commit { oid }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
         """
 
-        # Run GraphQL query
+        # Run GraphQL query with cursor as a variable
         graphql_cmd = [
             "gh", "api", "graphql",
             "-f", f"query={query}",
@@ -327,6 +340,10 @@ def get_unresolved_threads(pr_number: int, current_commit: str) -> list[Unresolv
             "-F", f"repo={repo}",
             "-F", f"number={pr_number}"
         ]
+
+        # Add cursor as variable if present (GraphQL handles null gracefully)
+        if cursor:
+            graphql_cmd.extend(["-f", f"after={cursor}"])
 
         output = run_cmd_optional(graphql_cmd)
         if not output:
@@ -350,6 +367,10 @@ def get_unresolved_threads(pr_number: int, current_commit: str) -> list[Unresolv
         except (json.JSONDecodeError, KeyError) as e:
             log_error(f"Failed to parse review threads: {e}")
             break
+
+    # Warn if we hit the page limit
+    if has_next_page and page_count >= MAX_PAGES:
+        log_error(f"Hit page limit ({MAX_PAGES}), some review threads may be missing")
 
     log_info(f"Fetched {len(all_threads)} total review threads across {page_count} page(s)")
 
