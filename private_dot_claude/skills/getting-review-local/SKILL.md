@@ -33,25 +33,29 @@ Use when you need:
 
 ## Review Sources
 
-### Option 1: External Review Tools
+### Option 1: Claude Code Builtin Review
 
-If available review tools exist:
+Use Claude Code's builtin `/review` command:
 
-**Obra review skill:**
 ```markdown
-If `superpowers:code-reviewer` or similar skill available, invoke it:
+Run the builtin review command:
 
-/code-review
+/review
 
+This triggers Claude Code's native code review functionality.
 Capture the output and structure into TOON format.
 ```
 
-**Other code review tools:**
+### Option 2: External Review Tools
+
+If other review tools are available:
+
 - CodeRabbit CLI
 - SonarQube local analysis
 - Custom review scripts
+- Third-party code review skills
 
-### Option 2: Claude's Own Analysis
+### Option 3: Claude's Own Analysis
 
 If no external tools available, perform analysis:
 
@@ -205,7 +209,7 @@ Perform code review and return structured feedback in TOON format."
 - `/pr-address-feedback-local` command - Pre-PR quality check
 
 **May use:**
-- `superpowers:code-reviewer` - If available
+- Claude Code builtin `/review` command
 - External review tools - If configured
 
 **Output compatible with:**
