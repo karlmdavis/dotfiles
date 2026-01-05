@@ -205,6 +205,18 @@ summary:
 
 As an agent executing this skill, follow these steps:
 
+Copy this checklist to track progress:
+
+```
+Feedback Gathering Progress:
+- [ ] Step 1: Get PR context (number, commit)
+- [ ] Step 2: Wait for workflows to complete
+- [ ] Step 3: Fetch build results for failed workflows
+- [ ] Step 4: Fetch and parse reviews
+- [ ] Step 5: Build unified output
+- [ ] Step 6: Return to main context
+```
+
 ### 1. Get PR Context
 
 ```bash

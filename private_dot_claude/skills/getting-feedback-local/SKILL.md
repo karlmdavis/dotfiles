@@ -155,6 +155,19 @@ summary:
 
 As an agent executing this skill, follow these steps:
 
+Copy this checklist to track progress:
+
+```
+Feedback Gathering Progress:
+- [ ] Step 1: Determine review scope (staged vs unstaged)
+- [ ] Step 2: Run local build
+- [ ] Step 3: Parse build output
+- [ ] Step 4: Perform code review
+- [ ] Step 5: Parse review feedback (if needed)
+- [ ] Step 6: Build unified output
+- [ ] Step 7: Return to main context
+```
+
 ### 1. Determine Review Scope
 
 ```bash
