@@ -9,23 +9,34 @@ I would like you to address all local feedback (build failures and code review) 
 
 **CRITICAL:** Before gathering feedback, determine what changes to review.
 
-**0.a.** Check current branch and comparison base:
+**0.a.** Determine review scope with separate simple commands:
 
+First, check current branch:
 ```bash
-# Get current branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git rev-parse --abbrev-ref HEAD
+```
 
-# Determine main/master branch
-MAIN_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "master")
+Then determine the main branch (usually main or master):
+```bash
+git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'
+```
 
-# Check if on main branch
-if [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ]; then
-    REVIEW_SCOPE="staged_or_unstaged"
-    CHANGED_FILES=$(git diff --staged --name-only || git diff --name-only)
-else
-    REVIEW_SCOPE="branch_vs_main"
-    CHANGED_FILES=$(git diff $MAIN_BRANCH...HEAD --name-only)
-fi
+If that fails (no remote HEAD set), check which exists:
+```bash
+git show-ref --verify refs/heads/main >/dev/null 2>&1 && echo "main" || echo "master"
+```
+
+**Logic to apply:**
+- If current branch == main/master → review scope is "staged_or_unstaged"
+- If current branch != main/master → review scope is "branch_vs_main"
+
+Get changed files based on scope:
+```bash
+# For staged_or_unstaged:
+git diff --staged --name-only || git diff --name-only
+
+# For branch_vs_main (replace MAIN with actual main branch name):
+git diff MAIN...HEAD --name-only
 ```
 
 **0.b.** Review scope interpretation:
@@ -72,10 +83,16 @@ Issue 4: [Suggestion] Refactor src/utils.ts:15-20
 
 ## 3. Address Each Issue Interactively
 
-**3.a.** For each issue from the summary (prioritize critical and related):
+**3.a.** Work through issues in priority order:
+1. **Critical issues and test failures** (related to changes) - must fix
+2. **Warnings** (related to changes) - should fix
+3. **Suggestions** - discuss with user whether to address now or defer
+
+For each issue:
 - Discuss the specific issue in detail.
 - Investigate the root cause (read relevant code, understand context).
-- Propose a fix and ask the user about the proposal.
+- For suggestions: **Ask the user** if they want to address now or create a follow-up issue.
+- Propose a fix and get user approval before implementing.
 - Implement the fix per user direction.
 
 **3.b.** AFTER implementing each fix:
