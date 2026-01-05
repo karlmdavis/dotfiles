@@ -142,6 +142,10 @@ def get_job_logs(run_id: int, job_id: int) -> str:
     log_info(f"Fetching logs for job {job_id}...")
 
     # Try to get logs via gh run view --job
+    # Using run_cmd_optional because logs may not be available for:
+    # - In-progress jobs (logs still streaming)
+    # - Archived jobs (retention period expired)
+    # - Jobs with log access restrictions
     logs = run_cmd_optional([
         "gh", "run", "view", str(run_id),
         "--job", str(job_id),
@@ -166,6 +170,11 @@ def fetch_workflow_logs(run_id: int) -> WorkflowLogs:
             continue
 
         # Only fetch logs for failed jobs to save time and space
+        # Rationale:
+        # - Passed jobs don't need debugging, so logs provide no value
+        # - GitHub workflow logs can be 10MB+ per job
+        # - Fetching all logs would bloat TOON output and waste tokens
+        # - Parse skill only needs failures for actionable feedback
         if job_conclusion in ("failure", "cancelled"):
             log_content = get_job_logs(run_id, job_id)
         else:

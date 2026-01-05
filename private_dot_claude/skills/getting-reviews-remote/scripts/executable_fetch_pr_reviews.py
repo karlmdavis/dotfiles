@@ -124,10 +124,19 @@ def run_cmd_optional(cmd: list[str]) -> str | None:
 
 
 def get_commit_push_timestamp(pr_number: int, commit_sha: str) -> str:
-    """Get when commit was pushed to PR (not just created)."""
+    """Get when commit was pushed to PR (not just created).
+
+    Why this matters:
+    - Commit timestamp = when developer created commit locally (git commit)
+    - Push timestamp = when commit appeared in PR on GitHub
+    - Claude bot may review commit A at 10am, then commit B gets pushed at 2pm
+    - We only want reviews AFTER 2pm for commit B, not stale 10am reviews
+    - Using commit creation time would incorrectly include pre-push reviews
+    """
     log_info(f"Finding push timestamp for commit {commit_sha[:7]}...")
 
     # Get timeline of commits pushed to PR
+    # GitHub's PR commits API shows when each commit was added to the PR
     output = run_cmd(
         ["gh", "api", f"/repos/{{owner}}/{{repo}}/pulls/{pr_number}/commits"],
         f"Failed to get PR commits for #{pr_number}"
@@ -143,12 +152,17 @@ def get_commit_push_timestamp(pr_number: int, commit_sha: str) -> str:
                 return commit_date
 
         # Fallback: use current time if commit not found in PR yet
+        # This can happen when:
+        # - Running script immediately after push (GitHub API lag)
+        # - Commit is in local branch but not yet in PR
+        # Using current time ensures we get the latest reviews
         log_info(f"Commit {commit_sha[:7]} not found in PR timeline, using current time")
         return datetime.utcnow().isoformat() + "Z"
 
     except (json.JSONDecodeError, KeyError) as e:
         log_error(f"Failed to parse commit timeline: {e}")
-        # Fallback to current time
+        # Fallback to current time - better to be conservative and get recent reviews
+        # than to fail or use an incorrect timestamp
         return datetime.utcnow().isoformat() + "Z"
 
 
@@ -166,6 +180,11 @@ def get_claude_bot_comment(pr_number: int, after_timestamp: str) -> ClaudeBotCom
         comments = data.get("comments", [])
 
         # Filter for Claude bot comments
+        # Multiple usernames because different setups use different accounts:
+        # - "claude": Most common direct integration
+        # - "github-actions[bot]": When Claude runs via GitHub Actions
+        # - "claude-code-bot": Some enterprise/custom deployments
+        # - "anthropic-claude[bot]": Official Anthropic bot deployments
         claude_comments = [
             c for c in comments
             if c.get("author", {}).get("login", "").lower() in [
