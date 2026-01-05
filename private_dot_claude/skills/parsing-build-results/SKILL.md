@@ -140,61 +140,31 @@ Based on failures, return one of:
 
 ## Parsing Strategies
 
-### Test Failures
+For detailed parsing patterns by error type, see the reference files:
 
-Look for patterns like:
-```
-FAIL tests/api.test.ts
-  ● should handle null user
-    TypeError: Cannot read property 'id' of null
-      at handler (src/api.ts:89)
-```
+**Test failures**: See [reference/test-failures.md](reference/test-failures.md) for Jest, pytest, cargo test patterns
+**Lint errors**: See [reference/lint-errors.md](reference/lint-errors.md) for ESLint, clippy, ruff patterns
+**Build errors**: See [reference/build-errors.md](reference/build-errors.md) for tsc, cargo, gcc patterns
+**Type errors**: See [reference/type-errors.md](reference/type-errors.md) for mypy, pyright, Flow patterns
 
-Extract:
-- Location: `tests/api.test.ts` (and `src/api.ts:89` from stack trace)
-- Message: Test name + error message
-- Type: "test"
+### Quick Reference
 
-### Lint Errors
+For most cases, look for these common patterns:
 
-Look for patterns like:
-```
-error: unused import in src/simulator.rs
-  --> src/simulator.rs:5:5
-   |
- 5 | use std::collections::HashMap;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
-```
+**File:line locations:**
+- `src/api.ts:42` or `src/api.ts(42,15)` (TypeScript)
+- `--> src/main.rs:42:9` (Rust)
+- `src/api.py:42:` (Python)
 
-Extract:
-- Location: `src/simulator.rs:5`
-- Message: "unused import"
-- Type: "lint"
+**Error indicators:**
+- Lines starting with "error:", "Error:", "FAIL", "FAILED"
+- Stack traces with "at [location]"
+- Compiler output with `-->` or `error[E...]`
 
-### Build Errors
-
-Look for patterns like:
-```
-error[E0425]: cannot find value `foo` in this scope
-  --> src/main.rs:42:9
-```
-
-Extract:
-- Location: `src/main.rs:42`
-- Message: Error code and description
-- Type: "build"
-
-### Type Errors
-
-Look for patterns like:
-```
-src/api.ts:89:15 - error TS2531: Object is possibly 'null'.
-```
-
-Extract:
-- Location: `src/api.ts:89`
-- Message: Type error description
-- Type: "type_check"
+**Extract from each failure:**
+1. **Type**: test/lint/build/type_check based on command
+2. **Location**: First file:line reference found
+3. **Messages**: Key error lines (2-3 snippets max, not full output)
 
 ## Return Format
 
