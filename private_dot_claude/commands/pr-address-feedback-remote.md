@@ -16,116 +16,86 @@ I would like you to address all PR feedback (workflow failures and review commen
 **1.b.** CRITICAL: The skill MUST run in a subagent, never in main context.
   This prevents token bloat from workflow logs and review text.
 
-## 2. Present Overall Summary
+## 2. Address Issues Interactively
 
-**2.a.** Provide a concise summary showing:
-- Total number of workflow failures (if any).
-- Total number of build failures from failed workflows (related vs unrelated to changes).
-- Total number of review issues (by severity: critical, warning, suggestion).
-- Total number of unresolved earlier comments.
-- Overall PR status (ready to merge / needs fixes).
-
-**2.b.** List all issues by number with severity and location:
-```
-Issue 1: [Critical Review] Null pointer in src/api.ts:42
-Issue 2: [Test Failure] tests/api.test.ts:42 (related to changes)
-Issue 3: [Warning Review] Missing error handling in src/api.ts:89
-Issue 4: [Unresolved] src/auth.ts:15-18 (from earlier commit)
-```
-
-## 3. Address Each Issue Interactively
-
-**3.a.** For each issue from the summary (prioritize critical and related):
-- Discuss the specific issue in detail.
-- Investigate the root cause (read relevant code, understand context).
-- Propose a fix and ask the user about the proposal.
-- Implement the fix per user direction.
-
-**3.b.** BEFORE committing each fix:
-- Run local pre-commit verification in a subagent.
-- Use the `getting-build-results-local` skill to run CI commands.
-- Use the `parsing-build-results` skill to parse output.
-- Triage the results:
-  - **If new failures in files you just modified** → Fix them before committing.
-  - **If unrelated failures** → Ask user how to proceed (commit anyway / fix first / skip).
-  - **If all passing** → Proceed with commit.
-
-**3.c.** After successful verification, commit the fix:
-- Use clear commit message referencing what was fixed.
-- DO NOT ask for permission to commit - just make the commit.
-
-**3.d.** Work through all issues sequentially until all are addressed.
-
-## 4. Final Verification and Push
-
-**4.a.** After all issues are fixed and committed, verify the branch is ready:
-- Run local CI one more time if needed.
-- Confirm all changes are committed.
-
-**4.b.** Ask once whether to push all commits to the remote branch.
-
-**4.c.** If user confirms, push to remote.
-
-## Important Guidelines
-
-- **Keep initial summary concise** - just counts and numbered list of issues.
-- **Address issues one at a time** - don't try to fix multiple simultaneously.
-- **Commit fixes separately** - one commit per logical fix.
-- **Verify before each commit** - use local CI to catch new failures.
-- **Triage objectively** - don't ignore unrelated failures, but don't block on them unnecessarily.
-- **Don't dump giant walls of text** - work iteratively and focused.
-- **Only ask about pushing at the very end** - not for each commit.
-
-## Pre-Commit Verification Details
-
-For each fix, before committing:
+**2.a.** Use the `addressing-feedback-interactively` skill to handle all issue resolution:
 
 ```markdown
-Use Task tool with subagent_type='general-purpose':
+Use Skill tool with skill='addressing-feedback-interactively':
 
-"Run local CI to verify changes.
-Use getting-build-results-local skill to run CI commands.
-Use parsing-build-results skill to parse output.
+Pass the complete TOON feedback from Step 1.
 
-Changed files for relatedness analysis:
-[list files you just modified]
-
-Return structured TOON with failures and relatedness determination."
+The skill will:
+- Ask user to choose commit strategy (incremental/accumulated/manual)
+  - Recommend "incremental" for PR workflow
+- Present unified summary of all issues with priorities
+- Work through each issue interactively
+- Verify fixes after each change
+- Create commits based on user's chosen strategy
 ```
 
-Triage the results:
-- If `status: all_passed` → Commit immediately.
-- If `status: fail_related` → Fix related failures before committing.
-- If `status: fail_unrelated` → Ask user: "Unrelated failures exist. Commit anyway? (yes/no/fix)"
+**2.b.** The skill handles:
+- Commit strategy selection (with recommendation)
+- Issue presentation in priority order
+- Interactive resolution with user approval
+- Verification after each fix
+- Commits based on strategy
+
+## 3. Push to Remote
+
+**3.a.** After all issues are addressed and committed, ask user once:
+
+```
+All issues resolved with {N} commit(s).
+
+Push to remote branch? (yes/no)
+```
+
+**3.b.** If user confirms, push:
+
+```bash
+git push
+```
 
 ## Example Flow
 
 ```
-1. Gather feedback → 3 issues found
-2. Present summary:
-   - Issue 1: [Critical] Null pointer src/api.ts:42
-   - Issue 2: [Test Failure] tests/api.test.ts:42
-   - Issue 3: [Suggestion] Refactor src/utils.ts:15-20
+Step 1: Gather PR feedback
+   - Run getting-feedback-remote skill in subagent
+   - Waits for workflows to complete
+   - Fetches build logs and review comments
+   - Returns: 3 issues (2 critical, 1 suggestion)
 
-3. Address Issue 1:
-   - Read src/api.ts
-   - Add null check
-   - Run local verification → All passing
-   - Commit "fix: add null check in src/api.ts:42"
+Step 2: Address issues interactively
+   - Skill asks: "How would you like to commit fixes?"
+   - User chooses: "Incremental" (recommended for PRs)
 
-4. Address Issue 2:
-   - Read tests/api.test.ts
-   - Update test expectations
-   - Run local verification → All passing
-   - Commit "test: update api.test.ts expectations"
+   - Skill presents summary:
+     Issue 1: [Critical] Null pointer src/api.ts:42
+     Issue 2: [Test Failure] tests/api.test.ts:42
+     Issue 3: [Suggestion] Refactor src/utils.ts:15-20
 
-5. Address Issue 3:
-   - Discuss with user: "Suggestion to refactor validation. Address now or defer?"
-   - User says "defer"
-   - Skip to next
+   - Skill addresses Issue 1:
+     - Reads src/api.ts
+     - Adds null check
+     - Verifies (passed)
+     - Commits "fix: add null check in src/api.ts:42"
 
-6. All critical issues resolved
-   - Ask: "Push 2 commits to remote? (yes/no)"
+   - Skill addresses Issue 2:
+     - Reads tests/api.test.ts
+     - Updates test expectations
+     - Verifies (passed)
+     - Commits "test: update api.test.ts expectations"
+
+   - Skill addresses Issue 3:
+     - Asks: "Address now or defer?"
+     - User says "defer"
+     - Skips
+
+Step 3: Push to remote
+   - Ask: "All issues resolved with 2 commits. Push to remote? (yes/no)"
    - User says "yes"
-   - Push to remote
+   - git push
+
+Done! PR updated with fixes. Workflows will run again.
 ```

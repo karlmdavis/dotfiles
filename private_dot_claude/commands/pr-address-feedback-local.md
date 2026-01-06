@@ -66,136 +66,76 @@ git diff MAIN...HEAD --name-only
 **1.b.** CRITICAL: The skill MUST run in a subagent, never in main context.
   This prevents token bloat from build logs and review analysis.
 
-## 2. Present Overall Summary
+## 2. Address Issues Interactively
 
-**2.a.** Provide a concise summary showing:
-- Total number of build failures (related vs unrelated to changes).
-- Total number of review issues (by severity: critical, warning, suggestion).
-- Overall status (clean / needs fixes).
-
-**2.b.** List all issues by number with severity and location:
-```
-Issue 1: [Critical Review] Null pointer in src/api.ts:42
-Issue 2: [Test Failure] tests/api.test.ts:42 (related to changes)
-Issue 3: [Warning Review] Missing error handling in src/api.ts:89
-Issue 4: [Suggestion] Refactor src/utils.ts:15-20
-```
-
-## 3. Address Each Issue Interactively
-
-**3.a.** Work through issues in priority order:
-1. **Critical issues and test failures** (related to changes) - must fix
-2. **Warnings** (related to changes) - should fix
-3. **Suggestions** - discuss with user whether to address now or defer
-
-For each issue:
-- Discuss the specific issue in detail.
-- Investigate the root cause (read relevant code, understand context).
-- For suggestions: **Ask the user** if they want to address now or create a follow-up issue.
-- Propose a fix and get user approval before implementing.
-- Implement the fix per user direction.
-
-**3.b.** AFTER implementing each fix:
-- Run local verification in a subagent to re-check build status.
-- Use the `getting-build-results-local` skill to run CI commands.
-- Use the `parsing-build-results` skill to parse output.
-- Triage the results:
-  - **If new failures in files you just modified** → Fix them before proceeding.
-  - **If unrelated failures** → Note but continue (they existed before your changes).
-  - **If all passing** → Proceed to next issue.
-
-**3.c.** DO NOT commit during the loop - just accumulate fixes.
-
-**3.d.** Work through all issues sequentially until all are addressed.
-
-## 4. Final Verification and Commit Decision
-
-**4.a.** After all issues are fixed, run full local verification one more time:
-- Run `getting-feedback-local` again in subagent.
-- Confirm all critical issues resolved.
-
-**4.b.** Ask the user what to do next:
-- **Option 1:** Commit all changes now.
-- **Option 2:** Stage changes but don't commit yet (let user commit manually).
-- **Option 3:** Leave changes unstaged (user will stage and commit manually).
-
-**4.c.** If user chooses to commit, create a single comprehensive commit with all fixes:
-```bash
-git add <files>
-git commit -m "Address feedback: [brief summary of what was fixed]"
-```
-
-## Important Guidelines
-
-- **Keep initial summary concise** - just counts and numbered list of issues.
-- **Address issues one at a time** - don't try to fix multiple simultaneously.
-- **Don't commit during the loop** - accumulate fixes, commit once at the end.
-- **Re-verify after fixing** - use local CI to catch new failures.
-- **Triage objectively** - distinguish between related and unrelated failures.
-- **Don't dump giant walls of text** - work iteratively and focused.
-- **Let user decide about committing** - don't assume they want to commit immediately.
-
-## Verification Between Fixes
-
-After each fix, before moving to next issue:
+**2.a.** Use the `addressing-feedback-interactively` skill to handle all issue resolution:
 
 ```markdown
-Use Task tool with subagent_type='general-purpose':
+Use Skill tool with skill='addressing-feedback-interactively':
 
-"Run local CI to verify current state.
-Use getting-build-results-local skill to run CI commands.
-Use parsing-build-results skill to parse output.
+Pass the complete TOON feedback from Step 1.
 
-Changed files for relatedness analysis:
-[list all files modified so far in this session]
-
-Return structured TOON with failures and relatedness determination."
+The skill will:
+- Ask user to choose commit strategy (incremental/accumulated/manual)
+  - Recommend "accumulated" for local development
+- Present unified summary of all issues with priorities
+- Work through each issue interactively
+- Verify fixes after each change
+- Create commits based on user's chosen strategy
 ```
 
-Triage the results:
-- If `status: all_passed` → Move to next issue.
-- If `status: fail_related` → Fix new related failures before proceeding.
-- If `status: fail_unrelated` → Note in summary, continue with issues.
+**2.b.** The skill handles:
+- Commit strategy selection (with recommendation)
+- Issue presentation in priority order
+- Interactive resolution with user approval
+- Verification after each fix
+- Final commits and verification
 
 ## Example Flow
 
 ```
-1. Gather feedback → 4 issues found
-2. Present summary:
-   - Issue 1: [Critical] Null pointer src/api.ts:42
-   - Issue 2: [Test Failure] tests/api.test.ts:42
-   - Issue 3: [Warning] Missing error handling src/api.ts:89
-   - Issue 4: [Suggestion] Refactor src/utils.ts:15-20
+Step 0: Determine review scope
+   - Current branch: feature-auth
+   - Main branch: main
+   - Review scope: branch_vs_main
+   - Changed files: src/api.ts, tests/api.test.ts
 
-3. Address Issue 1:
-   - Read src/api.ts
-   - Add null check
-   - Run verification → All passing
-   - Move to next issue (don't commit yet)
+Step 1: Gather feedback
+   - Run getting-feedback-local skill in subagent
+   - Returns: 3 issues (2 critical, 1 suggestion)
 
-4. Address Issue 2:
-   - Read tests/api.test.ts
-   - Update test expectations
-   - Run verification → All passing
-   - Move to next issue
+Step 2: Address issues interactively
+   - Skill asks: "How would you like to commit fixes?"
+   - User chooses: "Accumulated" (recommended for local)
 
-5. Address Issue 3:
-   - Read src/api.ts
-   - Add try/catch for database call
-   - Run verification → All passing
-   - Move to next issue
+   - Skill presents summary:
+     Issue 1: [Critical] Null pointer src/api.ts:42
+     Issue 2: [Test Failure] tests/api.test.ts:42
+     Issue 3: [Suggestion] Refactor src/utils.ts:15-20
 
-6. Address Issue 4:
-   - Discuss with user: "Suggestion to refactor. Address now or defer?"
-   - User says "defer"
-   - Skip
+   - Skill addresses Issue 1:
+     - Reads src/api.ts
+     - Adds null check
+     - Verifies (passed)
+     - Continues (no commit yet)
 
-7. Final verification:
-   - Run getting-feedback-local → All critical issues resolved
-   - Ask: "All issues fixed. What next? (commit/stage/leave)"
-   - User says "commit"
-   - git add src/api.ts tests/api.test.ts
-   - git commit -m "Address feedback: fix null pointer, update tests, add error handling"
+   - Skill addresses Issue 2:
+     - Reads tests/api.test.ts
+     - Updates test expectations
+     - Verifies (passed)
+     - Continues (no commit yet)
+
+   - Skill addresses Issue 3:
+     - Asks: "Address now or defer?"
+     - User says "defer"
+     - Skips
+
+   - Skill creates final commit (accumulated strategy):
+     - git add src/api.ts tests/api.test.ts
+     - git commit -m "Address feedback: fix null pointer, update tests"
+     - Final verification (all passed)
+
+Done! Ready to create PR or continue development.
 ```
 
 ## Use Cases
