@@ -1,6 +1,7 @@
 ---
 name: addressing-feedback-interactively
-description: Guide user through resolving feedback issues with commit strategy choice and priority-based workflow
+description: Guide human partner through resolving build failures and code review feedback interactively, as parsed by the getting-feedback-local or getting-feedback-remote skills. Use when addressing build failures (local or CI), test failures, type errors, linting errors, or review comments from PRs.
+allowed-tools: Read, Edit, Write, Bash, Task
 ---
 
 # Addressing Feedback Interactively
@@ -9,30 +10,30 @@ description: Guide user through resolving feedback issues with commit strategy c
 
 Unified workflow for guiding users through resolving feedback issues one at a time, with user control over commit strategy.
 
-**Core principle:** Present all issues in priority order, work through them interactively, and commit based on user preference.
+**Core principle:** Present all issues in priority order, work through them interactively, and commit based on user's strategy choice.
 
-**What it does:**
-1. Ask user to choose commit strategy (incremental/accumulated/manual)
-2. Present unified summary of all issues with priority levels
-3. Work through each issue in priority order
-4. Handle commits based on chosen strategy
-5. Verify fixes after each change
-6. Complete workflow based on strategy
+What it does:
+1. Ask user to choose commit strategy (incremental/accumulated/manual).
+2. Present unified summary of all issues with priority levels.
+3. Work through each issue in priority order.
+  - Handle commits based on chosen strategy.
+  - Verify fixes after each change.
+4. Complete workflow based on strategy.
 
-**Output:** All feedback addressed, commits created per user preference
+Output: All feedback addressed, commits created based on user's strategy choice.
 
 ## When to Use
 
 Use when you have parsed feedback (build failures + review issues) and need to:
-- Guide user through resolving issues one by one
-- Let user control when/how commits are created
-- Maintain consistent workflow across local and remote contexts
-- Verify fixes after each change
+- Guide user through resolving issues one by one.
+- Let user control when/how commits are created.
+- Maintain consistent workflow across local and remote contexts.
+- Verify fixes after each change.
 
-**When NOT to use:**
-- No feedback to address (all clear)
-- Feedback not yet parsed (use parsing skills first)
-- User wants to address issues themselves without guidance
+When NOT to use:
+- No feedback to address (all clear).
+- Feedback not yet parsed (use parsing skills first).
+- User wants to address issues themselves without guidance.
 
 ## Input Format
 
@@ -82,151 +83,171 @@ summary:
 
 ### Step 1: Choose Commit Strategy
 
-**Ask user once at the beginning:**
-
+Ask user once at the beginning:
+```markdown
 How would you like to commit fixes?
 
-**1. Incremental** - Commit after each fix (recommended for PRs)
-  - Each fix gets its own commit
-  - Easy to revert individual changes
-  - Clean git history showing progression
-  - Best when working on PR with CI feedback
-
-**2. Accumulated** - Fix all issues, commit once at end (recommended for local)
-  - All fixes in single commit
-  - Cleaner final history
-  - Good for local development before creating PR
-  - Best when addressing pre-commit feedback
-
-**3. Manual** - Don't auto-commit, I'll commit manually
-  - You control all commits
-  - Fixes are implemented but not committed
-  - Maximum flexibility
-  - Best when you want to review changes first
+**1. Incremental**: Commit after each fix.
+  - Each fix gets its own commit.
+  - Easy to revert individual changes.
+  - Clean git history showing progression.
+  - Best when working on PR with CI feedback.
+**2. Accumulated**: Fix all issues, commit once at end.
+  - All fixes in single commit.
+  - Cleaner final history.
+  - Good for local development before creating PR.
+  - Best when addressing pre-commit feedback.
+**3. Manual**: Don't auto-commit, I'll commit manually.
+  - You control all commits.
+  - Fixes are implemented but not committed.
+  - Maximum flexibility.
+  - Best when you want to review changes first.
 
 **Store choice for use in Steps 3 and 4.**
 
-### Step 2: Present Issues Summary
+### Step 2: Present Feedback Summary
 
-**Unified presentation format:**
+First, review all feedback and identify any aligned issues (see "Alignment Detection" section below). Group aligned issues together - those groupings will be noted in the summary and then will be presented as a single combined issue, going forwards. Priority of the combined issue is the highest priority of any individual issue in the group.
 
-```
-Found {N} issues across build and review:
+A note on terminology: from here on out, we refer to individual items that need addressing as "issues", whether they are build/test failures, review feedback items regardless of severity and including suggestions, or aligned sets of items.
 
-Priority 1: Critical Issues and Build Failures (MUST FIX)
-{count} issues
+#### Unified Presentation Format
 
-Priority 2: Warnings (SHOULD FIX)
-{count} issues
+Then, present a unified summary of all issues to your human partner.
 
-Priority 3: Suggestions (OPTIONAL - discuss with user)
-{count} issues
+```markdown
+**Build and Review Feedback Summary**
 
-Issue List:
-1. [Priority 1] [Test Failure] tests/api.test.ts:42 - TypeError: Cannot read property 'id' of null
-2. [Priority 1] [Critical Review] src/api.ts:42 - Null pointer risk
-3. [Priority 2] [Warning Review] src/api.ts:89 - Missing error handling
-4. [Priority 3] [Suggestion] src/utils.ts:15-20 - Consider refactoring
+**Build Results:** Pass/Fail ({N} failures, {M} related)
+**Review Results:** Merge/Needs Work ({N} recommendations): {concise 1-2 sentence summary of review results, focused on their overall recommendation and tone}
+
+**{N} Total Items To Consider Addressing**
+- Priority 1: {count} Build Failures and Critical Issues
+- Priority 2: {count} Warnings
+- Priority 3: {count} Suggestions
+
+**Notes**
+- {N} pre-existing build failures unrelated to your changes.
+<!-- If aligned issues were found, include this next bullet/section.
+     Note: this is a sample format; fill in actual aligned issue sets you found from the input. -->
+- The following issues are likely aligned with each other and will be presented together:
+  - [Priority 1] [Test Failure and Warning Review] src/api.ts:42 — Incorrect handling of null user object
+    - [Priority 1] [Test Failure] tests/api.test.ts:73 — TypeError: Cannot read property 'id' of null
+    - [Priority 2] [Warning Review] src/api.ts:42 — Null pointer risk
+<!-- End aligned issues bullet/section. -->
+
+**Issue List**
+<!-- Note: this is a sample format; fill in actual issues from the input. -->
+1. [Priority 1] [Test Failure and Warning Review] src/api.ts:42 — Incorrect handling of null user object
+2. [Priority 2] [Warning Review] src/api.ts:89 — Missing error handling
+3. [Priority 3] [Suggestion] src/utils.ts:15-20 — Consider refactoring
 
 Let's work through these in order.
 ```
 
-**Priority assignment logic:**
-
-**Priority 1 (MUST FIX):**
-- Build failures related to changes (`related_to_changes: true`)
-- Review issues with `severity: critical`
-
-**Priority 2 (SHOULD FIX):**
-- Review issues with `severity: warning`
-
-**Priority 3 (OPTIONAL):**
-- Review issues with `severity: suggestion`
-
-**Not presented (noted separately):**
-- Build failures unrelated to changes (`related_to_changes: false`)
-  - Display count: "Note: {N} pre-existing build failures unrelated to your changes"
-  - Don't include in issue list
-  - Don't require fixing
+Use the following logic to assign priorities for the issues presented in the template above:
+- Priority 1: Your human partner will likely want to fix these immediately.
+  - Build failures related to changes (`related_to_changes: true`).
+  - Review issues with `severity: critical`.
+- Priority 2: Your human partner will probably want to fix these soon, also.
+  - Review issues with `severity: warning`.
+- Priority 3: Your human partner may want to fix these.
+  - Review issues with `severity: suggestion`.
+- Not presented (noted separately):
+  - Build failures unrelated to changes (`related_to_changes: false`).
+    - Don't include in issue list.
+    - Don't require fixing as part of this workflow.
 
 ### Step 3: Interactive Resolution Loop
 
-**For each issue in priority order:**
+For each issue in priority order, first mention to your human partner:
 
-#### 3.1. Present Issue Details
-
-**For build failures:**
-```
-Issue {N}: [Test Failure] {location}
-
-Related to your changes: Yes
-Reasoning: {reasoning}
-
-Error messages:
-{messages joined}
+```markdown
+Next, we'll triage and consider addressing Issue {N} of {Total}: {issue brief description}...
 ```
 
-**For review issues:**
+For each issue in priority order, follow these sub-steps (details in following sections):
+- **Step 3.1: Investigate Root Cause** (gather context)
+- **Step 3.2: Present Issue Details** (show user the issue)
+- **Step 3.3: Propose Fix** (suggest solution)
+- **Step 3.4: Implement Fix** (make changes)
+- **Step 3.5: Verify Fix** (run CI)
+- **Step 3.6: Commit Decision** (based on strategy)
+
+We will loop over these steps for each issue until all are addressed.
+
+#### Step 3.1: Investigate Root Cause
+
+First, gather context for the issue:
+- Use Read tool to read the file(s) referenced in the issue.
+- Read surrounding code to understand how it's used.
+- Identify one or more options for how to address the issue.
+
+This context will inform the next steps.
+
+#### Step 3.2: Present Issue Details
+
+Then we will present the issue details to your human partner, based on issue type...
+
+For build failures:
+```markdown
+**Issue {N}:** [{issue type, e.g. "Test Failure", "Test Failure", "Lint Issue", etc.}] {location}
+
+**Related to your changes:** Yes
+**Reasoning:** {reasoning}
+
+**Description**
+{description of the build failure, including error messages}
+
+**Investigation Notes**
+{summary of relevant code context you gathered in Step 3.1}
 ```
-Issue {N}: [Critical Review] {code_references}
 
-{description}
+For review issues and suggestions:
+```markdown
+**Issue {N}:** [{issue type, e.g. "Critical Review"}] {code_references} — {brief title of issue}
+
+**Description**
+{description of the review issue, including any relevant details}
+
+**Investigation Notes**
+{summary of relevant code context you gathered in Step 3.1}
 ```
 
-**For issues that align (same location):**
-```
-Issue {N}: [Test Failure + Critical Review] {location}
+For aligned issues:
+```markdown
+**Issue {N}:** [{issue type, e.g. "Test Failure and Critical Review"}] {code_references} — {brief title of issue}
 
-Build failure:
-{build failure details}
+**Build Failure**
+{description of each build failure included in the aligned issue, if any, including error messages}
 
-Review feedback:
-{review description}
+**Review Feedback**
+{description of each review issue included in the aligned issue, if any, including any relevant details}
+
+**Investigation Notes**
+{summary of relevant code context you gathered in Step 3.1}
 
 These appear to be related to the same underlying issue.
 ```
 
-#### 3.2. Investigate Root Cause
+#### Step 3.3: Propose Fix
 
-- Read relevant code files
-- Understand context around the issue
-- Identify what needs to change
+Next, propose one or more approaches to address the issue to your human partner:
+- Explain what needs to change.
+- Show proposed fix approach.
+- Get user approval before implementing.
 
-#### 3.3. Handle Suggestions (Priority 3 only)
+#### Step 3.4: Implement Fix
 
-**For suggestions, ask user:**
+Once your human partner approves, implement the fix:
+- Make the necessary code changes.
+- Edit or write files as needed.
 
-```
-This is a suggestion, not a critical issue.
+#### Step 3.5: Verify Fix
 
-Would you like to:
-1. Address now
-2. Defer (create follow-up issue/note)
-3. Skip
+If a fix was implemented, verify it...
 
-What would you like to do?
-```
-
-**Based on user choice:**
-- **Address now:** Continue to step 3.4
-- **Defer:** Create note/issue, mark as handled, move to next issue
-- **Skip:** Mark as skipped, move to next issue
-
-#### 3.4. Propose Fix
-
-- Explain what needs to change
-- Show proposed fix approach
-- Get user approval before implementing
-
-#### 3.5. Implement Fix
-
-- Make the necessary code changes
-- Edit or write files as needed
-
-#### 3.6. Verify Fix
-
-**Run verification in subagent:**
-
+Run verification in subagent:
 ```markdown
 Use Task tool with subagent_type='general-purpose':
 
@@ -240,35 +261,49 @@ Changed files for relatedness analysis:
 Return structured TOON with failures and relatedness determination."
 ```
 
-**Triage verification results:**
+Notes:
+- Ensure all modified files in this session are listed for relatedness analysis.
+- The getting-build-results-local skill runs local CI commands for the entire project, not only on the modified files, and captures output. We run CI for the entire project (not just modified files) to catch unexpected interactions between fixes. This takes a bit longer but prevents surprises.
 
-**If status is `all_passed`:**
-- ✅ Fix verified, move to next step
+Triage verification results:
+- If status is `all_passed`:
+  - ✅ Fix verified successfully, move to Step 3.6 (Commit Decision).
 
-**If status is `fail_related` (new failures in files you just modified):**
-- 🔴 Fix introduced new issues
-- Investigate and fix before proceeding
-- Re-verify after fixing
+- If status is `fail_related`:
+  - ⚠️ Failures detected in files you modified.
+  - **Compare to original issue:** Review the verification failures and compare to the original issue you were fixing:
+    - **Same location and error as original?** → Fix didn't work or didn't fully resolve the issue.
+      - Loop back to Step 3.1 (Investigate Root Cause) to try a different approach.
+      - Explain to user that the previous approach didn't resolve the issue.
+      - Propose and implement an alternative solution.
+      - Re-verify by repeating all sub-steps of Step 3.5.
+    - **Different location or different error?** → Fix likely caused a side effect.
+      - Loop back to Step 3.1 treating this as a combined problem: fix the original issue WITHOUT causing the new failure.
+      - Investigate why the fix caused this side effect.
+      - Propose an alternative approach that avoids the side effect.
+      - Re-verify by repeating all sub-steps of Step 3.5.
+    - **Note:** Some build failures are intermittent. If the new failure seems unrelated to your changes (different subsystem, timing-related, etc.), it may be coincidental. Use judgment.
 
-**If status is `fail_unrelated`:**
-- ⚠️ Pre-existing failures, not caused by your fix
-- Note in summary
-- Continue with commit decision (fix is still good)
+- If status is `fail_unrelated`:
+  - ⚠️ Pre-existing failures in files you haven't modified.
+  - Note in summary but continue to Step 3.6 (your fix is still valid).
 
-#### 3.7. Commit Decision (based on strategy)
+#### Step 3.6: Commit Decision
 
-**Incremental strategy:**
-- Create commit immediately for this fix
-- Use descriptive message: "Fix {issue type}: {brief description}"
-- Append Claude Code attribution
-- Continue to next issue
+Based on chosen commit strategy from Step 1...
 
-**Accumulated strategy:**
-- Don't commit yet
-- Track that fix is complete
-- Continue to next issue
+Incremental strategy:
+- Create commit immediately for this fix.
+- Use descriptive message: "Fix {issue type}: {brief description}".
+- Append Claude Code attribution.
+- Continue to next issue.
 
-**Manual strategy:**
+Accumulated strategy:
+- Don't commit yet.
+- Track that fix is complete.
+- Continue to next issue.
+
+Manual strategy:
 - Don't commit
 - Continue to next issue
 
@@ -276,7 +311,9 @@ Return structured TOON with failures and relatedness determination."
 
 ### Step 4: Final Completion
 
-**Accumulated strategy:**
+Once all issues have been addressed, finalize based on commit strategy...
+
+Accumulated strategy:
 ```bash
 # Stage all fixes
 git add {all modified files}
@@ -285,315 +322,118 @@ git add {all modified files}
 git commit -m "$(cat <<'EOF'
 Address feedback: {summary of all fixes}
 
-- Fix {issue 1}
-- Fix {issue 2}
-- Fix {issue 3}
+- Fix {issue 1, brief title only}
+- Fix {issue 2, brief title only}
+- Fix {issue 3, brief title only}
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Code <noreply@anthropic.com>
 EOF
 )"
 ```
 
-**Incremental strategy:**
+Incremental strategy:
 - All commits already created
 - Just confirm completion: "All {N} issues addressed with {N} commits."
 
-**Manual strategy:**
+Manual strategy:
 ```
 All {N} issues have been fixed.
 
-Changed files:
+**Changed Files**
 - {file1}
 - {file2}
 
 The changes are ready for you to commit when you're ready.
 ```
 
-**Final verification (all strategies):**
-
-Run one final verification to confirm overall status:
-
-```markdown
-Use Task tool with subagent_type='general-purpose':
-
-"Run local CI to verify final state.
-Use getting-build-results-local skill.
-Return status: all_passed | fail_related | fail_unrelated"
-```
-
-**Report final status:**
-
-**All passed:**
-```
-✅ All issues resolved
-✅ All tests passing
-✅ Ready to {proceed based on context}
-```
-
-**Some failures unrelated:**
-```
-✅ All addressed issues resolved
-✅ Your changes verified
-⚠️ Note: {N} pre-existing failures unrelated to your changes
-✅ Ready to {proceed based on context}
-```
-
-**New related failures:**
-```
-🔴 New failures detected in modified files
-These need to be addressed before proceeding.
-
-{details}
-```
-
 ## Alignment Detection
 
-When build failure and review issue reference the same code location, present them as aligned issue:
+When build failure and review issue reference the same code location, present them as aligned issues...
 
-**Detection logic:**
-```
-build_failure.location == review_issue.code_reference (file:line match)
-OR
-build_failure.location is within review_issue.code_reference (line_range match)
-```
+Issues are considered aligned if any of the following are true:
+- They reference the same line in the same file AND involve the same underlying problem.
+- They reference lines or line ranges in the same file(s) that overlap AND they involve the same underlying problem.
+- They share the same root cause.
+  - Determining this may require a brief investigation, looking at code context, and reasoning about the issues.
+  - However, this should be kept lightweight to avoid excessive overhead.
+  - A deeper root cause analysis will be done later, in Step 3.1, and we can always change our mind then as to whether issues are truly aligned, if needed.
 
-**Presentation:**
-```
-Issue {N}: [Test Failure + Critical Review] src/api.ts:42
+Benefits:
+- User understands the connection.
+- Single fix addresses both issues.
+- Avoids duplicate work.
 
-Build failure:
-TypeError: Cannot read property 'id' of null
+## Examples (Decision Flow Only)
 
-Review feedback:
-Null pointer risk - user object may be null
+**IMPORTANT:** These examples illustrate decision logic and state transitions.
+They are NOT conversation transcripts - use the templates in the workflow sections above for actual communication with users.
 
-These appear to be related to the same underlying issue.
-```
+**Available examples:**
 
-**Benefits:**
-- User understands the connection
-- Single fix addresses both issues
-- Avoids duplicate work
+1. **TOON Input to Presentation Format** - [examples/toon-input-to-presentation.md](examples/toon-input-to-presentation.md)
+   - Shows how to transform TOON feedback into Step 2 presentation summary.
+   - Demonstrates alignment detection and priority assignment logic.
+   - Illustrates handling of unrelated failures.
 
-## Verification Workflow
+2. **Incremental Strategy with Alignment** - [examples/incremental-strategy-with-alignment.md](examples/incremental-strategy-with-alignment.md)
+   - Shows alignment detection grouping related items.
+   - Demonstrates commit-after-each-fix workflow.
+   - Illustrates one fix resolving multiple items.
 
-**After each fix (Step 3.6):**
-1. Run local CI in subagent
-2. Parse results
-3. Triage:
-   - All passed → Continue
-   - New related failures → Fix immediately
-   - Unrelated failures → Note and continue
+3. **Accumulated Strategy with Priority Ordering** - [examples/accumulated-strategy-with-priorities.md](examples/accumulated-strategy-with-priorities.md)
+   - Shows all three priority levels in action.
+   - Demonstrates unrelated failure handling (noted but not addressed).
+   - Shows suggestion deferral and single accumulated commit.
 
-**Changed files tracking:**
-- Maintain list of all files modified in this session
-- Pass to verification for relatedness analysis
-- Helps distinguish new failures from pre-existing
-
-**Verification timeout:**
-- If verification takes too long, ask user:
-  - Continue waiting
-  - Skip verification for this fix
-  - Skip all remaining verifications
-
-## Examples
-
-### Example 1: Incremental Strategy
-
-```
-Input: 3 issues (2 critical, 1 suggestion)
-
-Step 1: User chooses "Incremental"
-
-Step 2: Present summary
-  - Issue 1: [Critical] Null pointer src/api.ts:42
-  - Issue 2: [Test Failure] tests/api.test.ts:42
-  - Issue 3: [Suggestion] Refactor src/utils.ts:15-20
-
-Step 3: Work through issues
-  Issue 1:
-    - Read src/api.ts
-    - Add null check
-    - Verify (passed)
-    - Commit "Fix null pointer in API handler"
-
-  Issue 2:
-    - Read tests/api.test.ts
-    - Update test expectations
-    - Verify (passed)
-    - Commit "Update API tests for null handling"
-
-  Issue 3:
-    - Ask user: address/defer/skip?
-    - User says "defer"
-    - Create note, skip
-
-Step 4: Final completion
-  - All 2 critical issues fixed with 2 commits
-  - 1 suggestion deferred
-  - Final verification (all passed)
-  - Ready to push
-```
-
-### Example 2: Accumulated Strategy
-
-```
-Input: 3 issues (2 critical, 1 warning)
-
-Step 1: User chooses "Accumulated"
-
-Step 2: Present summary
-  - Issue 1: [Critical] Null pointer src/api.ts:42
-  - Issue 2: [Critical] SQL injection src/db.ts:89
-  - Issue 3: [Warning] Missing error handling src/api.ts:120
-
-Step 3: Work through issues
-  Issue 1:
-    - Add null check
-    - Verify (passed)
-    - Don't commit yet
-
-  Issue 2:
-    - Use parameterized query
-    - Verify (passed)
-    - Don't commit yet
-
-  Issue 3:
-    - Add try/catch
-    - Verify (passed)
-    - Don't commit yet
-
-Step 4: Final completion
-  - Create single commit with all 3 fixes
-  - Message: "Address feedback: fix null pointer, SQL injection, add error handling"
-  - Final verification (all passed)
-  - Ready for PR
-```
-
-### Example 3: Manual Strategy with Alignment
-
-```
-Input: 2 issues (aligned - same location)
-
-Step 1: User chooses "Manual"
-
-Step 2: Present summary
-  - Issue 1: [Test Failure + Critical Review] src/api.ts:42
-
-Step 3: Work through issues
-  Issue 1 (aligned):
-    - Present both failure and review together
-    - User sees they're related
-    - Add null check (fixes both)
-    - Verify (passed)
-    - Don't commit
-
-Step 4: Final completion
-  - All issues fixed
-  - Changed files: src/api.ts
-  - User will commit when ready
-```
-
-## Integration with Commands
-
-### pr-address-feedback-local
-
-```markdown
-## 1. Gather Complete Local Feedback
-
-[Step 1.a: Run getting-feedback-local skill in subagent]
-[Wait for unified TOON output]
-
-## 2. Address Issues Interactively
-
-**2.a.** Pass feedback to addressing-feedback-interactively skill:
-- Provide complete TOON output from step 1
-- Skill handles:
-  - Commit strategy selection
-  - Issue presentation
-  - Interactive resolution
-  - Verification after fixes
-  - Final commits based on strategy
-
-**2.b.** Skill returns when complete:
-- All issues addressed
-- Commits created per user preference
-- Final verification completed
-```
-
-### pr-address-feedback-remote
-
-```markdown
-## 1. Gather Complete PR Feedback
-
-[Step 1.a: Run getting-feedback-remote skill in subagent]
-[Wait for unified TOON output]
-
-## 2. Address Issues Interactively
-
-**2.a.** Pass feedback to addressing-feedback-interactively skill:
-- Provide complete TOON output from step 1
-- Skill handles:
-  - Commit strategy selection (default: incremental for PRs)
-  - Issue presentation
-  - Interactive resolution
-  - Verification after fixes
-  - Final commits based on strategy
-  - Push commits to remote
-
-**2.b.** Skill returns when complete:
-- All issues addressed
-- Commits created and pushed per user preference
-- Final verification completed
-```
+4. **Verification Triage** - [examples/verification-triage.md](examples/verification-triage.md)
+   - Shows three different verification outcomes (all_passed, fail_related, fail_unrelated).
+   - Illustrates relatedness analysis based on modified files.
+   - Demonstrates different actions for each outcome.
 
 ## Common Mistakes
 
-**Not tracking changed files:**
-- **Problem:** Can't determine if new failures are related
-- **Fix:** Maintain list of all files modified in session
+Not tracking changed files:
+- Problem: Can't determine if new failures are related.
+- Fix: Maintain list of all files modified in session.
 
-**Committing before verification:**
-- **Problem:** Commit might introduce new failures
-- **Fix:** Always verify before commit decision
+Committing before verification:
+- Problem: Commit might introduce new failures.
+- Fix: Always verify before commit decision.
 
-**Skipping suggestions without asking:**
-- **Problem:** User misses optional improvements
-- **Fix:** Always ask user for suggestions (address/defer/skip)
+Skipping suggestions without asking:
+- Problem: User misses optional improvements.
+- Fix: Always ask user for suggestions (address/defer/skip).
 
-**Not presenting aligned issues together:**
-- **Problem:** User fixes same issue twice
-- **Fix:** Detect alignment, present as single issue
+Not presenting aligned issues together:
+- Problem: User fixes same issue twice.
+- Fix: Detect alignment, present as single issue.
 
-**Not explaining commit strategies:**
-- **Problem:** User picks wrong strategy for context
-- **Fix:** Show recommendations (incremental for PRs, accumulated for local)
+Not explaining commit strategies:
+- Problem: User picks wrong strategy for context.
+- Fix: Show recommendations (incremental for PRs, accumulated for local).
 
 ## Error Handling
 
-**If verification fails repeatedly:**
-- After 3 failed verification attempts on same fix
-- Ask user:
-  - Try different approach
-  - Skip verification for this fix
-  - Abort and investigate manually
+If verification fails repeatedly, after 3 failed verification attempts on same fix, ask your human partner:
+- Try different approach.
+- Skip verification for this fix.
+- Abort and investigate manually.
 
-**If user wants to change commit strategy mid-workflow:**
-- Allow strategy change
-- Adjust remaining workflow accordingly
-- Don't undo commits already created
+If user wants to change commit strategy mid-workflow:
+- Allow strategy change.
+- Adjust remaining workflow accordingly.
+- Don't undo commits already created.
 
-**If fix introduces new critical issues:**
-- Stop immediately
-- Investigate new issue
-- Fix before proceeding with original issues
+If fix introduces new critical issues:
+- Stop immediately.
+- Investigate new issue.
+- Fix before proceeding with original issues.
 
 ## Usage Pattern
 
-**Called from commands:**
-
+This skill is typically invoked after getting feedback locally or remotely, via the pr-address-feedback-local or pr-address-feedback-remote commands:
 ```markdown
 Use Skill tool with skill='addressing-feedback-interactively':
 
@@ -602,30 +442,30 @@ Pass the complete TOON feedback from getting-feedback-local or getting-feedback-
 The skill will handle all user interaction for resolving issues.
 ```
 
-**Skill expectations:**
-- Input is well-formed TOON with parsed feedback
-- User is available for interactive decisions
-- Local CI commands are available (for verification)
-- Git operations are available (for commits)
+Skill expectations:
+- Input is well-formed TOON with parsed feedback.
+- User is available for interactive decisions.
+- Local CI commands are available (for verification).
+- Git operations are available (for commits).
 
 ## Benefits
 
-**Consistency:**
-- Same workflow for local and remote
-- Same issue presentation format
-- Same priority logic
+Consistency:
+- Same workflow for local and remote.
+- Same issue presentation format.
+- Same priority logic.
 
-**User Control:**
-- Choose commit strategy upfront
-- Decide on each suggestion
-- Full transparency
+User Control:
+- Choose commit strategy upfront.
+- Decide on each suggestion.
+- Full transparency.
 
-**Verification:**
-- After each fix
-- Catches regressions early
-- Distinguishes new vs pre-existing failures
+Verification:
+- After each fix.
+- Catches regressions early.
+- Distinguishes new vs pre-existing failures.
 
-**Efficiency:**
-- Priority-based ordering
-- Aligned issues presented together
-- Subagent verification (low token cost)
+Efficiency:
+- Priority-based ordering.
+- Aligned issues presented together.
+- Subagent verification (low token cost).
