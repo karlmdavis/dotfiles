@@ -1,40 +1,67 @@
 ---
-description: Iteratively address local feedback (build + review) before committing or creating PR
+description: Gather and triage all local quality issues (build + review) interactively
+argument-hint: everything | uncommitted | branch | branch-dirty
 ---
 
-I would like you to gather and address all local feedback (build failures and code review) interactively until everything is clean and ready to commit or create a PR:
+I would like you to gather and triage all local quality issues (build failures and code review) interactively until everything is clean and ready to commit or create a PR:
+
+## Scope Argument
+
+The `<scope>` argument determines what code to review:
+
+- `everything` - Full project as it appears in working copy (all files, regardless of git state).
+- `uncommitted` - Only staged and unstaged changes (what Git calls "working tree changes").
+- `branch` - Committed changes on current branch vs base branch (clean branch comparison).
+- `branch-dirty` - Current branch + uncommitted changes vs base branch (branch with WIP).
+
+If no argument provided, defaults to `branch-dirty` (most common use case).
+
+## Review Scope Determination
+
+Based on the scope argument:
+
+- `everything` → Review all files in project.
+- `uncommitted` → Review files from `local.uncommitted_files` (from getting-branch-state).
+- `branch` → Review files from `comparison.branch_vs_base.changed_files` (committed only).
+- `branch-dirty` → Review files from `comparison.branch_vs_base.changed_files` + `local.uncommitted_files` (union).
 
 ## 0. Determine Review Context
 
-**CRITICAL:** Before gathering feedback, determine what changes to review.
+**0.a.** Parse scope argument from command invocation:
+- If argument provided: Use specified scope.
+- If no argument: Default to `branch-dirty`.
 
-**0.a.** Run the getting-branch-state skill to get branch info and changed files:
+**0.b.** Run the getting-branch-state skill to get branch info:
 
 ```bash
 cd ~/.claude/skills/getting-branch-state
 scripts/check_branch_state.py
 ```
 
-Parse the TOON output.
+Parse the TOON output and store for later use.
 
-**0.b.** Determine review scope from branch state:
-- If `local.branch` == `local.base_branch` (on main/master) → review scope is "uncommitted"
-- If `local.branch` != `local.base_branch` (on feature branch) → review scope is "branch_vs_base"
+**0.c.** Determine file list based on scope:
 
-**0.c.** Get changed files for review:
-- If review scope is "uncommitted": Use `local.uncommitted_files`
-- If review scope is "branch_vs_base": Use `comparison.branch_vs_base.changed_files`
+- If scope is `everything`:
+  - Get all tracked files: `git ls-files`
+  - Review scope: "full project"
 
-**0.d.** Optional: Note PR status if it exists:
-- If `pr.exists` is true and `comparison.local_vs_pr.status` is "ahead":
-  - You have unpushed commits. Consider pushing before continuing local work.
-- If status is "diverged":
-  - You've rebased locally. Be aware when interpreting feedback.
+- If scope is `uncommitted`:
+  - Use `local.uncommitted_files` from branch state
+  - Review scope: "uncommitted changes"
 
-**0.e.** Pass context to feedback gathering subagent:
+- If scope is `branch`:
+  - Use `comparison.branch_vs_base.changed_files` from branch state
+  - Review scope: "branch changes"
+
+- If scope is `branch-dirty`:
+  - Combine `comparison.branch_vs_base.changed_files` + `local.uncommitted_files` (deduplicated)
+  - Review scope: "branch with uncommitted changes"
+
+**0.d.** Pass context to feedback gathering subagent:
 - Provide the list of changed files from step 0.c
-- Specify the review scope (uncommitted or branch_vs_base)
-- This ensures build relatedness analysis and code review focus on the right changes
+- Specify the review scope for context
+- Pass complete branch state TOON for potential use by parsing skills
 
 ## 1. Gather Complete Local Feedback
 
@@ -84,13 +111,14 @@ Note that this is a logical flow, not code to run or the exact messages to show 
 
 ```
 Step 0: Determine review context
+   - Scope argument: branch-dirty (default)
    - Run getting-branch-state skill
    - Local branch: feature-auth
    - Base branch: main
-   - Review scope: branch_vs_base (not on main)
-   - Changed files from branch_vs_base: src/api.ts, tests/api.test.ts
-   - PR exists: true (#123, status: ahead by 1 commit)
-   - Note: Unpushed commits exist, consider pushing later
+   - Changed files (branch): src/api.ts, tests/api.test.ts
+   - Uncommitted files: src/utils.ts
+   - Combined scope: src/api.ts, tests/api.test.ts, src/utils.ts
+   - Review scope: "branch with uncommitted changes"
 
 Step 1: Gather feedback
    - Run getting-feedback-local skill in subagent
