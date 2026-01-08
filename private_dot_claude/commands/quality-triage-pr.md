@@ -1,5 +1,5 @@
 ---
-description: Iteratively address PR feedback from workflows and reviews until all issues resolved
+description: Gather and triage all PR quality issues (workflows + reviews) interactively
 ---
 
 I would like you to gather and address all PR feedback (workflow failures and review comments) interactively until everything is resolved and ready to merge:
