@@ -9,7 +9,7 @@ Checks GitHub PR workflows while correctly handling unpushed commits, commit cor
 
 ## When to Use
 
-- Human partner asks "are tests passing?", "is CI done?", "wait for CI", or similar.
+- User asks "are tests passing?", "is CI done?", "wait for CI", or similar.
 - Need to verify workflow status after pushing commits.
 - Want to wait for workflows to complete before proceeding.
 
