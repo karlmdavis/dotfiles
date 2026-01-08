@@ -1,7 +1,7 @@
 # PR Feedback System Refactoring
 
 **Date:** 2026-01-04
-**Status:** Approved Design
+**Status:** Implemented (2026-01-08)
 **Context:** Refactor PR-related Claude Code skills for better reusability and token efficiency
 
 ## Overview
@@ -424,7 +424,7 @@ failures[1]:
 ## Phase 2: Interactive Feedback Resolution Refinement
 
 **Date:** 2026-01-05
-**Status:** Design
+**Status:** Implemented (2026-01-06)
 **Context:** Extract shared issue presentation and resolution logic from commands into reusable skill
 
 ### Problem Statement
@@ -730,3 +730,160 @@ verification, and commit management.
 3. All three commit strategies work correctly
 4. Commands are <50% of current size (delegating to skill)
 5. Skill is reusable for future feedback workflows
+
+---
+
+## Implementation Status Updates
+
+### January 8, 2026: Quality Commands Refactoring Complete
+
+**Status:** Implemented
+**Context:** Final polish of command names, scope arguments, and architectural patterns
+
+#### Changes Implemented
+
+**1. Command Renames for Clarity**
+
+Original names were verbose and PR-centric.
+Renamed to reflect their actual purpose (quality triage):
+
+- `/pr-address-feedback-local` → `/quality-triage`
+- `/pr-address-feedback-remote` → `/quality-triage-pr`
+- Removed obsolete `/pr-quality-loop` command
+
+**2. Scope Arguments for Local Quality Triage**
+
+Added flexible scope selection to `/quality-triage` command:
+
+```
+/quality-triage <scope>
+
+Scopes:
+- everything: Full project as it appears in working copy
+- uncommitted: Only staged and unstaged changes
+- branch: Committed changes on current branch vs base branch
+- branch-dirty: Branch changes + uncommitted changes (default)
+```
+
+This enables multiple workflows:
+- Pre-commit check: `/quality-triage uncommitted`
+- Full branch review: `/quality-triage branch`
+- Work-in-progress check: `/quality-triage branch-dirty` (default)
+- Full project audit: `/quality-triage everything`
+
+**3. Branch State Single Source of Truth**
+
+Extracted `getting-branch-state` skill as centralized source for:
+- Base branch detection (main vs master)
+- Uncommitted files tracking
+- PR existence and sync status
+- Changed files list for review context
+- Ahead/behind/diverged commit tracking
+
+Used by:
+- Both quality-triage commands (for scope determination)
+- `awaiting-pr-workflow-results` (for PR context)
+- Future skills requiring branch context
+
+**4. Context Isolation Pattern**
+
+Added formal `context: fork` field to 9 skills requiring isolation:
+- `getting-feedback-local`
+- `getting-feedback-remote`
+- `awaiting-pr-workflow-results`
+- `getting-build-results-local`
+- `getting-build-results-remote`
+- `getting-review-local`
+- `getting-reviews-remote`
+- `parsing-build-results`
+- `parsing-review-suggestions`
+
+This declarative field ensures Claude Code automatically runs these skills in isolated
+subagent context, preventing token bloat from large logs (50k+ tokens) and long-running
+operations (up to 20 minutes for workflow waits).
+
+**5. Terminology Standardization**
+
+Replaced "human partner" with "user" throughout all skills and commands (15 occurrences
+across 11 files) for consistency with industry standards and Claude Code conventions.
+
+**6. Documentation Updates**
+
+- Commands README: Updated workflow diagram and skill dependency graph
+- CLAUDE.md: Updated command references and descriptions
+- settings.json.tmpl: Updated slash command permissions
+- All skill documentation: Updated cross-references to new command names
+
+#### Final Architecture
+
+```
+Commands (User-facing):
+  /quality-triage <scope>
+    → getting-branch-state (determine scope)
+    → getting-feedback-local (in subagent, context: fork)
+       → getting-build-results-local → parsing-build-results
+       → getting-review-local → parsing-review-suggestions
+    → addressing-feedback-interactively (main context, user interaction)
+
+  /quality-triage-pr
+    → getting-branch-state (check sync status)
+    → getting-feedback-remote (in subagent, context: fork)
+       → awaiting-pr-workflow-results
+       → getting-build-results-remote → parsing-build-results
+       → getting-reviews-remote → parsing-review-suggestions
+    → addressing-feedback-interactively (main context, user interaction)
+
+  /pr-merge
+    → gh pr merge --squash
+    → cleanup local branch
+```
+
+#### Skills Inventory (Final)
+
+**Created (9 skills):**
+- `getting-branch-state` (script + agent) ← NEW, extracted 2026-01-07
+- `getting-build-results-remote` (script)
+- `getting-reviews-remote` (script)
+- `parsing-build-results` (agent-only)
+- `parsing-review-suggestions` (agent-only)
+- `getting-build-results-local` (agent-only)
+- `getting-review-local` (agent-only)
+- `getting-feedback-local` (agent-only)
+- `getting-feedback-remote` (agent-only)
+- `addressing-feedback-interactively` (agent-only) ← Phase 2
+
+**Deleted (3 skills):**
+- `getting-pr-workflow-results` ✓
+- `getting-pr-review-comments` ✓
+- `getting-pr-artifacts` ✓
+
+**Unchanged (1 skill):**
+- `awaiting-pr-workflow-results` (refactored earlier)
+
+#### Success Criteria Met
+
+✅ Local pre-PR workflow functional (`/quality-triage` with scope arguments)
+✅ Remote PR workflow functional (`/quality-triage-pr`)
+✅ Parsing layers successfully reused across local/remote
+✅ All output in consistent TOON format
+✅ Token usage reasonable (context: fork prevents bloat)
+✅ Pre-commit verification catches related failures
+✅ Branch state single source of truth established
+✅ Commands use consistent interactive resolution skill
+✅ Flexible commit strategies (incremental/accumulated/manual)
+✅ Clear command names reflecting actual purpose
+
+#### Implementation Commits
+
+See `docs/implementation-plans/2026-01-08-refactor-quality-commands.md` for detailed
+task breakdown.
+
+Summary of changes:
+- 15 commits total
+- 17 files modified
+- 2 commands renamed, 1 removed
+- 9 skills updated with context: fork
+- 11 files terminology standardized
+- All cross-references updated
+
+**Final Status:** Production-ready, all tests passing (54/54)
