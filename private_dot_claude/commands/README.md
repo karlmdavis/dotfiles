@@ -5,7 +5,7 @@ This directory contains custom slash commands for Claude Code that orchestrate P
 
 ## Commands Overview
 
-### `/pr-address-feedback-local`
+### `/quality-triage <scope>`
 **Description:** Iteratively address local feedback (build + review) before committing or creating PR.
 
 **Skills used:**
@@ -15,7 +15,7 @@ This directory contains custom slash commands for Claude Code that orchestrate P
 
 **When to use:** Before committing or creating a PR to ensure code quality.
 
-### `/pr-address-feedback-remote`
+### `/quality-triage-pr`
 **Description:** Iteratively address PR feedback from workflows and reviews until all issues resolved.
 
 **Skills used:**
@@ -24,15 +24,6 @@ This directory contains custom slash commands for Claude Code that orchestrate P
 - `addressing-feedback-interactively` - Resolve all issues with user approval.
 
 **When to use:** After creating a PR to address CI failures and review comments.
-
-### `/pr-quality-loop`
-**Description:** Monitor and fix CI checks until all pass (iterative loop).
-
-**Skills used:**
-- None explicitly (manual workflow orchestration).
-- Indirectly uses CI checking and review addressing patterns.
-
-**When to use:** For iterative PR refinement until all quality checks pass.
 
 ### `/pr-merge`
 **Description:** Squash merge PR and clean up local branch.
@@ -56,7 +47,7 @@ This directory contains custom slash commands for Claude Code that orchestrate P
         │
         ▼
   ┌─────────────────────────────────────────┐
-  │  /pr-address-feedback-local             │
+  │  /quality-triage <scope>                │
   │  ────────────────────────────────────   │
   │  • Check branch state                   │
   │  • Run local CI (build/test/lint)       │
@@ -69,7 +60,7 @@ This directory contains custom slash commands for Claude Code that orchestrate P
         │
         ▼
   ┌─────────────────────────────────────────┐
-  │  /pr-address-feedback-remote            │
+  │  /quality-triage-pr                     │
   │  ────────────────────────────────────   │
   │  • Check local/PR sync (warn if needed) │
   │  • Wait for workflows to complete       │
@@ -78,19 +69,6 @@ This directory contains custom slash commands for Claude Code that orchestrate P
   │  • Address issues interactively         │
   │  • Commit fixes (incremental strategy)  │
   │  • Push to PR                           │
-  └─────────────────────────────────────────┘
-        │
-        │  (Optional) Iterative refinement
-        │
-        ▼
-  ┌─────────────────────────────────────────┐
-  │  /pr-quality-loop                       │
-  │  ────────────────────────────────────   │
-  │  Loop until clean:                      │
-  │  1. Local quality checks                │
-  │  2. Verify acceptance criteria          │
-  │  3. CI checks (wait, review, fix)       │
-  │  4. Repeat                              │
   └─────────────────────────────────────────┘
         │
         │  All checks passing
@@ -114,41 +92,39 @@ This directory contains custom slash commands for Claude Code that orchestrate P
 ```
 Commands and their skill dependencies:
 
-/pr-address-feedback-local ──┬──▶ getting-branch-state
-                              │      │
-                              │      ├──▶ (git state detection)
-                              │      └──▶ (PR state via gh CLI)
-                              │
-                              ├──▶ getting-feedback-local
-                              │      │
-                              │      ├──▶ getting-build-results-local
-                              │      │      └──▶ parsing-build-results
-                              │      │
-                              │      └──▶ getting-review-local
-                              │
-                              └──▶ addressing-feedback-interactively
-                                     (Phase 2 unified resolver)
+/quality-triage <scope> ──┬──▶ getting-branch-state
+                          │      │
+                          │      ├──▶ (git state detection)
+                          │      └──▶ (PR state via gh CLI)
+                          │
+                          ├──▶ getting-feedback-local
+                          │      │
+                          │      ├──▶ getting-build-results-local
+                          │      │      └──▶ parsing-build-results
+                          │      │
+                          │      └──▶ getting-review-local
+                          │
+                          └──▶ addressing-feedback-interactively
+                                 (Phase 2 unified resolver)
 
 
-/pr-address-feedback-remote ──┬──▶ getting-branch-state
-                               │      (sync status checking)
-                               │
-                               ├──▶ getting-feedback-remote
-                               │      │
-                               │      ├──▶ awaiting-pr-workflow-results
-                               │      │      └──▶ getting-branch-state
-                               │      │
-                               │      ├──▶ getting-build-results-remote
-                               │      │      └──▶ parsing-build-results
-                               │      │
-                               │      └──▶ getting-reviews-remote
-                               │             └──▶ parsing-review-suggestions
-                               │
-                               └──▶ addressing-feedback-interactively
-                                      (Phase 2 unified resolver)
+/quality-triage-pr ──┬──▶ getting-branch-state
+                     │      (sync status checking)
+                     │
+                     ├──▶ getting-feedback-remote
+                     │      │
+                     │      ├──▶ awaiting-pr-workflow-results
+                     │      │      └──▶ getting-branch-state
+                     │      │
+                     │      ├──▶ getting-build-results-remote
+                     │      │      └──▶ parsing-build-results
+                     │      │
+                     │      └──▶ getting-reviews-remote
+                     │             └──▶ parsing-review-suggestions
+                     │
+                     └──▶ addressing-feedback-interactively
+                            (Phase 2 unified resolver)
 
-
-/pr-quality-loop ─────────────▶ (manual orchestration)
 
 /pr-merge ────────────────────▶ (gh CLI only)
 ```
@@ -195,21 +171,21 @@ The `addressing-feedback-interactively` skill provides:
 ```bash
 # Make changes
 git add .
-/pr-address-feedback-local
+/quality-triage uncommitted
+# Fix issues, commit when clean
+```
+
+**Full branch review before PR:**
+```bash
+/quality-triage branch
 # Fix issues, commit when clean
 ```
 
 **Create PR and address feedback:**
 ```bash
 gh pr create
-/pr-address-feedback-remote
+/quality-triage-pr
 # Fix issues, push when clean
-```
-
-**Iterative PR refinement:**
-```bash
-/pr-quality-loop
-# Runs until all checks pass
 ```
 
 **Merge when ready:**
