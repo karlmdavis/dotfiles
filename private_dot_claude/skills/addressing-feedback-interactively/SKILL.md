@@ -1,6 +1,6 @@
 ---
 name: addressing-feedback-interactively
-description: Guide human partner through resolving build failures and code review feedback interactively, as parsed by the getting-feedback-local or getting-feedback-remote skills. Use when addressing build failures (local or CI), test failures, type errors, linting errors, or review comments from PRs.
+description: Guide user through resolving build failures and code review feedback interactively, as parsed by the getting-feedback-local or getting-feedback-remote skills. Use when addressing build failures (local or CI), test failures, type errors, linting errors, or review comments from PRs.
 allowed-tools: Read, Edit, Write, Bash, Task
 ---
 
@@ -113,7 +113,7 @@ A note on terminology: from here on out, we refer to individual items that need 
 
 #### Unified Presentation Format
 
-Then, present a unified summary of all issues to your human partner.
+Then, present a unified summary of all issues to your user.
 
 ```markdown
 **Build and Review Feedback Summary**
@@ -146,12 +146,12 @@ Let's work through these in order.
 ```
 
 Use the following logic to assign priorities for the issues presented in the template above:
-- Priority 1: Your human partner will likely want to fix these immediately.
+- Priority 1: Your user will likely want to fix these immediately.
   - Build failures related to changes (`related_to_changes: true`).
   - Review issues with `severity: critical`.
-- Priority 2: Your human partner will probably want to fix these soon, also.
+- Priority 2: Your user will probably want to fix these soon, also.
   - Review issues with `severity: warning`.
-- Priority 3: Your human partner may want to fix these.
+- Priority 3: Your user may want to fix these.
   - Review issues with `severity: suggestion`.
 - Not presented (noted separately):
   - Build failures unrelated to changes (`related_to_changes: false`).
@@ -160,7 +160,7 @@ Use the following logic to assign priorities for the issues presented in the tem
 
 ### Step 3: Interactive Resolution Loop
 
-For each issue in priority order, first mention to your human partner:
+For each issue in priority order, first mention to your user:
 
 ```markdown
 Next, we'll triage and consider addressing Issue {N} of {Total}: {issue brief description}...
@@ -187,7 +187,7 @@ This context will inform the next steps.
 
 #### Step 3.2: Present Issue Details
 
-Then we will present the issue details to your human partner, based on issue type...
+Then we will present the issue details to your user, based on issue type...
 
 For build failures:
 ```markdown
@@ -232,14 +232,14 @@ These appear to be related to the same underlying issue.
 
 #### Step 3.3: Propose Fix
 
-Next, propose one or more approaches to address the issue to your human partner:
+Next, propose one or more approaches to address the issue to your user:
 - Explain what needs to change.
 - Show proposed fix approach.
 - Get user approval before implementing.
 
 #### Step 3.4: Implement Fix
 
-Once your human partner approves, implement the fix:
+Once your user approves, implement the fix:
 - Make the necessary code changes.
 - Edit or write files as needed.
 
@@ -416,7 +416,7 @@ Not explaining commit strategies:
 
 ## Error Handling
 
-If verification fails repeatedly, after 3 failed verification attempts on same fix, ask your human partner:
+If verification fails repeatedly, after 3 failed verification attempts on same fix, ask your user:
 - Try different approach.
 - Skip verification for this fix.
 - Abort and investigate manually.

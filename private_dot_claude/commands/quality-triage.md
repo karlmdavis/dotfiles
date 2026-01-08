@@ -107,7 +107,7 @@ The skill will:
 
 ## Example Flow
 
-Note that this is a logical flow, not code to run or the exact messages to show your human partner.
+Note that this is a logical flow, not code to run or the exact messages to show your user.
 
 ```
 Step 0: Determine review context

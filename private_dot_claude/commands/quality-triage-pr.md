@@ -24,7 +24,7 @@ If status is `in_sync`:
 - ✅ Proceed to Step 1.
 
 If status is `ahead`, `behind`, or `diverged`:
-- ⚠️ Warn the human partner about the mismatch.
+- ⚠️ Warn the user about the mismatch.
 - Show the specific situation:
   - If `ahead`: "Local is {ahead_count} commit(s) ahead of PR"
   - If `behind`: "Local is {behind_count} commit(s) behind PR"
@@ -107,7 +107,7 @@ git push
 
 ## Example Flow
 
-Note that this is a logical flow, not code to run or the exact messages to show your human partner.
+Note that this is a logical flow, not code to run or the exact messages to show your user.
 
 ```
 Step 0: Check branch state
