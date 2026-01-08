@@ -1,6 +1,7 @@
 ---
 name: awaiting-pr-workflow-results
 description: Check GitHub PR workflow status, verify unpushed commits, and wait for workflows to complete (up to 20min). Use when user asks "are tests passing?", "is CI done?", "wait for workflows", or needs to verify workflow status after pushing commits.
+context: fork
 ---
 
 # Awaiting PR Workflow Results
@@ -14,6 +15,12 @@ Checks GitHub PR workflows while correctly handling unpushed commits, commit cor
 - Want to wait for workflows to complete before proceeding.
 
 ## Usage
+
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
+
+When invoking via Task tool, the context field ensures automatic isolation.
+
+When invoking script directly via Bash, caller is responsible for running in appropriate context.
 
 ```
 Task tool with subagent_type='general-purpose':

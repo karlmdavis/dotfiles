@@ -1,6 +1,7 @@
 ---
 name: getting-feedback-remote
 description: Orchestrate complete PR feedback - waits for workflows, fetches build results and reviews, returns unified TOON summary without consuming main context
+context: fork
 ---
 
 # Getting Feedback Remote
@@ -320,7 +321,7 @@ Also address 1 unresolved earlier comment.
 
 ## Usage Pattern
 
-CRITICAL: Always run in subagent.
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':

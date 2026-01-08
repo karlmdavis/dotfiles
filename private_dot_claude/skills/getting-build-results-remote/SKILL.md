@@ -1,6 +1,7 @@
 ---
 name: getting-build-results-remote
 description: Fetch workflow logs from GitHub PR workflows - takes run IDs from awaiting-pr-workflow-results and returns raw logs for parsing
+context: fork
 ---
 
 # Getting Build Results Remote
@@ -96,7 +97,11 @@ workflows[2]:
 
 ## Usage Pattern
 
-CRITICAL: Always run in subagent to save context tokens.
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
+
+When invoking via Task tool, the context field ensures automatic isolation.
+
+When invoking script directly via Bash, caller is responsible for running in appropriate context.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':

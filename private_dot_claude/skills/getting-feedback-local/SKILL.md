@@ -1,6 +1,7 @@
 ---
 name: getting-feedback-local
 description: Orchestrate complete local feedback - runs local CI and code review, returns unified TOON summary without consuming main context
+context: fork
 ---
 
 # Getting Feedback Local
@@ -260,7 +261,7 @@ and flagged by review) before committing.
 
 ## Usage Pattern
 
-CRITICAL: Always run in subagent.
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':

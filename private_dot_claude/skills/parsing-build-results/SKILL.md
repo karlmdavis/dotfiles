@@ -1,6 +1,7 @@
 ---
 name: parsing-build-results
 description: Parse raw build/test logs into structured failures - extracts commands, failures, locations, and determines if related to current changes
+context: fork
 ---
 
 # Parsing Build Results
@@ -272,6 +273,8 @@ Used by:
 - Requires context about changed files (provided by caller)
 
 ## Usage Pattern
+
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 This is an agent-only skill. Caller provides:
 1. Raw build logs

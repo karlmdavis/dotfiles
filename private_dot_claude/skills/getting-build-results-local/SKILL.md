@@ -1,6 +1,7 @@
 ---
 name: getting-build-results-local
 description: Run local CI commands and return raw output - reads project CLAUDE.md to find build/test commands, executes them, returns output for parsing
+context: fork
 ---
 
 # Getting Build Results Local
@@ -235,6 +236,8 @@ uv run mypy .
 ```
 
 ## Usage Pattern
+
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 This is an agent-only skill. Caller provides working directory, agent figures out and runs CI commands.
 

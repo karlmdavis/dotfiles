@@ -1,6 +1,7 @@
 ---
 name: parsing-review-suggestions
 description: Parse raw review text into structured issues - extracts severity, code references, descriptions from Claude bot reviews, GitHub PR reviews, and unresolved threads
+context: fork
 ---
 
 # Parsing Review Suggestions
@@ -380,6 +381,8 @@ Used by:
 - Requires raw review text from `getting-reviews-remote` or `getting-review-local`
 
 ## Usage Pattern
+
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 This is an agent-only skill. Caller provides raw review text, agent parses and returns structured TOON.
 

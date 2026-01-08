@@ -1,6 +1,7 @@
 ---
 name: getting-review-local
 description: Get local code review of current changes - uses available review tools or Claude's own analysis to return structured feedback
+context: fork
 ---
 
 # Getting Review Local
@@ -185,6 +186,8 @@ Focus review on changed lines, not entire file.
 The output from this skill can be passed directly to `parsing-review-suggestions` if further structuring needed, or used as-is since it's already in compatible format.
 
 ## Usage Pattern
+
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
 
 This is an agent-only skill. Caller specifies what to review (staged vs unstaged), agent performs review and returns feedback.
 

@@ -1,6 +1,7 @@
 ---
 name: getting-reviews-remote
 description: Fetch PR review comments (Claude bot + GitHub reviews + unresolved threads) - returns raw review text for parsing by parsing-review-suggestions
+context: fork
 ---
 
 # Getting Reviews Remote
@@ -134,7 +135,11 @@ unresolved_threads[1]:
 
 ## Usage Pattern
 
-CRITICAL: Always run in subagent to save context tokens.
+**Context:** This skill uses `context: fork` to always run in isolated subagent context.
+
+When invoking via Task tool, the context field ensures automatic isolation.
+
+When invoking script directly via Bash, caller is responsible for running in appropriate context.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':
