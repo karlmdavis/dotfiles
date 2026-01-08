@@ -2,8 +2,7 @@
 description: Iteratively address PR feedback from workflows and reviews until all issues resolved
 ---
 
-I would like you to address all PR feedback (workflow failures and review comments) interactively until
-  everything is resolved and ready to merge:
+I would like you to gather and address all PR feedback (workflow failures and review comments) interactively until everything is resolved and ready to merge:
 
 ## 0. Check Branch State and PR Sync
 
@@ -107,6 +106,8 @@ git push
 ```
 
 ## Example Flow
+
+Note that this is a logical flow, not code to run or the exact messages to show your human partner.
 
 ```
 Step 0: Check branch state

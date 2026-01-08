@@ -2,8 +2,7 @@
 description: Iteratively address local feedback (build + review) before committing or creating PR
 ---
 
-I would like you to address all local feedback (build failures and code review) interactively until
-  everything is clean and ready to commit or create a PR:
+I would like you to gather and address all local feedback (build failures and code review) interactively until everything is clean and ready to commit or create a PR:
 
 ## 0. Determine Review Context
 
@@ -80,6 +79,8 @@ The skill will:
 - Final commits and verification
 
 ## Example Flow
+
+Note that this is a logical flow, not code to run or the exact messages to show your human partner.
 
 ```
 Step 0: Determine review context
