@@ -162,7 +162,7 @@ Done! Ready to create PR or continue development.
 
 **Pre-commit workflow:**
 - Make changes during development.
-- Run `/pr-address-feedback-local` before committing.
+- Run `/quality-triage` before committing.
 - Address all issues.
 - Commit clean code.
 
