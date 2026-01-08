@@ -118,7 +118,7 @@ Step 0: Check branch state
    - Warn: "Local is 2 commits ahead of PR"
    - User chooses: "Push now and re-run"
    - Push commits
-   - Exit: "Pushed successfully. Re-run /pr-address-feedback-remote to get fresh feedback."
+   - Exit: "Pushed successfully. Re-run /quality-triage-pr to get fresh feedback."
 
 (On re-run, Step 0 shows in_sync, proceeds to Step 1)
 
