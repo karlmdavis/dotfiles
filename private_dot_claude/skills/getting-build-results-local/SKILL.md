@@ -9,15 +9,15 @@ description: Run local CI commands and return raw output - reads project CLAUDE.
 
 Run the project's local CI commands (build, test, lint, type-check) and return raw output for parsing.
 
-**Core principle:** This is an agent-only skill. Only Claude can read arbitrary project documentation and understand what CI commands to run.
+Core principle: This is an agent-only skill. Only Claude can read arbitrary project documentation and understand what CI commands to run.
 
-**What it does:**
+What it does:
 1. Read project's `CLAUDE.md` or similar documentation
 2. Identify primary CI command(s) (build, test, lint, etc.)
 3. Run command(s) via Bash tool
 4. Capture output and return as TOON
 
-**Output:** Raw build output ready for `parsing-build-results` skill
+Output: Raw build output ready for `parsing-build-results` skill
 
 ## When to Use
 
@@ -26,7 +26,7 @@ Use when you need:
 - Test results before creating PR
 - Quick feedback loop during development
 
-**When NOT to use:**
+When NOT to use:
 - Need parsed failures (use `parsing-build-results` after this)
 - Project has no documented CI commands
 - Running in environment without build tools
@@ -251,7 +251,7 @@ in TOON format."
 
 ## Integration with Other Skills
 
-**Used by:**
+Used by:
 - `getting-feedback-local` - Orchestrates local feedback
 - `/pr-address-feedback-local` command - Pre-PR verification
 - `/pr-address-feedback-remote` command - Pre-commit verification
@@ -262,20 +262,20 @@ in TOON format."
 ## Common Mistakes
 
 **Not reading documentation**
-- **Problem:** Guess CI commands, miss project-specific setup
-- **Fix:** Always check CLAUDE.md, README.md, package files first
+- Problem: Guess CI commands, miss project-specific setup
+- Fix: Always check CLAUDE.md, README.md, package files first
 
 **Running only partial CI**
-- **Problem:** Miss failures in other areas (e.g., run tests but not lint)
-- **Fix:** Look for comprehensive "ci" command or run all relevant commands
+- Problem: Miss failures in other areas (e.g., run tests but not lint)
+- Fix: Look for comprehensive "ci" command or run all relevant commands
 
 **Stopping on first failure**
-- **Problem:** Don't see full picture of what's broken
-- **Fix:** Run all commands, track which failed
+- Problem: Don't see full picture of what's broken
+- Fix: Run all commands, track which failed
 
 **Not capturing stderr**
-- **Problem:** Miss error output
-- **Fix:** Capture both stdout and stderr
+- Problem: Miss error output
+- Fix: Capture both stdout and stderr
 
 ## Special Cases
 

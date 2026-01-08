@@ -12,11 +12,11 @@ Fetch all review feedback for a PR commit from GitHub:
 2. GitHub PR reviews (filtered by commit SHA)
 3. Unresolved review threads from earlier commits
 
-**Core principle:** Run in subagent to fetch reviews without consuming main context tokens.
+Core principle: Run in subagent to fetch reviews without consuming main context tokens.
 
 **Input:** PR number and commit SHA
 
-**Output:** TOON-formatted raw review text for parsing
+Output: TOON-formatted raw review text for parsing
 
 ## When to Use
 
@@ -25,7 +25,7 @@ Use when you need:
 - Human reviewer feedback from GitHub PR reviews
 - Outstanding unresolved comments from earlier commits
 
-**When NOT to use:**
+When NOT to use:
 - Need parsed/structured issues (use `parsing-review-suggestions` after this)
 - PR doesn't exist yet (create PR first)
 
@@ -134,7 +134,7 @@ unresolved_threads[1]:
 
 ## Usage Pattern
 
-**CRITICAL:** Always run in subagent to save context tokens.
+CRITICAL: Always run in subagent to save context tokens.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':
@@ -198,20 +198,20 @@ This requires `gh` CLI with GraphQL support (included by default).
 ## Common Mistakes
 
 **Using created_at instead of push timestamp**
-- **Problem:** Gets stale reviews from before current commit
-- **Fix:** Use commit push timestamp from PR commits API
+- Problem: Gets stale reviews from before current commit
+- Fix: Use commit push timestamp from PR commits API
 
 **Only fetching most recent review regardless of commit**
-- **Problem:** May get review for old commit
-- **Fix:** Filter by commit_id (GitHub reviews) or timestamp (Claude bot)
+- Problem: May get review for old commit
+- Fix: Filter by commit_id (GitHub reviews) or timestamp (Claude bot)
 
 **Missing unresolved threads**
-- **Problem:** Don't realize there are outstanding issues
-- **Fix:** Fetch via GraphQL and filter for unresolved + different commit
+- Problem: Don't realize there are outstanding issues
+- Fix: Fetch via GraphQL and filter for unresolved + different commit
 
 **Running in main context**
-- **Problem:** Review text can be 20k+ tokens
-- **Fix:** Always run in subagent
+- Problem: Review text can be 20k+ tokens
+- Fix: Always run in subagent
 
 ## Quick Reference
 

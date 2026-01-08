@@ -9,30 +9,30 @@ description: Orchestrate complete local feedback - runs local CI and code review
 
 Comprehensive local feedback orchestrator that combines local build/test results and code review into a single unified TOON output.
 
-**Core principle:** Run as subagent to gather all local feedback without consuming main context tokens.
+Core principle: Run as subagent to gather all local feedback without consuming main context tokens.
 
-**What it does:**
-1. Run local CI commands (build, test, lint, type-check)
-2. Parse build output into structured failures
-3. Perform code review of changes
-4. Parse review feedback into structured issues
-5. Combine everything into unified TOON summary
+What it does:
+1. Run local CI commands (build, test, lint, type-check).
+2. Parse build output into structured failures.
+3. Perform code review of changes.
+4. Parse review feedback into structured issues.
+5. Combine everything into unified TOON summary.
 
-**Output:** Complete local feedback ready for main context to address
+Output: Complete local feedback ready for main context to address.
 
 ## When to Use
 
 Use when you need:
-- Pre-commit verification before creating commits
-- Pre-PR quality check before pushing
-- Quick local feedback loop during development
-- All feedback in one place before addressing issues
+- Pre-commit verification before creating commits.
+- Pre-PR quality check before pushing.
+- Quick local feedback loop during development.
+- All feedback in one place before addressing issues.
 
-**When NOT to use:**
-- PR already exists (use `getting-feedback-remote`)
-- No changes to review
-- Just need build results (use `getting-build-results-local`)
-- Just need code review (use `getting-review-local`)
+When NOT to use:
+- PR already exists (use `getting-feedback-remote`).
+- No changes to review.
+- Just need build results (use `getting-build-results-local`).
+- Just need code review (use `getting-review-local`).
 
 ## Workflow
 
@@ -41,40 +41,40 @@ This skill orchestrates other skills in sequence:
 ### Step 1: Run Local Build
 
 Use `getting-build-results-local` skill to:
-1. Read project's CLAUDE.md or README.md for CI commands
-2. Run build/test/lint commands
-3. Capture raw output with exit codes and durations
+1. Read project's CLAUDE.md or README.md for CI commands.
+2. Run build/test/lint commands.
+3. Capture raw output with exit codes and durations.
 
 ### Step 2: Parse Build Results
 
 Use `parsing-build-results` skill to:
-1. Extract CI commands and failures from raw output
-2. Identify file:line locations for each failure
-3. Determine if failures are related to current changes
-4. Categorize by type (test, lint, build, type_check)
+1. Extract CI commands and failures from raw output.
+2. Identify file:line locations for each failure.
+3. Determine if failures are related to current changes.
+4. Categorize by type (test, lint, build, type_check).
 
 ### Step 3: Perform Code Review
 
 Use `getting-review-local` skill to:
-1. Identify changed files (staged or unstaged)
-2. Run available review tools or perform own analysis
-3. Return structured review feedback
+1. Identify changed files (staged or unstaged).
+2. Run available review tools or perform own analysis.
+3. Return structured review feedback.
 
 ### Step 4: Parse Review Feedback
 
 Use `parsing-review-suggestions` skill to:
-1. Extract issues from review feedback
-2. Categorize by severity (critical, warning, suggestion)
-3. Extract code references for each issue
+1. Extract issues from review feedback.
+2. Categorize by severity (critical, warning, suggestion).
+3. Extract code references for each issue.
 
 ### Step 5: Combine and Return
 
 Merge all feedback into unified TOON structure:
-- Build command results
-- Build failures (parsed and categorized)
-- Review issues (categorized by severity)
-- Overall counts and status
-- Recommendation for next steps
+- Build command results.
+- Build failures (parsed and categorized).
+- Review issues (categorized by severity).
+- Overall counts and status.
+- Recommendation for next steps.
 
 ## Return Format
 
@@ -153,9 +153,9 @@ summary:
 
 ## Implementation Steps
 
-As an agent executing this skill, follow these steps:
+As an agent executing this skill, follow these steps.
 
-Copy this checklist to track progress:
+Copy this checklist to track progress (helps maintain focus during multi-step orchestration):
 
 ```
 Feedback Gathering Progress:
@@ -183,23 +183,23 @@ UNSTAGED=$(git diff --name-only)
 ### 2. Run Local Build
 
 Use `getting-build-results-local` skill:
-- Read project documentation for CI commands
-- Run CI commands via Bash tool
-- Capture raw output
+- Read project documentation for CI commands.
+- Run CI commands via Bash tool.
+- Capture raw output.
 
 ### 3. Parse Build Output
 
 Use `parsing-build-results` skill:
-- Provide raw build output
-- Provide list of changed files (from step 1)
-- Get structured failures with relatedness analysis
+- Provide raw build output.
+- Provide list of changed files (from step 1).
+- Get structured failures with relatedness analysis.
 
 ### 4. Perform Code Review
 
 Use `getting-review-local` skill:
-- Provide list of changed files
-- Run review tools or perform analysis
-- Get structured review feedback
+- Provide list of changed files.
+- Run review tools or perform analysis.
+- Get structured review feedback.
 
 ### 5. Parse Review Feedback (if needed)
 
@@ -210,10 +210,10 @@ If review feedback isn't already structured, use `parsing-review-suggestions` sk
 Combine build results and review feedback into unified TOON structure.
 
 Calculate summary:
-- Count total build failures
-- Count review issues by severity
-- Determine overall status
-- Generate actionable recommendation
+- Count total build failures.
+- Count review issues by severity.
+- Determine overall status.
+- Generate actionable recommendation.
 
 ### 7. Return to Main Context
 
@@ -221,37 +221,37 @@ Output the complete unified TOON to stdout for main context consumption.
 
 ## Overall Status Values
 
-- **all_clear** - No build failures, no critical review issues
-- **needs_attention** - Build failures or critical review issues
-- **warnings_only** - Minor issues or suggestions only
+- `all_clear` - No build failures, no critical review issues.
+- `needs_attention` - Build failures or critical review issues.
+- `warnings_only` - Minor issues or suggestions only.
 
 ## Recommendation Generation
 
 Based on the feedback, generate actionable recommendation:
 
-**All clear:**
+All clear:
 ```
 All checks passed! Safe to commit.
 ```
 
-**Build failures only:**
+Build failures only:
 ```
 Fix 1 test failure before committing.
 ```
 
-**Review issues only:**
+Review issues only:
 ```
 Address 1 critical review issue before committing.
 2 suggestions can be addressed optionally.
 ```
 
-**Both:**
+Both:
 ```
 Fix 1 critical issue (null pointer in src/api.ts) which is causing
 test failure. Then address 1 suggestion before committing.
 ```
 
-**Alignment (build + review point to same issue):**
+Alignment (build + review point to same issue):
 When build failure and review issue reference the same code location:
 ```
 Fix critical null pointer issue in src/api.ts (causing test failure
@@ -260,7 +260,7 @@ and flagged by review) before committing.
 
 ## Usage Pattern
 
-**CRITICAL:** Always run in subagent.
+CRITICAL: Always run in subagent.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':
@@ -270,31 +270,31 @@ Run through all steps: local CI, parse results, code review, and return
 unified TOON output with complete summary and recommendations."
 ```
 
+Why run in subagent:
+- Running CI can take minutes - the wait happens in subagent context, not main.
+- Raw logs can be large (10k+ tokens) - never loaded into main context.
+- Review analysis adds more tokens - computed in subagent, only summary returned.
+- Main context only needs the structured summary (~2-3k tokens vs 10-20k raw).
+
 ## Integration with Commands
 
-**Used by:**
-- `/pr-address-feedback-local` command - Pre-PR quality loop
-- `/pr-address-feedback-remote` command - Pre-commit verification
-
-**Why subagent:**
-- Running CI can take minutes
-- Raw logs can be large (10k+ tokens)
-- Review analysis adds more tokens
-- Main context only needs the structured summary (~2-3k tokens)
+Used by:
+- `/pr-address-feedback-local` command - Pre-PR quality loop.
+- `/pr-address-feedback-remote` command - Pre-commit verification.
 
 ## Changed Files Detection
 
-**For staged changes:**
+For staged changes:
 ```bash
 git diff --staged --name-only
 ```
 
-**For unstaged changes:**
+For unstaged changes:
 ```bash
 git diff --name-only
 ```
 
-**For both:**
+For both:
 ```bash
 # Combined list (unique)
 { git diff --staged --name-only; git diff --name-only; } | sort -u
@@ -304,35 +304,35 @@ Pass this to both parsing-build-results and getting-review-local for context.
 
 ## Common Mistakes
 
-**Not providing changed files context**
-- **Problem:** Can't determine if failures are related to changes
-- **Fix:** Always include changed file list in context
+Not providing changed files context:
+- Problem: Can't determine if failures are related to changes.
+- Fix: Always include changed file list in context.
 
-**Running full review on entire codebase**
-- **Problem:** Wastes time and tokens
-- **Fix:** Focus review on changed files only
+Running full review on entire codebase:
+- Problem: Wastes time and tokens.
+- Fix: Focus review on changed files only.
 
-**Not aligning build failures with review**
-- **Problem:** Miss that they're pointing to same issue
-- **Fix:** Cross-reference code locations in summary
+Not aligning build failures with review:
+- Problem: Miss that they're pointing to same issue.
+- Fix: Cross-reference code locations in summary.
 
-**Returning raw data instead of unified TOON**
-- **Problem:** Main context gets overwhelmed
-- **Fix:** Always merge and summarize into unified structure
+Returning raw data instead of unified TOON:
+- Problem: Main context gets overwhelmed.
+- Fix: Always merge and summarize into unified structure.
 
 ## Error Handling
 
-**If build commands fail to run:**
-- Note in output
-- Continue with code review
-- Include partial results
+If build commands fail to run:
+- Note in output.
+- Continue with code review.
+- Include partial results.
 
-**If code review unavailable:**
-- Note in output
-- Include build results only
-- Suggest running review separately
+If code review unavailable:
+- Note in output.
+- Include build results only.
+- Suggest running review separately.
 
-**Always return TOON output**, even on partial failure. Main context needs actionable information.
+Always return TOON output, even on partial failure. Main context needs actionable information.
 
 ## Quick Reference
 

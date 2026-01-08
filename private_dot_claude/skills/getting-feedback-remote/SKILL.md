@@ -9,27 +9,27 @@ description: Orchestrate complete PR feedback - waits for workflows, fetches bui
 
 Comprehensive PR feedback orchestrator that combines workflow results, build failures, and review suggestions into a single unified TOON output.
 
-**Core principle:** Run as subagent to gather all PR feedback without consuming main context tokens.
+Core principle: Run as subagent to gather all PR feedback without consuming main context tokens.
 
-**What it does:**
-1. Wait for all PR workflows to complete
-2. Fetch and parse build/test failures from failed workflows
-3. Fetch and parse review feedback (Claude bot + GitHub reviews + unresolved threads)
-4. Combine everything into unified TOON summary
+What it does:
+1. Wait for all PR workflows to complete.
+2. Fetch and parse build/test failures from failed workflows.
+3. Fetch and parse review feedback (Claude bot + GitHub reviews + unresolved threads).
+4. Combine everything into unified TOON summary.
 
-**Output:** Complete PR feedback ready for main context to address
+Output: Complete PR feedback ready for main context to address.
 
 ## When to Use
 
 Use when you need:
-- Complete picture of PR status (workflows + reviews)
-- All feedback in one place before starting fixes
-- Token-efficient PR quality check
+- Complete picture of PR status (workflows + reviews).
+- All feedback in one place before starting fixes.
+- Token-efficient PR quality check.
 
-**When NOT to use:**
-- No PR exists yet (create PR first)
-- Just need workflow status (use `awaiting-pr-workflow-results`)
-- Just need reviews (use `getting-reviews-remote`)
+When NOT to use:
+- No PR exists yet (create PR first).
+- Just need workflow status (use `awaiting-pr-workflow-results`).
+- Just need reviews (use `getting-reviews-remote`).
 
 ## Workflow
 
@@ -38,36 +38,36 @@ This skill orchestrates other skills in sequence:
 ### Step 1: Wait for Workflows
 
 Use `awaiting-pr-workflow-results` skill to:
-- Check for unpushed commits
-- Verify PR exists and commit correlation
-- Wait for workflows to complete (up to 20 minutes)
-- Get workflow status and URLs
+- Check for unpushed commits.
+- Verify PR exists and commit correlation.
+- Wait for workflows to complete (up to 20 minutes).
+- Get workflow status and URLs.
 
 If workflows haven't started or commits are unpushed, return early with recommendation to push.
 
 ### Step 2: Fetch Build Results (if failures exist)
 
 For each failed workflow:
-1. Use `getting-build-results-remote` to fetch raw logs
-2. Use `parsing-build-results` to extract structured failures
+1. Use `getting-build-results-remote` to fetch raw logs.
+2. Use `parsing-build-results` to extract structured failures.
 
 ### Step 3: Fetch and Parse Reviews
 
 1. Use `getting-reviews-remote` to fetch:
-   - Claude bot review comments (after commit push)
-   - GitHub PR reviews (for current commit)
-   - Unresolved threads from earlier commits
+   - Claude bot review comments (after commit push).
+   - GitHub PR reviews (for current commit).
+   - Unresolved threads from earlier commits.
 
-2. Use `parsing-review-suggestions` to parse into structured issues
+2. Use `parsing-review-suggestions` to parse into structured issues.
 
 ### Step 4: Combine and Return
 
 Merge all feedback into unified TOON structure:
-- Workflow summary
-- Build failures (parsed and categorized)
-- Review issues (categorized by severity)
-- Overall counts and status
-- Recommendation for next steps
+- Workflow summary.
+- Build failures (parsed and categorized).
+- Review issues (categorized by severity).
+- Overall counts and status.
+- Recommendation for next steps.
 
 ## Return Format
 
@@ -205,7 +205,7 @@ summary:
 
 As an agent executing this skill, follow these steps:
 
-Copy this checklist to track progress:
+Copy this checklist to track progress (helps maintain focus during multi-step orchestration):
 
 ```
 Feedback Gathering Progress:
@@ -273,12 +273,12 @@ Take the raw review text and use `parsing-review-suggestions` skill to parse it.
 
 Combine all outputs into unified TOON structure as shown in Return Format above.
 
-Calculate summary:
-- Count total failures (by type)
-- Count review issues (by severity)
-- Count unresolved earlier comments
+Calculate summary:.
+- Count total failures (by type).
+- Count review issues (by severity).
+- Count unresolved earlier comments.
 - Determine overall status
-- Generate recommendation
+- Generate recommendation.
 
 ### 6. Return to Main Context
 
@@ -286,33 +286,33 @@ Output the complete unified TOON to stdout for main context consumption.
 
 ## Overall Status Values
 
-- **all_clear** - All workflows passed, no review issues
-- **needs_attention** - Failures or critical review issues
-- **warnings_only** - Minor issues or suggestions only
-- **blocked** - Can't proceed (no PR, unpushed commits, timeout)
+- `all_clear` - All workflows passed, no review issues
+- `needs_attention` - Failures or critical review issues
+- `warnings_only` - Minor issues or suggestions only
+- `blocked` - Can't proceed (no PR, unpushed commits, timeout)
 
 ## Recommendation Generation
 
 Based on the feedback, generate actionable recommendation:
 
-**All clear:**
+All clear:
 ```
 All checks passed! Ready to merge.
 ```
 
-**Build failures only:**
+Build failures only:
 ```
 Fix 2 related build failures before merge.
 1 unrelated failure can be addressed separately.
 ```
 
-**Review issues only:**
+Review issues only:
 ```
 Address 2 critical review issues before merge.
 3 suggestions can be addressed optionally.
 ```
 
-**Both:**
+Both:
 ```
 Fix 2 related build failures and 2 critical review issues before merge.
 Also address 1 unresolved earlier comment.
@@ -320,7 +320,7 @@ Also address 1 unresolved earlier comment.
 
 ## Usage Pattern
 
-**CRITICAL:** Always run in subagent.
+CRITICAL: Always run in subagent.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':
@@ -333,51 +333,51 @@ complete summary and recommendations."
 
 ## Integration with Commands
 
-**Used by:**
+Used by:
 - `/pr-address-feedback-remote` command - Main consumer
 
-**Why subagent:**
-- Waiting for workflows can take up to 20 minutes
-- Raw logs can be 50k+ tokens
-- Raw reviews can be 20k+ tokens
-- Main context only needs the structured summary (~2-5k tokens)
+Why run in subagent:
+- Waiting for workflows can take up to 20 minutes - the wait happens in subagent context, not main.
+- Raw logs can be 50k+ tokens - never loaded into main context.
+- Raw reviews can be 20k+ tokens - computed in subagent, only summary returned.
+- Main context only needs the structured summary (~2-5k tokens vs 50-70k raw).
 
 ## Common Mistakes
 
-**Not waiting for workflows**
-- **Problem:** Try to fetch logs while workflows still running
-- **Fix:** Always run awaiting-pr-workflow-results first
+Not waiting for workflows:
+- Problem: Try to fetch logs while workflows still running
+- Fix: Always run awaiting-pr-workflow-results first
 
-**Fetching logs for passing workflows**
-- **Problem:** Waste time and tokens
-- **Fix:** Only fetch logs for failed workflows
+Fetching logs for passing workflows:
+- Problem: Waste time and tokens
+- Fix: Only fetch logs for failed workflows
 
-**Not providing changed files context**
-- **Problem:** Can't determine if failures are related to changes
-- **Fix:** Include `git diff --name-only` in context for parsing skill
+Not providing changed files context:
+- Problem: Can't determine if failures are related to changes
+- Fix: Include `git diff --name-only` in context for parsing skill
 
-**Returning raw data instead of unified TOON**
-- **Problem:** Main context gets overwhelmed
-- **Fix:** Always merge and summarize into unified structure
+Returning raw data instead of unified TOON:
+- Problem: Main context gets overwhelmed
+- Fix: Always merge and summarize into unified structure
 
 ## Error Handling
 
-**If awaiting-pr-workflow-results fails:**
+If awaiting-pr-workflow-results fails:
 - Return status: "blocked"
 - Include error message
 - Recommendation: Check git/gh setup
 
-**If getting-build-results-remote fails:**
+If getting-build-results-remote fails:
 - Note which workflows couldn't be fetched
 - Continue with reviews
 - Include partial results
 
-**If getting-reviews-remote fails:**
+If getting-reviews-remote fails:
 - Continue with build results
 - Note that review data unavailable
 - Include partial results
 
-**Always return TOON output**, even on partial failure. Main context needs actionable information.
+Always return TOON output, even on partial failure. Main context needs actionable information.
 
 ## Quick Reference
 

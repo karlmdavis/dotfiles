@@ -9,11 +9,11 @@ description: Parse raw build/test logs into structured failures - extracts comma
 
 Parse raw build output (from local CI or GitHub workflows) into structured TOON format with extracted failures, file locations, and relatedness analysis.
 
-**Core principle:** This is an agent-only skill. No script can parse arbitrary build output as well as Claude can reason about unstructured logs.
+Core principle: This is an agent-only skill. No script can parse arbitrary build output as well as Claude can reason about unstructured logs.
 
 **Input:** Raw build logs (from `getting-build-results-local` or `getting-build-results-remote`)
 
-**Output:** Structured TOON with CI commands, failures, and recommendations
+Output: Structured TOON with CI commands, failures, and recommendations
 
 ## When to Use
 
@@ -23,7 +23,7 @@ Use when you need to:
 - Determine which failures are related to current changes
 - Get structured failure data for main context
 
-**When NOT to use:**
+When NOT to use:
 - Need to fetch logs (use getting-build-results-* skills first)
 - Already have structured test results
 
@@ -120,7 +120,7 @@ For each failure, extract:
 
 ### 3. Relatedness Analysis
 
-**CRITICAL:** Determine if each failure is related to the current changes.
+CRITICAL: Determine if each failure is related to the current changes.
 
 **How to determine:**
 - Read the failure location (file:line)
@@ -263,7 +263,7 @@ Use the `messages` list for non-adjacent error snippets:
 
 ## Integration with Other Skills
 
-**Used by:**
+Used by:
 - `getting-feedback-local` - Parses local build output
 - `getting-feedback-remote` - Parses GitHub workflow logs
 
@@ -295,20 +295,20 @@ Return structured TOON output with failures and relatedness analysis."
 ## Common Mistakes
 
 **Including full logs in messages**
-- **Problem:** Makes output too verbose
-- **Fix:** Extract only key error lines, not full traces
+- Problem: Makes output too verbose
+- Fix: Extract only key error lines, not full traces
 
 **Not analyzing relatedness**
-- **Problem:** Caller can't prioritize fixes
-- **Fix:** Always compare failure locations to changed files
+- Problem: Caller can't prioritize fixes
+- Fix: Always compare failure locations to changed files
 
 **Missing file:line locations**
-- **Problem:** Hard to find where to fix
-- **Fix:** Parse stack traces and error messages for locations
+- Problem: Hard to find where to fix
+- Fix: Parse stack traces and error messages for locations
 
 **Wrong failure type**
-- **Problem:** Misleading categorization
-- **Fix:** Use test/lint/build/type_check based on error source
+- Problem: Misleading categorization
+- Fix: Use test/lint/build/type_check based on error source
 
 ## Edge Cases
 

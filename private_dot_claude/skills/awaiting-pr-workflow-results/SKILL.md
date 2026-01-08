@@ -1,16 +1,15 @@
 ---
 name: awaiting-pr-workflow-results
-description: Check GitHub PR workflow status, verify unpushed commits, and wait for workflows to complete (up to 20min). Use when user asks "are tests passing?", "is CI done?", "wait for workflows", or needs to verify workflow status after pushing commits.
+description: Check GitHub PR workflow status, verify unpushed commits, and wait for workflows to complete (up to 20min). Use when human partner asks "are tests passing?", "is CI done?", "wait for workflows", or needs to verify workflow status after pushing commits.
 ---
 
 # Awaiting PR Workflow Results
 
-Checks GitHub PR workflows while correctly handling unpushed commits, commit correlation, and workflow timing.
-Uses a Python script that verifies local state before checking remote workflows.
+Checks GitHub PR workflows while correctly handling unpushed commits, commit correlation, and workflow timing. Uses the `getting-branch-state` skill to verify local/PR state, then waits for workflows to complete.
 
 ## When to Use
 
-- User asks "are tests passing?", "is CI done?", "wait for CI", or similar.
+- Human partner asks "are tests passing?", "is CI done?", "wait for CI", or similar.
 - Need to verify workflow status after pushing commits.
 - Want to wait for workflows to complete before proceeding.
 

@@ -9,44 +9,32 @@ I would like you to address all local feedback (build failures and code review) 
 
 **CRITICAL:** Before gathering feedback, determine what changes to review.
 
-**0.a.** Determine review scope with separate simple commands:
+**0.a.** Run the getting-branch-state skill to get branch info and changed files:
 
-First, check current branch:
 ```bash
-git rev-parse --abbrev-ref HEAD
+cd ~/.claude/skills/getting-branch-state
+scripts/check_branch_state.py
 ```
 
-Then determine the main branch (usually main or master):
-```bash
-git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'
-```
+Parse the TOON output.
 
-If that fails (no remote HEAD set), check which exists:
-```bash
-git show-ref --verify refs/heads/main >/dev/null 2>&1 && echo "main" || echo "master"
-```
+**0.b.** Determine review scope from branch state:
+- If `local.branch` == `local.base_branch` (on main/master) → review scope is "uncommitted"
+- If `local.branch` != `local.base_branch` (on feature branch) → review scope is "branch_vs_base"
 
-**Logic to apply:**
-- If current branch == main/master → review scope is "staged_or_unstaged"
-- If current branch != main/master → review scope is "branch_vs_main"
+**0.c.** Get changed files for review:
+- If review scope is "uncommitted": Use `local.uncommitted_files`
+- If review scope is "branch_vs_base": Use `comparison.branch_vs_base.changed_files`
 
-Get changed files based on scope:
-```bash
-# For staged_or_unstaged:
-git diff --staged --name-only || git diff --name-only
+**0.d.** Optional: Note PR status if it exists:
+- If `pr.exists` is true and `comparison.local_vs_pr.status` is "ahead":
+  - You have unpushed commits. Consider pushing before continuing local work.
+- If status is "diverged":
+  - You've rebased locally. Be aware when interpreting feedback.
 
-# For branch_vs_main (replace MAIN with actual main branch name):
-git diff MAIN...HEAD --name-only
-```
-
-**0.b.** Review scope interpretation:
-- **On main/master branch** → Review staged changes (or unstaged if nothing staged)
-- **On feature branch** → Review all changes on branch vs main/master
-- **User can override** by specifying explicit comparison in the command
-
-**0.c.** Pass this context to the feedback gathering subagent:
-- Provide the list of changed files
-- Specify the comparison base (staged, unstaged, or branch vs main)
+**0.e.** Pass context to feedback gathering subagent:
+- Provide the list of changed files from step 0.c
+- Specify the review scope (uncommitted or branch_vs_base)
 - This ensures build relatedness analysis and code review focus on the right changes
 
 ## 1. Gather Complete Local Feedback
@@ -94,11 +82,14 @@ The skill will:
 ## Example Flow
 
 ```
-Step 0: Determine review scope
-   - Current branch: feature-auth
-   - Main branch: main
-   - Review scope: branch_vs_main
-   - Changed files: src/api.ts, tests/api.test.ts
+Step 0: Determine review context
+   - Run getting-branch-state skill
+   - Local branch: feature-auth
+   - Base branch: main
+   - Review scope: branch_vs_base (not on main)
+   - Changed files from branch_vs_base: src/api.ts, tests/api.test.ts
+   - PR exists: true (#123, status: ahead by 1 commit)
+   - Note: Unpushed commits exist, consider pushing later
 
 Step 1: Gather feedback
    - Run getting-feedback-local skill in subagent

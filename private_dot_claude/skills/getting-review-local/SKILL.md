@@ -9,15 +9,15 @@ description: Get local code review of current changes - uses available review to
 
 Perform local code review of staged or uncommitted changes and return structured feedback.
 
-**Core principle:** This is an agent-only skill. Uses available review tools or Claude's analysis capabilities.
+Core principle: This is an agent-only skill. Uses available review tools or Claude's analysis capabilities.
 
-**What it does:**
+What it does:
 1. Identify changed files (staged or working directory)
 2. Run available review tools (if any)
 3. Perform own code analysis
 4. Return structured review feedback
 
-**Output:** Review feedback in format compatible with `parsing-review-suggestions` skill
+Output: Review feedback in format compatible with `parsing-review-suggestions` skill
 
 ## When to Use
 
@@ -26,7 +26,7 @@ Use when you need:
 - Local quality check before creating PR
 - Quick feedback on changes without pushing
 
-**When NOT to use:**
+When NOT to use:
 - Changes already in PR (use `getting-reviews-remote`)
 - No changes to review
 - Only want automated tests (use `getting-build-results-local`)
@@ -204,7 +204,7 @@ Perform code review and return structured feedback in TOON format."
 
 ## Integration with Other Skills
 
-**Used by:**
+Used by:
 - `getting-feedback-local` - Orchestrates local feedback
 - `/pr-address-feedback-local` command - Pre-PR quality check
 

@@ -34,31 +34,10 @@ class CommandError(Exception):
 
 
 @dataclass
-class GitState:
-    """Local git repository state."""
-    branch: str
-    commit: str
-    commit_full: str
-    timestamp: str
-    unpushed_count: int
-    unpushed_commits: list[CommitInfo] = field(default_factory=list)
-
-
-@dataclass
 class CommitInfo:
     """Git commit information."""
     sha: str
     message: str
-
-
-@dataclass
-class PRInfo:
-    """GitHub Pull Request information."""
-    number: int
-    title: str
-    commit: str
-    commit_full: str
-    url: str
 
 
 @dataclass
@@ -159,97 +138,40 @@ def run_cmd_optional(cmd: list[str]) -> str | None:
         return None
 
 
-def get_git_state() -> GitState:
-    """Get local git repository state."""
-    log_info("Checking local git state...")
-
-    branch = run_cmd(
-        ["git", "branch", "--show-current"],
-        "Failed to get current branch"
+def call_getting_branch_state() -> dict:
+    """Call getting-branch-state skill and return parsed JSON."""
+    script_path = os.path.expanduser(
+        "~/.claude/skills/getting-branch-state/scripts/check_branch_state.py"
     )
 
-    commit_full = run_cmd(
-        ["git", "rev-parse", "HEAD"],
-        "Failed to get HEAD commit"
-    )
-
-    commit_short = run_cmd(
-        ["git", "rev-parse", "--short", "HEAD"],
-        "Failed to get short commit hash"
-    )
-
-    timestamp = run_cmd(
-        ["git", "log", "-1", "--format=%cI", commit_full],
-        "Failed to get commit timestamp"
-    )
-
-    status_output = run_cmd(
-        ["git", "status", "-sb"],
-        "Failed to get git status"
-    )
-
-    unpushed_count = 0
-    unpushed_commits: list[CommitInfo] = []
-
-    if "ahead" in status_output:
-        parts = status_output.split("[ahead ")
-        if len(parts) > 1:
-            try:
-                unpushed_count = int(parts[1].split("]")[0])
-
-                log_output = run_cmd(
-                    ["git", "log", f"origin/{branch}..HEAD",
-                     "--format=%h|||%s", "--no-merges"],
-                    "Failed to get unpushed commits"
-                )
-
-                for line in log_output.split("\n"):
-                    if "|||" in line:
-                        sha, message = line.split("|||", 1)
-                        unpushed_commits.append(
-                            CommitInfo(sha=sha.strip(), message=message.strip())
-                        )
-            except (ValueError, IndexError) as e:
-                log_error(f"Failed to parse unpushed commit count: {e}")
-
-    return GitState(
-        branch=branch,
-        commit=commit_short,
-        commit_full=commit_full,
-        timestamp=timestamp,
-        unpushed_count=unpushed_count,
-        unpushed_commits=unpushed_commits
-    )
-
-
-def get_pr_info(branch: str) -> PRInfo | None:
-    """Get PR information for current branch."""
-    log_info(f"Looking for PR on branch '{branch}'...")
-
-    output = run_cmd_optional([
-        "gh", "pr", "list", "--head", branch,
-        "--json", "number,title,headRefOid,url"
-    ])
-
-    if not output:
-        return None
+    log_info("Getting branch state...")
 
     try:
-        prs = json.loads(output)
-        if not prs:
-            return None
-
-        pr = prs[0]
-        return PRInfo(
-            number=pr["number"],
-            title=pr["title"],
-            commit=pr["headRefOid"][:7],
-            commit_full=pr["headRefOid"],
-            url=pr["url"]
+        result = subprocess.run(
+            [script_path, "--format", "json"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60
         )
-    except (json.JSONDecodeError, KeyError, IndexError) as e:
-        log_error(f"Failed to parse PR info: {e}")
-        return None
+
+        if result.returncode != 0:
+            log_error("getting-branch-state failed")
+            if result.stderr:
+                log_error(result.stderr)
+            raise CommandError("Failed to get branch state")
+
+        return json.loads(result.stdout)
+
+    except FileNotFoundError:
+        log_error(f"getting-branch-state not found: {script_path}")
+        raise CommandError("getting-branch-state script not found")
+    except subprocess.TimeoutExpired:
+        log_error("getting-branch-state timed out")
+        raise CommandError("getting-branch-state timeout")
+    except json.JSONDecodeError as e:
+        log_error(f"Failed to parse branch state JSON: {e}")
+        raise CommandError("Invalid branch state output")
 
 
 def wait_for_workflow_start(commit: str, max_wait: int = 30) -> list[dict] | None:
@@ -412,41 +334,67 @@ def dataclass_to_dict(obj) -> dict:
 def main() -> int:
     """Main entry point."""
     try:
-        local = get_git_state()
-        pr = get_pr_info(local.branch)
+        # Get branch state using getting-branch-state skill
+        branch_state = call_getting_branch_state()
+
+        local = branch_state["local"]
+        pr_info = branch_state["pr"]
+        comparison = branch_state["comparison"]["local_vs_pr"]
+
+        # Build local info for output (simplified from branch state)
+        local_output = {
+            "branch": local["branch"],
+            "commit": local["head_short"],
+            "commit_full": local["head"],
+            "timestamp": local["timestamp"],
+        }
 
         result: TOONOutput = {
             "status": "",
             "recommendation": "",
             "message": "",
-            "local": dataclass_to_dict(local),
+            "local": local_output,
         }
 
-        if pr:
-            result["pr"] = dataclass_to_dict(pr)
+        # Add PR info if exists
+        if pr_info["exists"]:
+            result["pr"] = {
+                "number": pr_info["number"],
+                "commit": pr_info["head_short"],
+                "commit_full": pr_info["head"],
+                "url": pr_info["url"],
+            }
         else:
             result["pr"] = None
 
-        # Determine status
-        if not pr:
+        # Determine status based on branch state
+        if not pr_info["exists"]:
             result["status"] = "no_pr"
             result["recommendation"] = "create_pr"
-            result["message"] = f"No PR found for branch '{local.branch}'"
+            result["message"] = f"No PR found for branch '{local['branch']}'"
             result["action"] = "ask_user_to_create_pr"
 
-        elif local.unpushed_count > 0 or local.commit_full != pr.commit_full:
+        elif comparison["status"] in ("ahead", "diverged"):
+            # Local has unpushed commits or diverged from PR
             result["status"] = "warning"
             result["recommendation"] = "push_required"
             result["commit_match"] = False
+
+            # Convert ahead_commits to expected format
+            ahead_commits = comparison.get("ahead_commits", [])
+            local_output["unpushed_count"] = comparison.get("ahead_count", 0)
+            local_output["unpushed_commits"] = ahead_commits
+
             result["message"] = (
-                f"Found {local.unpushed_count} unpushed commit(s). "
-                f"PR workflows testing {pr.commit}, not your latest changes."
+                f"Found {comparison['ahead_count']} unpushed commit(s). "
+                f"PR workflows testing {pr_info['head_short']}, not your latest changes."
             )
             result["action"] = "ask_user_to_push"
 
         else:
+            # Local and PR are in sync, check workflows
             result["commit_match"] = True
-            workflow_summary = wait_for_completion(pr.commit_full)
+            workflow_summary = wait_for_completion(pr_info["head"])
             result["workflows"] = dataclass_to_dict(workflow_summary)
 
             if workflow_summary.complete:
@@ -456,14 +404,14 @@ def main() -> int:
                     result["status"] = "failure"
                     result["recommendation"] = "fix_failures"
                     result["message"] = (
-                        f"{len(failures)} workflow(s) failed for commit {pr.commit}"
+                        f"{len(failures)} workflow(s) failed for commit {pr_info['head_short']}"
                     )
                 else:
                     result["status"] = "success"
                     result["recommendation"] = "all_passed"
                     result["message"] = (
                         f"All {len(workflow_summary.results)} workflow(s) passed "
-                        f"for commit {pr.commit}"
+                        f"for commit {pr_info['head_short']}"
                     )
             else:
                 incomplete = [w for w in workflow_summary.results

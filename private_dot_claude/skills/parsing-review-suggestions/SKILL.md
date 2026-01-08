@@ -9,11 +9,11 @@ description: Parse raw review text into structured issues - extracts severity, c
 
 Parse raw review feedback (from Claude bot, GitHub reviewers, and unresolved threads) into structured TOON format with issues, code references, and severity levels.
 
-**Core principle:** This is an agent-only skill. Claude naturally understands review text and can extract structured information.
+Core principle: This is an agent-only skill. Claude naturally understands review text and can extract structured information.
 
 **Input:** Raw review text (from `getting-reviews-remote` or `getting-review-local`)
 
-**Output:** Structured TOON with categorized issues and code references
+Output: Structured TOON with categorized issues and code references
 
 ## When to Use
 
@@ -22,7 +22,7 @@ Use when you need to:
 - Structure GitHub PR review feedback
 - Extract code references and severity from review text
 
-**When NOT to use:**
+When NOT to use:
 - Need to fetch reviews (use getting-reviews-* skills first)
 - Reviews already structured
 
@@ -372,7 +372,7 @@ Unresolved threads are simpler:
 
 ## Integration with Other Skills
 
-**Used by:**
+Used by:
 - `getting-feedback-local` - Parses local review output
 - `getting-feedback-remote` - Parses PR review feedback
 
@@ -407,20 +407,20 @@ code references extracted."
 ## Common Mistakes
 
 **Missing code references**
-- **Problem:** Don't extract file:line from issue descriptions
-- **Fix:** Scan all text for file path patterns
+- Problem: Don't extract file:line from issue descriptions
+- Fix: Scan all text for file path patterns
 
 **Not handling line ranges**
-- **Problem:** Only capture single lines, miss ranges like "15-18"
-- **Fix:** Support both single lines and ranges in code_references
+- Problem: Only capture single lines, miss ranges like "15-18"
+- Fix: Support both single lines and ranges in code_references
 
 **Losing issue context**
-- **Problem:** Extract location but not full description
-- **Fix:** Include complete issue description including suggested fixes
+- Problem: Extract location but not full description
+- Fix: Include complete issue description including suggested fixes
 
 **Not extracting overall summary**
-- **Problem:** Miss high-level recommendations
-- **Fix:** Capture overall review assessment before diving into issues
+- Problem: Miss high-level recommendations
+- Fix: Capture overall review assessment before diving into issues
 
 ## Edge Cases
 

@@ -9,11 +9,11 @@ description: Fetch workflow logs from GitHub PR workflows - takes run IDs from a
 
 Fetch raw workflow logs from GitHub for failed PR workflows.
 
-**Core principle:** Run in subagent to fetch logs without consuming main context tokens.
+Core principle: Run in subagent to fetch logs without consuming main context tokens.
 
 **Input:** Workflow run IDs (from `awaiting-pr-workflow-results` skill)
 
-**Output:** TOON-formatted raw logs for each failed workflow
+Output: TOON-formatted raw logs for each failed workflow
 
 ## When to Use
 
@@ -22,7 +22,7 @@ Use when you need:
 - Build output from GitHub Actions workflows
 - Test failure logs from CI runs
 
-**When NOT to use:**
+When NOT to use:
 - Need parsed/structured failures (use `parsing-build-results` after this)
 - Workflows still running (use `awaiting-pr-workflow-results` first)
 
@@ -96,7 +96,7 @@ workflows[2]:
 
 ## Usage Pattern
 
-**CRITICAL:** Always run in subagent to save context tokens.
+CRITICAL: Always run in subagent to save context tokens.
 
 ```markdown
 Use Task tool with subagent_type='general-purpose':
@@ -117,16 +117,16 @@ and return the complete TOON output."
 ## Common Mistakes
 
 **Fetching logs for all workflows**
-- **Problem:** Wastes time and tokens fetching logs for passing workflows
-- **Fix:** Script only fetches full logs for failed/cancelled jobs
+- Problem: Wastes time and tokens fetching logs for passing workflows
+- Fix: Script only fetches full logs for failed/cancelled jobs
 
 **Running in main context**
-- **Problem:** Log output can be 50k+ tokens
-- **Fix:** Always run in subagent, return TOON to main context
+- Problem: Log output can be 50k+ tokens
+- Fix: Always run in subagent, return TOON to main context
 
 **Not waiting for workflows to complete**
-- **Problem:** Logs may be incomplete or unavailable
-- **Fix:** Use `awaiting-pr-workflow-results` first
+- Problem: Logs may be incomplete or unavailable
+- Fix: Use `awaiting-pr-workflow-results` first
 
 ## Quick Reference
 

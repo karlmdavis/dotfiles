@@ -5,6 +5,55 @@ description: Iteratively address PR feedback from workflows and reviews until al
 I would like you to address all PR feedback (workflow failures and review comments) interactively until
   everything is resolved and ready to merge:
 
+## 0. Check Branch State and PR Sync
+
+**0.a.** Run the getting-branch-state skill to check local/PR sync status:
+
+```bash
+cd ~/.claude/skills/getting-branch-state
+scripts/check_branch_state.py
+```
+
+Parse the TOON output.
+
+**0.b.** Verify PR exists:
+- If `pr.exists` is false → Error: "No PR found for current branch. Create a PR first."
+
+**0.c.** Check sync status (`comparison.local_vs_pr.status`):
+
+If status is `in_sync`:
+- ✅ Proceed to Step 1.
+
+If status is `ahead`, `behind`, or `diverged`:
+- ⚠️ Warn the human partner about the mismatch.
+- Show the specific situation:
+  - If `ahead`: "Local is {ahead_count} commit(s) ahead of PR"
+  - If `behind`: "Local is {behind_count} commit(s) behind PR"
+  - If `diverged`: "Local and PR have diverged ({ahead_count} ahead, {behind_count} behind)"
+- Show commit lists from `ahead_commits` and/or `behind_commits`.
+- Explain: "PR feedback will be for commit {pr.head_short}, not your local {local.head_short}."
+
+Present options using AskUserQuestion:
+```markdown
+**Question:** "Local and PR branches are out of sync. How would you like to proceed?"
+
+**Options:**
+1. "Push now and re-run" (recommended for 'ahead' or 'diverged')
+   - Description: "Push your local commits to the PR, then re-run this command to get fresh feedback"
+2. "Pull first" (recommended for 'behind')
+   - Description: "Pull PR commits to your local branch first, then re-run this command"
+3. "Continue anyway"
+   - Description: "Get feedback for the old PR commit (won't match your local code)"
+4. "Cancel"
+   - Description: "Stop and handle the sync issue manually"
+```
+
+Based on user choice:
+- Option 1: Push with `git push`, then exit with message to re-run command.
+- Option 2: Pull with `git pull`, then exit with message to re-run command.
+- Option 3: Continue to Step 1 (accept mismatch).
+- Option 4: Exit cleanly.
+
 ## 1. Gather Complete PR Feedback
 
 **1.a.** Spawn a subagent using the Task tool with `subagent_type='general-purpose'` and
@@ -60,6 +109,18 @@ git push
 ## Example Flow
 
 ```
+Step 0: Check branch state
+   - Run getting-branch-state skill
+   - Local: feature-auth (abc123d)
+   - PR: #123 (def456a)
+   - Status: ahead (2 commits)
+   - Warn: "Local is 2 commits ahead of PR"
+   - User chooses: "Push now and re-run"
+   - Push commits
+   - Exit: "Pushed successfully. Re-run /pr-address-feedback-remote to get fresh feedback."
+
+(On re-run, Step 0 shows in_sync, proceeds to Step 1)
+
 Step 1: Gather PR feedback
    - Run getting-feedback-remote skill in subagent
    - Waits for workflows to complete
