@@ -8,10 +8,7 @@ I would like you to gather and address all PR feedback (workflow failures and re
 
 **0.a.** Run the getting-branch-state skill to check local/PR sync status:
 
-```bash
-cd ~/.claude/skills/getting-branch-state
-scripts/check_branch_state.py
-```
+Use Skill tool with skill='getting-branch-state'.
 
 Parse the TOON output.
 

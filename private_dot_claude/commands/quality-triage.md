@@ -33,10 +33,7 @@ Based on the scope argument:
 
 **0.b.** Run the getting-branch-state skill to get branch info:
 
-```bash
-cd ~/.claude/skills/getting-branch-state
-scripts/check_branch_state.py
-```
+Use Skill tool with skill='getting-branch-state'.
 
 Parse the TOON output and store for later use.
 

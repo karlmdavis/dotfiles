@@ -152,7 +152,6 @@ The skill automatically detects the base branch:
 ```markdown
 Run the script directly via Bash:
 
-cd ~/.claude/skills/getting-branch-state
 scripts/check_branch_state.py
 ```
 

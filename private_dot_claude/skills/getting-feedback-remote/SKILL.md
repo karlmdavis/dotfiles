@@ -229,12 +229,7 @@ COMMIT_SHORT=$(git rev-parse --short HEAD)
 
 ### 2. Wait for Workflows
 
-Run `awaiting-pr-workflow-results` skill:
-
-```bash
-cd ~/.claude/skills/awaiting-pr-workflow-results
-scripts/check_pr_workflows.py
-```
+Use `awaiting-pr-workflow-results` skill (invoke via Skill tool).
 
 Parse the TOON output. If status is:
 - `no_pr` → Return with recommendation to create PR
@@ -246,12 +241,7 @@ Parse the TOON output. If status is:
 
 Extract failed workflow run IDs from awaiting skill output.
 
-For each failed workflow:
-
-```bash
-cd ~/.claude/skills/getting-build-results-remote
-scripts/fetch_workflow_logs.py <run_id1> <run_id2> ...
-```
+For each failed workflow, use `getting-build-results-remote` skill (invoke via Skill tool) with the workflow run IDs.
 
 Take the raw logs and use `parsing-build-results` skill to parse them.
 
@@ -263,10 +253,7 @@ git diff main...HEAD --name-only
 
 ### 4. Fetch and Parse Reviews
 
-```bash
-cd ~/.claude/skills/getting-reviews-remote
-scripts/fetch_pr_reviews.py $PR_NUM $COMMIT
-```
+Use `getting-reviews-remote` skill (invoke via Skill tool) with PR number and commit SHA.
 
 Take the raw review text and use `parsing-review-suggestions` skill to parse it.
 
