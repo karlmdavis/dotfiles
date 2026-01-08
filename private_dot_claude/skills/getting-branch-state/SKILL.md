@@ -161,8 +161,8 @@ Parse the TOON output to get branch state, PR info, and sync status.
 ## Integration with Commands
 
 Used by:
-- `/pr-address-feedback-local` command - Step 0 (determine review scope, detect PR).
-- `/pr-address-feedback-remote` command - Step 0 (check sync, warn about mismatches).
+- `/quality-triage` command - Step 0 (determine review scope, detect PR).
+- `/quality-triage-pr` command - Step 0 (check sync, warn about mismatches).
 
 Why extract to separate skill:
 - Single source of truth for branch/PR state logic.
@@ -172,7 +172,7 @@ Why extract to separate skill:
 
 ## Example Use Cases
 
-### Pre-commit workflow (pr-address-feedback-local)
+### Pre-commit workflow (quality-triage)
 
 ```
 1. Run getting-branch-state
@@ -185,7 +185,7 @@ Why extract to separate skill:
 4. Pass changed files to getting-feedback-local
 ```
 
-### PR workflow (pr-address-feedback-remote)
+### PR workflow (quality-triage-pr)
 
 ```
 1. Run getting-branch-state

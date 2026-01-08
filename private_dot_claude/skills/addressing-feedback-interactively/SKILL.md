@@ -433,7 +433,7 @@ If fix introduces new critical issues:
 
 ## Usage Pattern
 
-This skill is typically invoked after getting feedback locally or remotely, via the pr-address-feedback-local or pr-address-feedback-remote commands:
+This skill is typically invoked after getting feedback locally or remotely, via the quality-triage or quality-triage-pr commands:
 ```markdown
 Use Skill tool with skill='addressing-feedback-interactively':
 

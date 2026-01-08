@@ -253,8 +253,8 @@ in TOON format."
 
 Used by:
 - `getting-feedback-local` - Orchestrates local feedback
-- `/pr-address-feedback-local` command - Pre-PR verification
-- `/pr-address-feedback-remote` command - Pre-commit verification
+- `/quality-triage` command - Pre-PR verification
+- `/quality-triage-pr` command - Pre-commit verification
 
 **Provides output to:**
 - `parsing-build-results` - Parses raw output into structured failures

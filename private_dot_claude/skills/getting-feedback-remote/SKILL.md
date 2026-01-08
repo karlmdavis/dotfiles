@@ -334,7 +334,7 @@ complete summary and recommendations."
 ## Integration with Commands
 
 Used by:
-- `/pr-address-feedback-remote` command - Main consumer
+- `/quality-triage-pr` command - Main consumer
 
 Why run in subagent:
 - Waiting for workflows can take up to 20 minutes - the wait happens in subagent context, not main.

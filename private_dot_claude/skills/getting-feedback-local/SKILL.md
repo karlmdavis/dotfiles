@@ -279,8 +279,8 @@ Why run in subagent:
 ## Integration with Commands
 
 Used by:
-- `/pr-address-feedback-local` command - Pre-PR quality loop.
-- `/pr-address-feedback-remote` command - Pre-commit verification.
+- `/quality-triage` command - Pre-PR quality loop.
+- `/quality-triage-pr` command - Pre-commit verification.
 
 ## Changed Files Detection
 

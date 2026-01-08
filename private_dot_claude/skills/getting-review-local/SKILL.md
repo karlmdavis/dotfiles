@@ -206,7 +206,7 @@ Perform code review and return structured feedback in TOON format."
 
 Used by:
 - `getting-feedback-local` - Orchestrates local feedback
-- `/pr-address-feedback-local` command - Pre-PR quality check
+- `/quality-triage` command - Pre-PR quality check
 
 **May use:**
 - Claude Code builtin `/review` command
