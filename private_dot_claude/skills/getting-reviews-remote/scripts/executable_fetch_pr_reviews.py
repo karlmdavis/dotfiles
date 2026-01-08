@@ -148,35 +148,49 @@ def get_commit_push_timestamp(pr_number: int, commit_sha: str) -> str:
     """
     log_info(f"Finding push timestamp for commit {commit_sha[:7]}...")
 
-    # Get timeline of commits pushed to PR
-    # GitHub's PR commits API shows when each commit was added to the PR
-    output = run_cmd(
-        ["gh", "api", f"/repos/{{owner}}/{{repo}}/pulls/{pr_number}/commits"],
-        f"Failed to get PR commits for #{pr_number}"
-    )
+    # Fetch all commits with pagination
+    # GitHub API returns 30 commits per page by default, but PRs can have more
+    page = 1
+    MAX_PAGES = 100  # Safety limit to prevent excessive API calls
 
-    try:
-        commits = json.loads(output)
-        for commit in commits:
-            if commit["sha"] == commit_sha:
-                # Use commit date from GitHub API (when it was pushed to PR)
-                commit_date = commit["commit"]["committer"]["date"]
-                log_info(f"Commit pushed at: {commit_date}")
-                return commit_date
+    while page <= MAX_PAGES:
+        log_info(f"Fetching PR commits page {page}...")
 
-        # Fallback: use current time if commit not found in PR yet
-        # This can happen when:
-        # - Running script immediately after push (GitHub API lag)
-        # - Commit is in local branch but not yet in PR
-        # Using current time ensures we get the latest reviews
-        log_info(f"Commit {commit_sha[:7]} not found in PR timeline, using current time")
-        return datetime.now(timezone.utc).isoformat()
+        # Get timeline of commits pushed to PR with pagination
+        # per_page=100 is the maximum allowed by GitHub API
+        output = run_cmd(
+            ["gh", "api", f"/repos/{{owner}}/{{repo}}/pulls/{pr_number}/commits?per_page=100&page={page}"],
+            f"Failed to get PR commits for #{pr_number}"
+        )
 
-    except (json.JSONDecodeError, KeyError) as e:
-        log_error(f"Failed to parse commit timeline: {e}")
-        # Fallback to current time - better to be conservative and get recent reviews
-        # than to fail or use an incorrect timestamp
-        return datetime.now(timezone.utc).isoformat()
+        try:
+            commits = json.loads(output)
+
+            # Empty page means we've reached the end
+            if not commits:
+                break
+
+            for commit in commits:
+                if commit["sha"] == commit_sha:
+                    # Use commit date from GitHub API (when it was pushed to PR)
+                    commit_date = commit["commit"]["committer"]["date"]
+                    log_info(f"Commit found on page {page}, pushed at: {commit_date}")
+                    return commit_date
+
+            # Move to next page
+            page += 1
+
+        except (json.JSONDecodeError, KeyError) as e:
+            log_error(f"Failed to parse commit timeline: {e}")
+            break
+
+    # Fallback: use current time if commit not found in PR yet
+    # This can happen when:
+    # - Running script immediately after push (GitHub API lag)
+    # - Commit is in local branch but not yet in PR
+    # Using current time ensures we get the latest reviews
+    log_info(f"Commit {commit_sha[:7]} not found in PR timeline after checking {page-1} page(s), using current time")
+    return datetime.now(timezone.utc).isoformat()
 
 
 def get_claude_bot_comment(pr_number: int, after_timestamp: str) -> ClaudeBotComment | None:
