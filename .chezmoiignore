@@ -10,6 +10,8 @@ dev/
 .githooks/
 docs/
 test/
+pyproject.toml
+uv.lock
 
 {{ if ne .chezmoi.os "darwin" }}
 # Only apply MacOS-only files when we're _actually_ on MacOS.
