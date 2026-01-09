@@ -4,49 +4,80 @@ import sys
 from pathlib import Path
 
 
-def test_check_branch_state_happy_path(mocker, tmp_path):
+def test_check_branch_state_happy_path(tmp_path):
     """Test check_branch_state.py returns valid TOON output in happy path."""
-    # Mock subprocess.run to fake git/gh commands
-    def mock_run(cmd, **kwargs):
-        result = mocker.Mock()
-        result.returncode = 0
-        result.stdout = ""
-        result.stderr = ""
+    # Create a real git repository for testing
+    repo = tmp_path / "test_repo"
+    repo.mkdir()
 
-        # Mock git commands
-        if "rev-parse" in cmd and "--abbrev-ref" in cmd:
-            result.stdout = "feature-branch\n"
-        elif "rev-parse" in cmd and "HEAD" in cmd:
-            result.stdout = "abc123def456789\n"
-        elif "symbolic-ref" in cmd:
-            result.stdout = "refs/remotes/origin/main\n"
-        elif "diff" in cmd and "--name-only" in cmd:
-            result.stdout = "file1.py\nfile2.py\n"
-        elif cmd[:2] == ["gh", "pr"]:
-            # Mock PR data
-            pr_data = {
-                "number": 123,
-                "headRefOid": "abc123def456789",
-                "url": "https://github.com/owner/repo/pull/123"
-            }
-            result.stdout = str(pr_data).replace("'", '"')
+    # Initialize git repo
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-        return result
+    # Create initial commit on main branch
+    test_file = repo / "test.txt"
+    test_file.write_text("initial content\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-    mocker.patch('subprocess.run', side_effect=mock_run)
+    # Rename to main branch
+    subprocess.run(
+        ["git", "branch", "-m", "main"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-    # Run the script
-    script_path = Path(__file__).parent.parent.parent / \
-        "private_dot_claude/skills/getting-branch-state/scripts/executable_check_branch_state.py"
+    # Create and checkout feature branch
+    subprocess.run(
+        ["git", "checkout", "-b", "feature-branch"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+
+    # Make a change
+    test_file.write_text("modified content\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Feature work"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+
+    # Run the script in the test repository
+    script_path = (
+        Path(__file__).parent.parent.parent
+        / "private_dot_claude/skills/getting-branch-state/scripts"
+        / "executable_check_branch_state.py"
+    )
 
     result = subprocess.run(
         [sys.executable, str(script_path)],
+        cwd=repo,
         capture_output=True,
         text=True
     )
 
     # Verify it succeeded and returned TOON-like output
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
     assert "local:" in result.stdout
-    assert "branch:" in result.stdout
+    assert "branch: feature-branch" in result.stdout
     assert "pr:" in result.stdout

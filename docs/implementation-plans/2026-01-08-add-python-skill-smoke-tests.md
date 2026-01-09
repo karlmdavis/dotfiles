@@ -1,13 +1,15 @@
-# Python Skill Smoke Tests Implementation Plan
+# Python Skill Smoke Tests Implementation Plan (UPDATED)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add minimal happy-path smoke tests for 4 Python skill scripts to verify basic functionality.
 
-**Architecture:** Create pytest-based tests in `test/skills/` directory that mock external commands (gh, git) and verify TOON output format.
+**Architecture:** Create pytest-based tests in `test/skills/` directory.
 Each script gets one smoke test covering the happy path only.
+- **For check_branch_state.py**: Integration test with real git repository
+- **For gh-based scripts**: Import module and mock subprocess at module level
 
-**Tech Stack:** pytest, pytest-mock, Python 3.x
+**Tech Stack:** pytest, pytest-mock (for gh scripts only), Python 3.x
 
 ---
 
@@ -15,7 +17,6 @@ Each script gets one smoke test covering the happy path only.
 
 **Files:**
 - Create: `test/skills/__init__.py`
-- Create: `test/skills/conftest.py`
 - Create: `pyproject.toml`
 - Modify: `.mise.toml`
 
@@ -26,46 +27,7 @@ mkdir -p test/skills
 touch test/skills/__init__.py
 ```
 
-**Step 2: Create pytest configuration**
-
-Create `test/skills/conftest.py`:
-
-```python
-"""Pytest configuration and shared fixtures for skills tests."""
-import pytest
-
-
-@pytest.fixture
-def mock_subprocess_run(mocker):
-    """Mock subprocess.run for command execution tests."""
-    return mocker.patch('subprocess.run')
-
-
-@pytest.fixture
-def mock_git_commands(mock_subprocess_run):
-    """Pre-configured mocks for common git commands."""
-    def _run(cmd, **kwargs):
-        # Default to success
-        result = mocker.Mock()
-        result.returncode = 0
-        result.stdout = ""
-        result.stderr = ""
-
-        # Handle specific commands
-        if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
-            result.stdout = "feature-branch"
-        elif cmd == ["git", "rev-parse", "HEAD"]:
-            result.stdout = "abc123def456"
-        elif cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
-            result.stdout = "refs/remotes/origin/main"
-
-        return result
-
-    mock_subprocess_run.side_effect = _run
-    return mock_subprocess_run
-```
-
-**Step 3: Create pyproject.toml**
+**Step 2: Create pyproject.toml**
 
 Create `pyproject.toml` in repository root:
 
@@ -88,7 +50,7 @@ python_files = "test_*.py"
 addopts = "-v"
 ```
 
-**Step 4: Add pytest task to mise.toml**
+**Step 3: Add pytest task to mise.toml**
 
 Add after the existing `[tasks.test]` section in `.mise.toml`:
 
@@ -108,7 +70,7 @@ mise run test-python
 """
 ```
 
-**Step 5: Update CI task**
+**Step 4: Update CI task**
 
 Modify `[tasks.ci]` in `.mise.toml` to include python tests:
 
@@ -138,10 +100,10 @@ echo "✓ All CI checks passed!"
 """
 ```
 
-**Step 6: Commit infrastructure**
+**Step 5: Commit infrastructure**
 
 ```bash
-git add test/skills/__init__.py test/skills/conftest.py pyproject.toml .mise.toml
+git add test/skills/__init__.py pyproject.toml .mise.toml
 git commit -m "test: add pytest infrastructure for skill smoke tests"
 ```
 
@@ -152,7 +114,7 @@ git commit -m "test: add pytest infrastructure for skill smoke tests"
 **Files:**
 - Create: `test/skills/test_check_branch_state.py`
 
-**Step 1: Write the failing test**
+**Step 1: Write the test**
 
 Create `test/skills/test_check_branch_state.py`:
 
@@ -163,82 +125,94 @@ import sys
 from pathlib import Path
 
 
-def test_check_branch_state_happy_path(mocker, tmp_path):
+def test_check_branch_state_happy_path(tmp_path):
     """Test check_branch_state.py returns valid TOON output in happy path."""
-    # Mock subprocess.run to fake git/gh commands
-    def mock_run(cmd, **kwargs):
-        result = mocker.Mock()
-        result.returncode = 0
-        result.stdout = ""
-        result.stderr = ""
+    # Create a real git repository for testing
+    repo = tmp_path / "test_repo"
+    repo.mkdir()
 
-        # Mock git commands
-        if "rev-parse" in cmd and "--abbrev-ref" in cmd:
-            result.stdout = "feature-branch\n"
-        elif "rev-parse" in cmd and "HEAD" in cmd:
-            result.stdout = "abc123def456789\n"
-        elif "symbolic-ref" in cmd:
-            result.stdout = "refs/remotes/origin/main\n"
-        elif "diff" in cmd and "--name-only" in cmd:
-            result.stdout = "file1.py\nfile2.py\n"
-        elif cmd[:2] == ["gh", "pr"]:
-            # Mock PR data
-            pr_data = {
-                "number": 123,
-                "headRefOid": "abc123def456789",
-                "url": "https://github.com/owner/repo/pull/123"
-            }
-            result.stdout = str(pr_data).replace("'", '"')
+    # Initialize git repo
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-        return result
+    # Create initial commit on main branch
+    test_file = repo / "test.txt"
+    test_file.write_text("initial content\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-    mocker.patch('subprocess.run', side_effect=mock_run)
+    # Rename to main branch
+    subprocess.run(
+        ["git", "branch", "-m", "main"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
 
-    # Run the script
-    script_path = Path(__file__).parent.parent.parent / \
-        "private_dot_claude/skills/getting-branch-state/scripts/executable_check_branch_state.py"
+    # Create and checkout feature branch
+    subprocess.run(
+        ["git", "checkout", "-b", "feature-branch"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+
+    # Make a change
+    test_file.write_text("modified content\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Feature work"],
+        cwd=repo,
+        check=True,
+        capture_output=True
+    )
+
+    # Run the script in the test repository
+    script_path = (
+        Path(__file__).parent.parent.parent
+        / "private_dot_claude/skills/getting-branch-state/scripts"
+        / "executable_check_branch_state.py"
+    )
 
     result = subprocess.run(
         [sys.executable, str(script_path)],
+        cwd=repo,
         capture_output=True,
         text=True
     )
 
     # Verify it succeeded and returned TOON-like output
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
     assert "local:" in result.stdout
-    assert "branch:" in result.stdout
+    assert "branch: feature-branch" in result.stdout
     assert "pr:" in result.stdout
 ```
 
-**Step 2: Run test to verify it fails**
+**Step 2: Run test to verify it passes**
 
 ```bash
 uv run --extra test pytest test/skills/test_check_branch_state.py
 ```
 
-Expected output:
-```
-FAILED test/skills/test_check_branch_state.py::test_check_branch_state_happy_path
-```
+Expected: PASSED
 
-**Step 3: Fix the test (the script already exists)**
-
-The test should pass because the script is already implemented.
-If it fails, debug the mocking to match actual script behavior.
-
-**Step 4: Run test to verify it passes**
-
-```bash
-uv run --extra test pytest test/skills/test_check_branch_state.py
-```
-
-Expected output:
-```
-PASSED test/skills/test_check_branch_state.py::test_check_branch_state_happy_path
-```
-
-**Step 5: Commit**
+**Step 3: Commit**
 
 ```bash
 git add test/skills/test_check_branch_state.py
@@ -252,20 +226,29 @@ git commit -m "test: add smoke test for check_branch_state.py"
 **Files:**
 - Create: `test/skills/test_fetch_pr_reviews.py`
 
-**Step 1: Write the failing test**
+**Step 1: Write the test**
 
 Create `test/skills/test_fetch_pr_reviews.py`:
 
 ```python
 """Smoke test for fetch_pr_reviews.py script."""
-import subprocess
 import sys
 from pathlib import Path
+import json
 
 
 def test_fetch_pr_reviews_happy_path(mocker):
     """Test fetch_pr_reviews.py returns valid TOON output in happy path."""
-    # Mock subprocess.run for gh commands
+    # Add script to path and import
+    script_dir = (
+        Path(__file__).parent.parent.parent
+        / "private_dot_claude/skills/getting-reviews-remote/scripts"
+    )
+    sys.path.insert(0, str(script_dir))
+
+    import executable_fetch_pr_reviews as script
+
+    # Mock subprocess.run at module level
     def mock_run(cmd, **kwargs):
         result = mocker.Mock()
         result.returncode = 0
@@ -278,66 +261,59 @@ def test_fetch_pr_reviews_happy_path(mocker):
                 "sha": "abc123def",
                 "commit": {"committer": {"date": "2026-01-08T20:00:00Z"}}
             }]
-            import json
             result.stdout = json.dumps(commits)
-        elif "view" in cmd and "comments" in cmd:
+        elif "view" in str(cmd) and "comments" in str(cmd):
             # Mock PR comments (no Claude bot comments)
             result.stdout = '{"comments": []}'
-        elif "api" in cmd and "reviews" in cmd:
+        elif "api" in str(cmd) and "reviews" in str(cmd):
             # Mock PR reviews (empty)
             result.stdout = '[]'
-        elif "repo" in cmd and "view" in cmd:
+        elif "repo" in str(cmd) and "view" in str(cmd):
             # Mock repo info for GraphQL
             result.stdout = '{"owner": {"login": "test"}, "name": "repo"}'
-        elif "graphql" in cmd:
+        elif "graphql" in str(cmd):
             # Mock GraphQL reviewThreads response
-            result.stdout = '''{
+            result.stdout = json.dumps({
                 "data": {
                     "repository": {
                         "pullRequest": {
                             "reviewThreads": {
-                                "pageInfo": {"hasNextPage": false, "endCursor": null},
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
                                 "nodes": []
                             }
                         }
                     }
                 }
-            }'''
+            })
 
         return result
 
-    mocker.patch('subprocess.run', side_effect=mock_run)
+    # Patch subprocess.run and call main
+    mocker.patch.object(script.subprocess, 'run', side_effect=mock_run)
 
-    # Run the script with test args
-    script_path = Path(__file__).parent.parent.parent / \
-        "private_dot_claude/skills/getting-reviews-remote/scripts/executable_fetch_pr_reviews.py"
+    # Mock sys.argv for script arguments
+    mocker.patch.object(script.sys, 'argv', ['script.py', '123', 'abc123def'])
 
-    result = subprocess.run(
-        [str(script_path), "123", "abc123def"],
-        capture_output=True,
-        text=True
-    )
+    # Capture stdout
+    import io
+    from contextlib import redirect_stdout
 
-    # Verify it succeeded and returned TOON output
-    assert result.returncode == 0
-    assert "status:" in result.stdout
-    assert "pr_number:" in result.stdout
-    assert "current_commit" in result.stdout
+    f = io.StringIO()
+    with redirect_stdout(f):
+        try:
+            script.main()
+        except SystemExit:
+            pass  # Script calls sys.exit(0)
+
+    output = f.getvalue()
+
+    # Verify TOON output
+    assert "status:" in output
+    assert "pr_number:" in output
+    assert "current_commit" in output
 ```
 
-**Step 2: Run test to verify it fails**
-
-```bash
-uv run --extra test pytest test/skills/test_fetch_pr_reviews.py
-```
-
-Expected: FAILED (script not yet tested with mocks)
-
-**Step 3: Adjust mocks if needed**
-
-Debug and adjust the mock responses to match what the script actually expects.
-
-**Step 4: Run test to verify it passes**
+**Step 2: Run test to verify it passes**
 
 ```bash
 uv run --extra test pytest test/skills/test_fetch_pr_reviews.py
@@ -345,7 +321,7 @@ uv run --extra test pytest test/skills/test_fetch_pr_reviews.py
 
 Expected: PASSED
 
-**Step 5: Commit**
+**Step 3: Commit**
 
 ```bash
 git add test/skills/test_fetch_pr_reviews.py
@@ -359,20 +335,29 @@ git commit -m "test: add smoke test for fetch_pr_reviews.py"
 **Files:**
 - Create: `test/skills/test_fetch_workflow_logs.py`
 
-**Step 1: Write the failing test**
+**Step 1: Write the test**
 
 Create `test/skills/test_fetch_workflow_logs.py`:
 
 ```python
 """Smoke test for fetch_workflow_logs.py script."""
-import subprocess
 import sys
 from pathlib import Path
+import json
 
 
 def test_fetch_workflow_logs_happy_path(mocker):
     """Test fetch_workflow_logs.py returns valid TOON output in happy path."""
-    # Mock subprocess.run for gh api commands
+    # Add script to path and import
+    script_dir = (
+        Path(__file__).parent.parent.parent
+        / "private_dot_claude/skills/getting-build-results-remote/scripts"
+    )
+    sys.path.insert(0, str(script_dir))
+
+    import executable_fetch_workflow_logs as script
+
+    # Mock subprocess.run at module level
     def mock_run(cmd, **kwargs):
         result = mocker.Mock()
         result.returncode = 0
@@ -393,7 +378,6 @@ def test_fetch_workflow_logs_happy_path(mocker):
                     }]
                 }]
             }
-            import json
             result.stdout = json.dumps(jobs)
         elif "logs" in str(cmd):
             # Mock job logs
@@ -401,37 +385,31 @@ def test_fetch_workflow_logs_happy_path(mocker):
 
         return result
 
-    mocker.patch('subprocess.run', side_effect=mock_run)
+    # Patch subprocess.run and call main
+    mocker.patch.object(script.subprocess, 'run', side_effect=mock_run)
 
-    # Run the script with test run ID
-    script_path = Path(__file__).parent.parent.parent / \
-        "private_dot_claude/skills/getting-build-results-remote/scripts/executable_fetch_workflow_logs.py"
+    # Mock sys.argv for script arguments
+    mocker.patch.object(script.sys, 'argv', ['script.py', '123456'])
 
-    result = subprocess.run(
-        [str(script_path), "123456"],
-        capture_output=True,
-        text=True
-    )
+    # Capture stdout
+    import io
+    from contextlib import redirect_stdout
 
-    # Verify it succeeded and returned TOON output
-    assert result.returncode == 0
-    assert "status:" in result.stdout
-    assert "run_id:" in result.stdout or "workflow" in result.stdout.lower()
+    f = io.StringIO()
+    with redirect_stdout(f):
+        try:
+            script.main()
+        except SystemExit:
+            pass
+
+    output = f.getvalue()
+
+    # Verify TOON output
+    assert "status:" in output
+    assert "run_id:" in output or "workflow" in output.lower()
 ```
 
-**Step 2: Run test to verify it fails**
-
-```bash
-uv run --extra test pytest test/skills/test_fetch_workflow_logs.py
-```
-
-Expected: FAILED
-
-**Step 3: Adjust mocks to match script behavior**
-
-Debug the test to match actual script expectations.
-
-**Step 4: Run test to verify it passes**
+**Step 2: Run test to verify it passes**
 
 ```bash
 uv run --extra test pytest test/skills/test_fetch_workflow_logs.py
@@ -439,7 +417,7 @@ uv run --extra test pytest test/skills/test_fetch_workflow_logs.py
 
 Expected: PASSED
 
-**Step 5: Commit**
+**Step 3: Commit**
 
 ```bash
 git add test/skills/test_fetch_workflow_logs.py
@@ -453,20 +431,29 @@ git commit -m "test: add smoke test for fetch_workflow_logs.py"
 **Files:**
 - Create: `test/skills/test_check_pr_workflows.py`
 
-**Step 1: Write the failing test**
+**Step 1: Write the test**
 
 Create `test/skills/test_check_pr_workflows.py`:
 
 ```python
 """Smoke test for check_pr_workflows.py script."""
-import subprocess
 import sys
 from pathlib import Path
+import json
 
 
 def test_check_pr_workflows_happy_path(mocker):
     """Test check_pr_workflows.py returns valid TOON output in happy path."""
-    # Mock subprocess.run for git/gh commands
+    # Add script to path and import
+    script_dir = (
+        Path(__file__).parent.parent.parent
+        / "private_dot_claude/skills/awaiting-pr-workflow-results/scripts"
+    )
+    sys.path.insert(0, str(script_dir))
+
+    import executable_check_pr_workflows as script
+
+    # Mock subprocess.run at module level
     def mock_run(cmd, **kwargs):
         result = mocker.Mock()
         result.returncode = 0
@@ -485,7 +472,6 @@ def test_check_pr_workflows_happy_path(mocker):
                     "headRefOid": "abc123def456",
                     "url": "https://github.com/owner/repo/pull/123"
                 }
-                import json
                 result.stdout = json.dumps(pr_data)
             elif "checks" in cmd:
                 # Mock PR checks (all passed)
@@ -495,42 +481,32 @@ def test_check_pr_workflows_happy_path(mocker):
                     "conclusion": "SUCCESS",
                     "detailsUrl": "https://github.com/..."
                 }]
-                import json
                 result.stdout = json.dumps(checks)
 
         return result
 
-    mocker.patch('subprocess.run', side_effect=mock_run)
+    # Patch subprocess.run and call main
+    mocker.patch.object(script.subprocess, 'run', side_effect=mock_run)
 
-    # Run the script
-    script_path = Path(__file__).parent.parent.parent / \
-        "private_dot_claude/skills/awaiting-pr-workflow-results/scripts/executable_check_pr_workflows.py"
+    # Capture stdout
+    import io
+    from contextlib import redirect_stdout
 
-    result = subprocess.run(
-        [str(script_path)],
-        capture_output=True,
-        text=True
-    )
+    f = io.StringIO()
+    with redirect_stdout(f):
+        try:
+            script.main()
+        except SystemExit:
+            pass
 
-    # Verify it succeeded and returned TOON output
-    assert result.returncode == 0
-    assert "status:" in result.stdout
-    assert "workflows:" in result.stdout or "checks" in result.stdout.lower()
+    output = f.getvalue()
+
+    # Verify TOON output
+    assert "status:" in output
+    assert "workflows:" in output or "checks" in output.lower()
 ```
 
-**Step 2: Run test to verify it fails**
-
-```bash
-uv run --extra test pytest test/skills/test_check_pr_workflows.py
-```
-
-Expected: FAILED
-
-**Step 3: Adjust mocks to match script behavior**
-
-Debug and fix mocks to match actual script.
-
-**Step 4: Run test to verify it passes**
+**Step 2: Run test to verify it passes**
 
 ```bash
 uv run --extra test pytest test/skills/test_check_pr_workflows.py
@@ -538,7 +514,7 @@ uv run --extra test pytest test/skills/test_check_pr_workflows.py
 
 Expected: PASSED
 
-**Step 5: Commit**
+**Step 3: Commit**
 
 ```bash
 git add test/skills/test_check_pr_workflows.py
@@ -574,19 +550,21 @@ Expected: All checks pass (shellcheck + bash tests + python tests)
 
 **Step 3: Update CLAUDE.md with testing documentation**
 
-Add to the "Testing and Quality" section in `CLAUDE.md` after the bash testing section:
+Add to the "Testing and Quality" section in `CLAUDE.md` after the bash testing section (around line 213):
 
 ```markdown
 ### Python Skill Testing
 
 **Minimal smoke test coverage:**
 - One happy-path test per Python skill script
-- Mock external dependencies (gh, git commands) using pytest-mock
+- Integration test approach for git-based scripts (real git repository)
+- Module import and mocking for gh-based scripts
 - Verify TOON output format
 
 **Test structure:**
 - `test/skills/` - Python smoke tests using pytest framework
-- `test/skills/conftest.py` - Shared fixtures for mocking
+- Integration tests use `tmp_path` for isolated git repositories
+- Mock-based tests import scripts as modules and patch subprocess at module level
 
 **Running tests:**
 ```bash
@@ -613,14 +591,23 @@ After completing all tasks:
 
 1. Run `mise run test-python` - all 4 tests should pass
 2. Run `mise run ci` - complete CI should pass (lint + all tests)
-3. Verify `test/skills/` contains 4 test files + conftest.py
+3. Verify `test/skills/` contains 4 test files
 4. Verify CLAUDE.md documents the Python testing approach
 
 ---
 
 ## Notes
 
-- These are **smoke tests only** - happy path verification
-- Mocks may need adjustment based on actual script behavior
+- **check_branch_state.py**: Integration test with real git repo (fast, authentic)
+- **gh-based scripts**: Import module and mock subprocess (avoids GitHub API dependency)
 - Scripts use defensive programming, so minimal testing is acceptable
 - Future enhancement: add tests for error handling and edge cases
+
+## Key Design Decision: Hybrid Testing Approach
+
+**Why not use subprocess mocking for all tests?**
+Mocking `subprocess.run` globally and then using `subprocess.run` to launch the script doesn't work - the mock intercepts the launch call, preventing the script from running.
+
+**Solution:**
+- **Git scripts**: Integration tests with real git repos in `tmp_path`
+- **GitHub scripts**: Import as module, mock subprocess at module level
