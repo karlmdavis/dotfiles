@@ -194,7 +194,11 @@ def get_commit_push_timestamp(pr_number: int, commit_sha: str) -> str:
 
 
 def get_claude_bot_comment(pr_number: int, after_timestamp: str) -> ClaudeBotComment | None:
-    """Get most recent Claude bot comment after given timestamp."""
+    """Get all Claude bot comments after given timestamp and combine them.
+
+    This handles split reviews where Claude posts multiple comments in sequence.
+    All comments after the timestamp are combined chronologically into a single body.
+    """
     log_info("Fetching Claude bot comments...")
 
     output = run_cmd(
@@ -236,13 +240,23 @@ def get_claude_bot_comment(pr_number: int, after_timestamp: str) -> ClaudeBotCom
             log_info(f"No Claude bot comments after {after_timestamp}")
             return None
 
-        # Get most recent
-        most_recent = max(recent_comments, key=lambda c: c.get("updatedAt", c.get("createdAt", "")))
+        # Sort comments chronologically by creation time
+        # This ensures split reviews are combined in the order they were posted
+        sorted_comments = sorted(recent_comments, key=lambda c: c.get("createdAt", ""))
+
+        log_info(f"Found {len(sorted_comments)} Claude bot comment(s) after {after_timestamp}")
+
+        # Combine all comment bodies with separators
+        # Use a clear separator to help parsing distinguish between parts
+        combined_body = "\n\n---\n\n".join(c.get("body", "") for c in sorted_comments)
+
+        # Use the last comment's metadata (most recent)
+        last_comment = sorted_comments[-1]
 
         return ClaudeBotComment(
-            link=most_recent.get("url", ""),
-            updated_at=most_recent.get("updatedAt", most_recent.get("createdAt", "")),
-            body=most_recent.get("body", "")
+            link=last_comment.get("url", ""),
+            updated_at=last_comment.get("updatedAt", last_comment.get("createdAt", "")),
+            body=combined_body
         )
 
     except (json.JSONDecodeError, KeyError) as e:
