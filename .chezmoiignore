@@ -4,6 +4,7 @@ LICENSE
 CLAUDE.md
 CONTRIBUTING.md
 dev/
+private_dot_claude/commands/README.md
 
 # Ignore testing and development files.
 .mise.toml
