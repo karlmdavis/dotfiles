@@ -52,7 +52,7 @@ Based on user choice:
 
 ## 1. Gather Complete PR Feedback
 
-**1.a.** Spawn a subagent using the Task tool with `subagent_type='general-purpose'` and
+**1.a.** Spawn a subagent using the Task tool with `subagent_type='quality-data-extractor'` and
   `description="Get complete PR feedback"`.
 - The subagent prompt should use the `getting-feedback-remote` skill.
 - This orchestrates: waiting for workflows, fetching build results, fetching reviews.

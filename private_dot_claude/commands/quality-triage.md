@@ -62,7 +62,7 @@ Parse the TOON output and store for later use.
 
 ## 1. Gather Complete Local Feedback
 
-**1.a.** Spawn a subagent using the Task tool with `subagent_type='general-purpose'` and
+**1.a.** Spawn a subagent using the Task tool with `subagent_type='quality-data-extractor'` and
   `description="Get complete local feedback"`.
 - The subagent prompt should use the `getting-feedback-local` skill.
 - **CRITICAL:** Pass the review context from step 0:

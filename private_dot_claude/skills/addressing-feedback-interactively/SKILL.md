@@ -251,7 +251,7 @@ If a fix was implemented, verify it...
 
 Run verification in subagent:
 ```markdown
-Use Task tool with subagent_type='general-purpose':
+Use Task tool with subagent_type='quality-data-extractor':
 
 "Run local CI to verify current state.
 Use getting-build-results-local skill to run CI commands.
