@@ -57,6 +57,7 @@ Based on user choice:
 - The subagent prompt should use the `getting-feedback-remote` skill.
 - This orchestrates: waiting for workflows, fetching build results, fetching reviews.
 - Wait for the subagent to return unified TOON output with complete PR feedback.
+- No need to display this returned feedback to the user, as Step 2 will do that.
 
 **1.b.** CRITICAL: The skill MUST run in a subagent, never in main context.
   This prevents token bloat from workflow logs and review text.

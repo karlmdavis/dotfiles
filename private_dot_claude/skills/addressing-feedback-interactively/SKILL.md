@@ -166,15 +166,17 @@ For each issue in priority order, first mention to your user:
 Next, we'll triage and consider addressing Issue {N} of {Total}: {issue brief description}...
 ```
 
-For each issue in priority order, follow these sub-steps (details in following sections):
-- **Step 3.1: Investigate Root Cause** (gather context)
-- **Step 3.2: Present Issue Details** (show user the issue)
-- **Step 3.3: Propose Fix** (suggest solution)
-- **Step 3.4: Implement Fix** (make changes)
-- **Step 3.5: Verify Fix** (run CI)
-- **Step 3.6: Commit Decision** (based on strategy)
+Then, after displaying that to the user, you should proceed to address each issue interactively. The following steps outline the workflow you should follow in order to address the issues:
+- Loop over each issue in priority order:
+  - **Step 3.1: Investigate Root Cause** (gather context)
+  - **Step 3.2: Present Issue Details** (show user the issue)
+  - **Step 3.3: Propose Fix** (suggest solution)
+  - **Step 3.4: Implement Fix** (make changes)
+  - **Step 3.5: Verify Fix** (run CI)
+  - **Step 3.6: Commit Decision** (based on strategy)
+  - Return to Step 3.1 for next issue.
 
-We will loop over these steps for each issue until all are addressed.
+Each step is described in detail in the following sections. Be sure to track your progress through the issues, and return to Step 3.1 for each new issue until all are addressed.
 
 #### Step 3.1: Investigate Root Cause
 
