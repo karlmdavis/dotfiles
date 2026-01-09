@@ -212,6 +212,28 @@ mise run ci
 
 **Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test in parallel).
 
+### Python Skill Testing
+
+**Minimal smoke test coverage:**
+- One happy-path test per Python skill script.
+- Integration test approach for git-based scripts (real git repository).
+- Module import and mocking for gh-based scripts.
+- Verify TOON output format.
+
+**Test structure:**
+- `test/skills/` - Python smoke tests using pytest framework.
+- Integration tests use `tmp_path` for isolated git repositories.
+- Mock-based tests import scripts as modules and patch subprocess at module level.
+
+**Running tests:**
+```bash
+mise run test-python  # Python tests only
+mise run test-all     # Bash + Python tests
+```
+
+**Note:** Tests focus on happy path only.
+The scripts use defensive programming (timeouts, error handling) to handle edge cases in production.
+
 ### Notification System Architecture (V2)
 
 The wkflw-ntfy V2 system uses composable bash scripts following Unix philosophy:
