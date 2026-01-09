@@ -3,6 +3,7 @@ name: getting-feedback-remote
 description: Orchestrate complete PR feedback - waits for workflows, fetches build results and reviews, returns unified TOON summary without consuming main context
 context: agent
 agent: quality-data-extractor
+user_invocable: false
 ---
 
 # Getting Feedback Remote

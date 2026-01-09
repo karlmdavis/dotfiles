@@ -2,6 +2,7 @@
 name: parsing-build-results
 description: Parse raw build/test logs into structured failures - extracts commands, failures, locations, and determines if related to current changes
 context: fork
+user_invocable: false
 ---
 
 # Parsing Build Results

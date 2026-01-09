@@ -1,6 +1,7 @@
 ---
 name: getting-branch-state
 description: Check local branch state, PR status, and sync comparison (ahead/behind/diverged). Returns branch info, base branch detection, uncommitted files, PR details, and changed files for review context.
+user_invocable: false
 ---
 
 # Getting Branch State

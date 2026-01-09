@@ -2,6 +2,7 @@
 name: getting-reviews-remote
 description: Fetch PR review comments (Claude bot + GitHub reviews + unresolved threads) - returns raw review text for parsing by parsing-review-suggestions
 context: fork
+user_invocable: false
 ---
 
 # Getting Reviews Remote

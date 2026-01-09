@@ -2,6 +2,7 @@
 name: addressing-feedback-interactively
 description: Guide user through resolving build failures and code review feedback interactively, as parsed by the getting-feedback-local or getting-feedback-remote skills. Use when addressing build failures (local or CI), test failures, type errors, linting errors, or review comments from PRs.
 allowed-tools: Read, Edit, Write, Bash, Task
+user_invocable: false
 ---
 
 # Addressing Feedback Interactively

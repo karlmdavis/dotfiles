@@ -3,6 +3,7 @@ name: getting-feedback-local
 description: Orchestrate complete local feedback - runs local CI and code review, returns unified TOON summary without consuming main context
 context: agent
 agent: quality-data-extractor
+user_invocable: false
 ---
 
 # Getting Feedback Local

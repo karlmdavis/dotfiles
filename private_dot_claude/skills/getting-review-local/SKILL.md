@@ -2,6 +2,7 @@
 name: getting-review-local
 description: Get local code review of current changes - uses available review tools or Claude's own analysis to return structured feedback
 context: fork
+user_invocable: false
 ---
 
 # Getting Review Local
