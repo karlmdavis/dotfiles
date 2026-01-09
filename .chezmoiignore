@@ -12,6 +12,7 @@ docs/
 test/
 pyproject.toml
 uv.lock
+__pycache__/  # Python bytecode cache (auto-generated)
 
 {{ if ne .chezmoi.os "darwin" }}
 # Only apply MacOS-only files when we're _actually_ on MacOS.
