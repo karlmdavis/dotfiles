@@ -31,6 +31,12 @@ Based on the scope argument:
 - If argument provided: Use specified scope.
 - If no argument: Default to `branch-dirty`.
 
+**0.a.1.** Validate scope argument:
+- Check if scope is one of: `everything`, `uncommitted`, `branch`, `branch-dirty`.
+- If invalid scope:
+  - Display error: "Invalid scope '{scope}'. Valid options: everything, uncommitted, branch, branch-dirty"
+  - Exit workflow.
+
 **0.b.** Run the getting-branch-state skill to get branch info:
 
 Use Skill tool with skill='getting-branch-state'.
