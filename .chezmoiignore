@@ -4,7 +4,7 @@ LICENSE
 CLAUDE.md
 CONTRIBUTING.md
 dev/
-private_dot_claude/commands/README.md
+.claude/commands/README.md
 
 # Ignore testing and development files.
 .mise.toml
@@ -13,7 +13,7 @@ docs/
 test/
 pyproject.toml
 uv.lock
-__pycache__/  # Python bytecode cache (auto-generated)
+**/__pycache__  # Python bytecode cache (auto-generated, at any level)
 
 {{ if ne .chezmoi.os "darwin" }}
 # Only apply MacOS-only files when we're _actually_ on MacOS.
