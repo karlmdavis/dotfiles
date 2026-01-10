@@ -26,7 +26,17 @@ When invoking script directly via Bash, caller is responsible for running in app
 ```
 Task tool with subagent_type='general-purpose':
 
-"Run scripts/check_pr_workflows.py and return the complete output."
+"Run the workflow check script using the absolute path:
+
+1. The base directory for this skill is shown at the top: `Base directory for this skill: <PATH>`
+2. Construct the full script path: `<PATH>/scripts/check_pr_workflows.py`
+3. Run: `<full_path_from_step_2>`
+
+Example:
+- If base directory is `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results`
+- Then run: `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results/scripts/check_pr_workflows.py`
+
+Return the complete TOON output."
 ```
 
 The script outputs TOON format to stdout, status messages to stderr.

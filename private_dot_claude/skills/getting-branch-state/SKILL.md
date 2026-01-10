@@ -151,9 +151,15 @@ The skill automatically detects the base branch:
 ## Usage Pattern
 
 ```markdown
-Run the script directly via Bash:
+Run the script using the absolute path:
 
-scripts/check_branch_state.py
+1. The base directory for this skill is shown at the top: `Base directory for this skill: <PATH>`
+2. Construct the full script path: `<PATH>/scripts/check_branch_state.py`
+3. Run: `<full_path_from_step_2>`
+
+Example:
+- If base directory is `/Users/cool_person/.claude/skills/getting-branch-state`
+- Then run: `/Users/cool_person/.claude/skills/getting-branch-state/scripts/check_branch_state.py`
 ```
 
 Parse the TOON output to get branch state, PR info, and sync status.

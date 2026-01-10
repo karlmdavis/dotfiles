@@ -45,10 +45,11 @@ COMMIT=$(git rev-parse HEAD)
 
 ### Step 2: Fetch Reviews
 
-Run the script:
+Run the script using the absolute path (construct from skill base directory shown at top):
 
 ```bash
-scripts/fetch_pr_reviews.py $PR_NUM $COMMIT
+# Example if base directory is /Users/cool_person/.claude/skills/getting-reviews-remote
+/Users/cool_person/.claude/skills/getting-reviews-remote/scripts/fetch_pr_reviews.py $PR_NUM $COMMIT
 ```
 
 ### Step 3: Use Output for Parsing
@@ -146,8 +147,19 @@ When invoking script directly via Bash, caller is responsible for running in app
 Use Task tool with subagent_type='general-purpose':
 
 "Use the getting-reviews-remote skill to fetch review feedback for PR #123
-at commit a1b2c3d4. Run scripts/fetch_pr_reviews.py with these parameters
-and return the complete TOON output."
+at commit a1b2c3d4.
+
+Run the script using the absolute path:
+
+1. The base directory for this skill is shown at the top: `Base directory for this skill: <PATH>`
+2. Construct the full script path: `<PATH>/scripts/fetch_pr_reviews.py`
+3. Run: `<full_path_from_step_2> 123 a1b2c3d4`
+
+Example:
+- If base directory is `/Users/cool_person/.claude/skills/getting-reviews-remote`
+- Then run: `/Users/cool_person/.claude/skills/getting-reviews-remote/scripts/fetch_pr_reviews.py 123 a1b2c3d4`
+
+Return the complete TOON output."
 ```
 
 ## Integration with Other Skills
@@ -223,7 +235,9 @@ This requires `gh` CLI with GraphQL support (included by default).
 
 | Task | Command |
 |------|---------|
-| Fetch reviews for PR #123 at commit abc123 | `scripts/fetch_pr_reviews.py 123 abc123` |
+| Fetch reviews for PR #123 at commit abc123 | `<base_dir>/scripts/fetch_pr_reviews.py 123 abc123` |
 | Get current PR number | `gh pr view --json number -q '.number'` |
 | Get current commit SHA | `git rev-parse HEAD` |
 | Get short commit SHA | `git rev-parse --short HEAD` |
+
+Note: `<base_dir>` = Base directory for this skill (shown at top of skill output)

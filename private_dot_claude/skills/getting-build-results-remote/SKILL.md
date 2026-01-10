@@ -48,10 +48,11 @@ Extract the run ID from the URL (last segment) or use `databaseId` if available.
 
 ### Step 2: Fetch Logs
 
-Run the script with run IDs as arguments:
+Run the script using the absolute path (construct from skill base directory shown at top):
 
 ```bash
-scripts/fetch_workflow_logs.py 19727163744 19727163745
+# Example if base directory is /Users/cool_person/.claude/skills/getting-build-results-remote
+/Users/cool_person/.claude/skills/getting-build-results-remote/scripts/fetch_workflow_logs.py 19727163744 19727163745
 ```
 
 ### Step 3: Use Output for Parsing
@@ -108,8 +109,19 @@ When invoking script directly via Bash, caller is responsible for running in app
 Use Task tool with subagent_type='general-purpose':
 
 "Use the getting-build-results-remote skill to fetch logs for workflow runs
-19727163744 and 19727163745. Run scripts/fetch_workflow_logs.py with these IDs
-and return the complete TOON output."
+19727163744 and 19727163745.
+
+Run the script using the absolute path:
+
+1. The base directory for this skill is shown at the top: `Base directory for this skill: <PATH>`
+2. Construct the full script path: `<PATH>/scripts/fetch_workflow_logs.py`
+3. Run: `<full_path_from_step_2> 19727163744 19727163745`
+
+Example:
+- If base directory is `/Users/cool_person/.claude/skills/getting-build-results-remote`
+- Then run: `/Users/cool_person/.claude/skills/getting-build-results-remote/scripts/fetch_workflow_logs.py 19727163744 19727163745`
+
+Return the complete TOON output."
 ```
 
 ## Integration with Other Skills
@@ -138,6 +150,8 @@ and return the complete TOON output."
 
 | Task | Command |
 |------|---------|
-| Fetch logs for one run | `scripts/fetch_workflow_logs.py 19727163744` |
-| Fetch logs for multiple runs | `scripts/fetch_workflow_logs.py 19727163744 19727163745` |
+| Fetch logs for one run | `<base_dir>/scripts/fetch_workflow_logs.py 19727163744` |
+| Fetch logs for multiple runs | `<base_dir>/scripts/fetch_workflow_logs.py 19727163744 19727163745` |
 | Get run ID from awaiting skill | Extract from `workflows.results[].url` or use `databaseId` |
+
+Note: `<base_dir>` = Base directory for this skill (shown at top of skill output)
