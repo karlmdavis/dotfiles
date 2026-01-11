@@ -1,7 +1,6 @@
 ---
 name: parsing-review-suggestions
 description: Parse raw review text into structured issues - extracts severity, code references, descriptions from Claude bot reviews, GitHub PR reviews, and unresolved threads
-context: fork
 user_invocable: false
 ---
 

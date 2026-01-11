@@ -1,7 +1,6 @@
 ---
 name: getting-build-results-remote
 description: Fetch workflow logs from GitHub PR workflows - takes run IDs from awaiting-pr-workflow-results and returns raw logs for parsing
-context: fork
 user_invocable: false
 ---
 

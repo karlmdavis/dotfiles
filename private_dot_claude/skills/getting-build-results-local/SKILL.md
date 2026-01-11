@@ -1,7 +1,6 @@
 ---
 name: getting-build-results-local
 description: Run local CI commands and return raw output - reads project CLAUDE.md to find build/test commands, executes them, returns output for parsing
-context: fork
 user_invocable: false
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: awaiting-pr-workflow-results
 description: Check GitHub PR workflow status, verify unpushed commits, and wait for workflows to complete (up to 20min). Use when user asks "are tests passing?", "is CI done?", "wait for workflows", or needs to verify workflow status after pushing commits.
-context: fork
 user_invocable: false
 ---
 
