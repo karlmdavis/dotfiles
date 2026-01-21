@@ -112,7 +112,7 @@ if ($texlive_bin | path exists) {
 # Aliases.
 ##
 
-alias claude = volta run --node=22 --bundled-npm npx @anthropic-ai/claude-code
+# (none, at the moment)
 
 
 ##
