@@ -33,12 +33,26 @@ echo "Running wkflw-ntfy unit tests..."
 bats test/wkflw-ntfy/unit/
 """
 
+[tasks.test-python]
+description = "Run Python skill smoke tests"
+run = """
+echo "Running Python skill smoke tests..."
+uv run --extra test pytest
+"""
+
+[tasks.test-all]
+description = "Run all tests (bash + python)"
+run = """
+mise run test
+mise run test-python
+"""
+
 [tasks.ci]
-description = "Run complete CI suite (lint + test in parallel)"
+description = "Run complete CI suite (lint + all tests in parallel)"
 run = """
 mise run lint &
 LINT_PID=$!
-mise run test &
+mise run test-all &
 TEST_PID=$!
 
 wait $LINT_PID

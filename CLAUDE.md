@@ -125,7 +125,8 @@ This repository also manages Claude Code configuration for consistent setup acro
 - `~/.claude/settings.local.json` - Machine-specific overrides (minimal, for truly local settings)
 
 **Custom Slash Commands:**
-- `~/.claude/commands/pr-quality-loop.md` - CI monitoring and fixing loop
+- `~/.claude/commands/quality-triage.md` - Triage local build/test failures and review feedback.
+- `~/.claude/commands/quality-triage-pr.md` - Triage PR workflow failures and review feedback.
 - `~/.claude/commands/pr-merge.md` - Squash merge PR and clean up local branch
 
 **Custom Skills:**
@@ -171,7 +172,8 @@ This permissive global setup reduces permission prompts while allowing project-s
 ### Slash Command Usage
 
 Available commands after applying chezmoi configuration:
-- `/pr-quality-loop` - Iterative CI check monitoring and fixing until all pass
+- `/quality-triage` - Triage local build/test failures and review feedback.
+- `/quality-triage-pr` - Triage PR workflow failures and review feedback.
 - `/pr-merge` - Squash merge PR and clean up local branch
 
 Commands support bash command interpolation with `!`backticks`` for dynamic context.
@@ -209,6 +211,28 @@ mise run ci
 - `test/wkflw-ntfy/helpers/` - Shared test utilities
 
 **Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test in parallel).
+
+### Python Skill Testing
+
+**Minimal smoke test coverage:**
+- One happy-path test per Python skill script.
+- Integration test approach for git-based scripts (real git repository).
+- Module import and mocking for gh-based scripts.
+- Verify TOON output format.
+
+**Test structure:**
+- `test/skills/` - Python smoke tests using pytest framework.
+- Integration tests use `tmp_path` for isolated git repositories.
+- Mock-based tests import scripts as modules and patch subprocess at module level.
+
+**Running tests:**
+```bash
+mise run test-python  # Python tests only
+mise run test-all     # Bash + Python tests
+```
+
+**Note:** Tests focus on happy path only.
+The scripts use defensive programming (timeouts, error handling) to handle edge cases in production.
 
 ### Notification System Architecture (V2)
 
