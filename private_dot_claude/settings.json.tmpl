@@ -1,4 +1,9 @@
 {
+  "cleanupPeriodDays": 36525,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       {{- /* === Git Operations === */}}
@@ -135,12 +140,21 @@
     ]
   },
   "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
+    "superpowers@superpowers-marketplace": true,
+    "swift-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
-  "cleanupPeriodDays": 36525,
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  }
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "preferredNotifChannel": "iterm2_with_bell",
+  "remoteControlAtStartup": true,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true,
+  "inputNeededNotifEnabled": true
 }
