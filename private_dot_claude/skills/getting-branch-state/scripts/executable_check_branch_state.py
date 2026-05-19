@@ -8,6 +8,33 @@ Returns TOON with:
 - Comparison (local_vs_pr status, branch_vs_base changed_files)
 
 Supports --format json for machine-readable output.
+
+Output Format (TOON):
+  Returns nested structure with local, PR, and comparison data:
+  - local: Current branch state and commit info.
+  - pr: Associated PR information (if PR exists).
+  - comparison: Sync status between local/PR and changed files vs base.
+
+  Example output (TOON tabular format):
+    local[1]{branch,head,head_short,timestamp,base_branch}:
+      feature-branch,abc1234567890abcdef1234567890abcdef123456,abc1234,2026-02-16T10:30:00-08:00,main
+
+    local.uncommitted_files[0]{}:
+
+    pr[1]{exists,number,head,head_short,url}:
+      true,123,abc1234567890abcdef1234567890abcdef123456,abc1234,https://github.com/owner/repo/pull/123
+
+    comparison:
+      local_vs_pr[1]{status,ahead_count,behind_count}:
+        in_sync,0,0
+
+      local_vs_pr.ahead_commits[0]{}:
+
+      local_vs_pr.behind_commits[0]{}:
+
+      branch_vs_base.changed_files[2]{}:
+        src/main.py
+        tests/test_main.py
 """
 
 import argparse
@@ -149,7 +176,7 @@ def get_pr_state(branch):
     pr_output = run_cmd([
         "gh", "pr", "list",
         "--head", branch,
-        "--json", "number,headRefOid,url",
+        "--json", "number,title,isDraft,headRefOid,url",
         "--limit", "1"
     ])
 
@@ -169,6 +196,8 @@ def get_pr_state(branch):
         return PRState(
             exists=True,
             number=pr.get("number"),
+            title=pr.get("title"),
+            is_draft=pr.get("isDraft", False),
             head=head,
             head_short=head[:7] if head else None,
             url=pr.get("url")

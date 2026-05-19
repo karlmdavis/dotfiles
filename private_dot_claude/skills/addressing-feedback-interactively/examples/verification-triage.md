@@ -1,7 +1,8 @@
 # Example: Verification Triage
 
 **IMPORTANT:** This example illustrates decision logic and state transitions.
-It is NOT a conversation transcript - use the templates in the workflow sections of SKILL.md for actual communication with users.
+It is NOT a conversation transcript - use the templates in the workflow sections of SKILL.md for
+  actual communication with users.
 
 ## Scenario
 

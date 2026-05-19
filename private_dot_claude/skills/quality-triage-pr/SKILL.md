@@ -5,9 +5,19 @@ disable-model-invocation: true
 tools: Bash, Edit, Skill, WebFetch, WebSearch, Write, LSP, mcp__ide__getDiagnostics, mcp__ide__executeCode
 ---
 
-I would like you to gather all PR feedback (workflow failures and review comments) and then interactively guide the user through addressing all of that PR feedback. I will give you a checklist of Triage Steps 1 though 4 and ask you to track your progress through them. Some Triage Steps will have their own checklists and steps, which you will be asked to track your progress through, as well.
+# PR Quality Triage
 
-Many steps will produce and/or consume TOON-formatted data, which is a structured data format suited for use by agents. TOON is similar to JSON and YAML but uses 2-space indents and arrays show length and fields. Here's a small toy example:
+I would like you to gather all PR feedback (workflow failures and review comments)
+  and then interactively guide the user through addressing all of that PR feedback.
+I will give you a checklist of Triage Steps 1 though 4
+  and ask you to track your progress through them.
+Some Triage Steps may also have their own checklists and steps,
+  which you will be asked to track your progress through, as well.
+
+Many steps will produce and/or consume TOON-formatted data,
+  which is a structured data format suited for use by agents.
+TOON is similar to JSON and YAML but uses 2-space indents and arrays show length and fields.
+Here's a small toy example:
 
 ```toon
 context:
@@ -21,7 +31,8 @@ hikes[3]{id,name,distanceKm,elevationGain,companion,wasSunny}:
   3,Wildflower Loop,5.1,180,sam,true
 ```
 
-This checklist specifies the top-level Triage Steps for the PR quality triage process. Copy this checklist and track your progress through it:
+This checklist specifies the top-level Triage Steps for the PR quality triage process.
+Copy this checklist and track your progress through it:
 
 ```
 PR Quality Triage Progress:
@@ -31,62 +42,23 @@ PR Quality Triage Progress:
 [ ] Triage Step 4: Push Changes to Remote, Maybe
 ```
 
+TODO: Move example flow to its own doc and link here, as otherwise it risks confusing the main flow
+
 ## Triage Step 1: Check Branch State and PR Sync Status
 
-See [Triage Step 1: Check Branch State and PR Sync Status](triage_steps/triage_step_1_check_status.md) and follow its instructions.
+See [Triage Step 1: Check Branch State and PR Sync Status](steps/triage_step_1_check_status.md) and follow its instructions.
 
 ## Triage Step 2: Gather Complete PR Feedback
 
-**2.a.** Spawn a subagent using the Task tool with `subagent_type='quality-data-extractor'` and
-  `description="Get complete PR feedback"`.
-- The subagent prompt should use the `getting-feedback-remote` skill.
-- This orchestrates: waiting for workflows, fetching build results, fetching reviews.
-- Wait for the subagent to return unified TOON output with complete PR feedback.
-- No need to display this returned feedback to the user, as Step 2 will do that.
-
-**2.b.** CRITICAL: The skill MUST run in a subagent, never in main context.
-  This prevents token bloat from workflow logs and review text.
+See [Triage Step 2: Gather Complete PR Feedback](steps/triage_step_2_gather_feedback.md) and follow its instructions.
 
 ## Triage Step 3: Address Issues Interactively
 
-**3.a.** Use the `addressing-feedback-interactively` skill to handle all issue resolution:
-
-```markdown
-Use Skill tool with skill='addressing-feedback-interactively':
-
-Pass the complete TOON feedback from Step 2.
-
-The skill will:
-- Ask user to choose commit strategy (incremental/accumulated/manual)
-  - Recommend "incremental" for PR workflow
-- Present unified summary of all issues with priorities
-- Work through each issue interactively
-- Verify fixes after each change
-- Create commits based on user's chosen strategy
-```
-
-**3.b.** The skill handles:
-- Commit strategy selection (with recommendation)
-- Issue presentation in priority order
-- Interactive resolution with user approval
-- Verification after each fix
-- Commits based on strategy
+See [Triage Step 3: Address Issues Interactively](steps/triage_step_3_address_issues.md) and follow its instructions.
 
 ## Triage Step 4: Push Changes to Remote, Maybe
 
-**4.a.** After all issues are addressed and committed, ask user once:
-
-```
-All issues resolved with {N} commit(s).
-
-Push to remote branch? (yes/no)
-```
-
-**4.b.** If user confirms, push:
-
-```bash
-git push
-```
+See [Triage Step 4: Push Changes to Remote, Maybe](steps/triage_step_4_push_changes.md) and follow its instructions.
 
 ## Example Flow
 

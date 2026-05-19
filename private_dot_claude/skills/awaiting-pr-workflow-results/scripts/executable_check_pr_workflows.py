@@ -12,6 +12,33 @@ All errors and status messages go to stderr.
 Exit codes:
   0 - Success (actionable status determined)
   1 - Fatal error (git/gh command failed, invalid state)
+
+Output Format:
+  Returns TOON structure with local/PR info and workflow summary:
+  - local: Current branch and commit information
+  - pr: PR number, head commit, and URL
+  - workflows: Summary of workflow runs (complete status, wait time, results)
+    - results: Array of workflow runs with status, conclusion, duration, artifacts
+
+  Example output (TOON tabular format):
+    local[1]{branch,commit,commit_full,timestamp}:
+      feature-branch,abc1234,abc1234567890abcdef1234567890abcdef123456,2026-02-16T10:30:00-08:00
+
+    pr[1]{number,commit,commit_full,url}:
+      123,abc1234,abc1234567890abcdef1234567890abcdef123456,https://github.com/owner/repo/pull/123
+
+    workflows:
+      complete: true
+      wait_time_seconds: 45
+
+      results[2]{name,database_id,status,conclusion,duration_seconds,url}:
+        CI Tests,123456,completed,success,120,https://github.com/owner/repo/actions/runs/123456
+        Linting,123457,completed,success,35,https://github.com/owner/repo/actions/runs/123457
+
+      results[0].artifacts[1]{name,url}:
+        test-coverage,https://api.github.com/repos/owner/repo/actions/artifacts/789/zip
+
+      results[1].artifacts[0]{}:
 """
 
 from __future__ import annotations
@@ -51,6 +78,7 @@ class ArtifactInfo:
 class WorkflowResult:
     """Workflow run result."""
     name: str
+    database_id: int
     status: str
     conclusion: str | None
     duration_seconds: int | None
@@ -68,14 +96,9 @@ class WorkflowSummary:
 
 class TOONOutput(TypedDict):
     """TOON output structure for type safety."""
-    status: str
-    recommendation: str
-    message: str
     local: dict
-    pr: NotRequired[dict | None]
-    commit_match: NotRequired[bool]
-    action: NotRequired[str]
-    workflows: NotRequired[dict | None]
+    pr: dict
+    workflows: dict | None
 
 
 def log_error(message: str) -> None:
@@ -306,6 +329,7 @@ def wait_for_completion(
 
         results.append(WorkflowResult(
             name=run["name"],
+            database_id=run["databaseId"],
             status=run["status"],
             conclusion=run.get("conclusion"),
             duration_seconds=duration,
@@ -341,87 +365,55 @@ def main() -> int:
         pr_info = branch_state["pr"]
         comparison = branch_state["comparison"]["local_vs_pr"]
 
-        # Build local info for output (simplified from branch state)
-        local_output = {
-            "branch": local["branch"],
-            "commit": local["head_short"],
-            "commit_full": local["head"],
-            "timestamp": local["timestamp"],
-        }
+        # Validate PR exists and is in sync
+        if not pr_info["exists"]:
+            log_error(
+                f"Unable to get workflow status for branch '{local['branch']}': "
+                f"No PR exists. Create a PR before checking workflow status."
+            )
+            return 1
 
+        sync_status = comparison["status"]
+        if sync_status != "in_sync":
+            ahead_count = comparison.get("ahead_count", 0)
+            behind_count = comparison.get("behind_count", 0)
+            local_commit = local['head_short']
+
+            if sync_status == "ahead":
+                detail = f"Local is {ahead_count} commit(s) ahead of PR. Push changes first."
+            elif sync_status == "behind":
+                detail = f"Local is {behind_count} commit(s) behind PR. Pull changes first."
+            else:  # diverged
+                detail = (
+                    f"Local and PR have diverged ({ahead_count} ahead, {behind_count} behind). "
+                    f"Sync branches first."
+                )
+
+            log_error(
+                f"Unable to get workflow status for local commit {local_commit}: {detail}"
+            )
+            return 1
+
+        # Build output structure (validation already done, local and PR are in sync)
         result: TOONOutput = {
-            "status": "",
-            "recommendation": "",
-            "message": "",
-            "local": local_output,
-        }
-
-        # Add PR info if exists
-        if pr_info["exists"]:
-            result["pr"] = {
+            "local": {
+                "branch": local["branch"],
+                "commit": local["head_short"],
+                "commit_full": local["head"],
+                "timestamp": local["timestamp"],
+            },
+            "pr": {
                 "number": pr_info["number"],
                 "commit": pr_info["head_short"],
                 "commit_full": pr_info["head"],
                 "url": pr_info["url"],
-            }
-        else:
-            result["pr"] = None
+            },
+            "workflows": None,  # Will be set below
+        }
 
-        # Determine status based on branch state
-        if not pr_info["exists"]:
-            result["status"] = "no_pr"
-            result["recommendation"] = "create_pr"
-            result["message"] = f"No PR found for branch '{local['branch']}'"
-            result["action"] = "ask_user_to_create_pr"
-
-        elif comparison["status"] in ("ahead", "diverged"):
-            # Local has unpushed commits or diverged from PR
-            result["status"] = "warning"
-            result["recommendation"] = "push_required"
-            result["commit_match"] = False
-
-            # Convert ahead_commits to expected format
-            ahead_commits = comparison.get("ahead_commits", [])
-            local_output["unpushed_count"] = comparison.get("ahead_count", 0)
-            local_output["unpushed_commits"] = ahead_commits
-
-            result["message"] = (
-                f"Found {comparison['ahead_count']} unpushed commit(s). "
-                f"PR workflows testing {pr_info['head_short']}, not your latest changes."
-            )
-            result["action"] = "ask_user_to_push"
-
-        else:
-            # Local and PR are in sync, check workflows
-            result["commit_match"] = True
-            workflow_summary = wait_for_completion(pr_info["head"])
-            result["workflows"] = dataclass_to_dict(workflow_summary)
-
-            if workflow_summary.complete:
-                failures = [w for w in workflow_summary.results
-                           if w.conclusion in ("failure", "cancelled")]
-                if failures:
-                    result["status"] = "failure"
-                    result["recommendation"] = "fix_failures"
-                    result["message"] = (
-                        f"{len(failures)} workflow(s) failed for commit {pr_info['head_short']}"
-                    )
-                else:
-                    result["status"] = "success"
-                    result["recommendation"] = "all_passed"
-                    result["message"] = (
-                        f"All {len(workflow_summary.results)} workflow(s) passed "
-                        f"for commit {pr_info['head_short']}"
-                    )
-            else:
-                incomplete = [w for w in workflow_summary.results
-                             if w.status in ("in_progress", "queued")]
-                result["status"] = "timeout"
-                result["recommendation"] = "wait_longer_or_check_logs"
-                result["message"] = (
-                    f"{len(incomplete)} workflow(s) still running after "
-                    f"{workflow_summary.wait_time_seconds}s"
-                )
+        # Wait for workflows to complete
+        workflow_summary = wait_for_completion(pr_info["head"])
+        result["workflows"] = dataclass_to_dict(workflow_summary)
 
         # Output TOON to stdout (only thing on stdout)
         print(encode(result))

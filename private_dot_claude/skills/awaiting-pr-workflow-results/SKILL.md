@@ -2,92 +2,58 @@
 name: awaiting-pr-workflow-results
 description: Check GitHub PR workflow status, verify unpushed commits, and wait for workflows to complete (up to 20min). Use when user asks "are tests passing?", "is CI done?", "wait for workflows", or needs to verify workflow status after pushing commits.
 user_invocable: false
+tools: Bash, WebFetch
 ---
 
 # Awaiting PR Workflow Results
 
-Checks GitHub PR workflows while correctly handling unpushed commits, commit correlation, and workflow timing. Uses the `getting-branch-state` skill to verify local/PR state, then waits for workflows to complete.
+I would like you to wait for all GitHub PR workflows to complete (up to a timeout),
+  and return the workflow status and URLs as a TOON-formatted output.
+In order to accomplish all of this,
+  this skill has a bundled script that handles the workflow monitoring and status retrieval.
 
-## When to Use
-
-- User asks "are tests passing?", "is CI done?", "wait for CI", or similar.
-- Need to verify workflow status after pushing commits.
-- Want to wait for workflows to complete before proceeding.
-
-## Usage
-
-**Context:** This skill uses `context: fork` to always run in isolated subagent context.
-
-When invoking via Task tool, the context field ensures automatic isolation.
-
-When invoking script directly via Bash, caller is responsible for running in appropriate context.
-
-```
-Task tool with subagent_type='general-purpose':
-
-"Run the workflow check script using the absolute path:
+Run the `scripts/check_pr_workflows.py` script, as follows:
 
 1. The base directory for this skill is shown at the top: `Base directory for this skill: <PATH>`
-2. Construct the full script path: `<PATH>/scripts/check_pr_workflows.py`
-3. Run: `<full_path_from_step_2>`
+2. Construct the absolute path to the script: `<PATH>/scripts/check_pr_workflows.py`
+3. Run: `<absolute_path_from_step_2>`
+4. Capture the TOON-formatted output from stdout and any status messages from stderr.
 
-Example:
-- If base directory is `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results`
-- Then run: `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results/scripts/check_pr_workflows.py`
+Examples:
+- If the base directory for this skill is `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results`,
+    then run: `/Users/cool_person/.claude/skills/awaiting-pr-workflow-results/scripts/check_pr_workflows.py`.
+- If the base directory for this skill is `/home/cool_person/neat_project/.claude/skills/awaiting-pr-workflow-results`,
+    then run: `/home/cool_person/neat_project/.claude/skills/awaiting-pr-workflow-results/scripts/check_pr_workflows.py`.
 
-Return the complete TOON output."
+The script will output TOON-formatted results to stdout, status messages to stderr.
+
+## Interpreting awaiting-pr-workflow-results Results
+
+The TOON output from the `awaiting-pr-workflow-results` skill
+  contains information about the status and outputs of GitHub PR workflows.
+The data should be largely self-explanatory,
+  but `reference/results_details.md` contains additional details and interpretation guidance,
+  if needed.
+
+## Displaying awaiting-pr-workflow-results Results
+
+If the user would like a summary of the workflow results,
+  they can be displayed using this template:
+
+```markdown
+**Workflow Results**
+
+**Workflows By Status:** {# completed} completed, {# in_progress} in-progress, {# queued} queued
+**Completed Workflows:**
+{for each workflow in workflows.results where status == "completed"}
+- {name}: {conclusion} ({duration_seconds} seconds) — [View Workflow]({url})
+  {for each artifact in workflow.artifacts}
+  - Artifact: [{artifact.name}]({artifact.url})
+  {end for}
+{end for}
 ```
 
-The script outputs TOON format to stdout, status messages to stderr.
+## awaiting-pr-workflow-results Completed
 
-## Example Output
-
-```
-status: success
-
-local:
-  branch: feature-auth
-  commit: a1b2c3d
-  unpushed_count: 0
-
-pr:
-  number: 123
-  url: https://github.com/user/repo/pull/123
-
-workflows:
-  complete: true
-  wait_time_seconds: 342
-  results[3]{name,status,conclusion,duration_seconds,url}:
-    CI Tests,completed,success,298,https://github.com/user/repo/actions/runs/123
-    Lint,completed,success,45,https://github.com/user/repo/actions/runs/124
-    Type Check,completed,success,67,https://github.com/user/repo/actions/runs/125
-
-recommendation: all_passed
-message: All 3 workflow(s) passed for commit a1b2c3d
-```
-
-## Output Fields
-
-| Field | Description |
-|-------|-------------|
-| `status` | success, warning, failure, timeout, no_pr |
-| `recommendation` | Action to take (see table below) |
-| `message` | Human-readable summary |
-| `local.unpushed_count` | Number of unpushed commits |
-| `local.unpushed_commits[]` | Array of {sha, message} |
-| `pr.url` | PR URL |
-| `workflows.results[].url` | Workflow run logs URL |
-| `workflows.results[].artifacts[]` | Artifacts with {name, url} |
-| `workflows.results[].duration_seconds` | Time (completed or elapsed) |
-
-## Interpreting Recommendations
-
-| recommendation | What to do |
-|----------------|------------|
-| `create_pr` | Ask user if they want to create a PR |
-| `push_required` | Ask user if they want to push unpushed commits |
-| `all_passed` | Report success with workflow details and URLs |
-| `fix_failures` | Report failures with log URLs and artifacts |
-| `wait_longer_or_check_logs` | Report timeout, ask user how to proceed |
-
-Always include workflow URLs (`workflows.results[].url`) and any artifacts in your response, regardless of the recommendation.
+Make the full TOON output from the `check_pr_workflows.py` script available
+  to downstream steps for further processing.

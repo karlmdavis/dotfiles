@@ -32,33 +32,14 @@ When NOT to use:
 - No changes to review
 - Only want automated tests (use `getting-build-results-local`)
 
-## Review Sources
+## How This Skill Works
 
-### Option 1: Claude Code Builtin Review
+This is an agent-only skill that performs code review analysis directly.
+The agent reads changed files and applies code review reasoning to identify issues.
 
-Use Claude Code's builtin `/review` command:
+### Primary Approach: Agent-Driven Code Review
 
-```markdown
-Run the builtin review command:
-
-/review
-
-This triggers Claude Code's native code review functionality.
-Capture the output and structure into TOON format.
-```
-
-### Option 2: External Review Tools
-
-If other review tools are available:
-
-- CodeRabbit CLI
-- SonarQube local analysis
-- Custom review scripts
-- Third-party code review skills
-
-### Option 3: Claude's Own Analysis
-
-If no external tools available, perform analysis:
+Perform analysis using Claude's reasoning capabilities:
 
 1. **Get changed files:**
 ```bash
@@ -284,6 +265,26 @@ Focus on:
 - Test quality and coverage
 - Test clarity and maintainability
 - Don't over-critique (tests can be less DRY)
+
+## Common Pitfalls
+
+**Reviewing too much code:**
+- Problem: Reviewing entire files instead of just changes leads to overwhelming output.
+- Fix: Focus only on changed lines (use git diff to identify).
+  Use `-U0` for precise change context.
+
+**Flagging pre-existing issues:**
+- Problem: Reporting issues in unchanged code creates noise.
+- Fix: Only review lines that were modified in the current changeset.
+
+**Being too verbose:**
+- Problem: Writing lengthy explanations for every minor issue.
+- Fix: Be concise.
+  Critical issues need detail, suggestions can be brief.
+
+**Missing the forest for the trees:**
+- Problem: Focusing on style/naming while missing logic bugs.
+- Fix: Prioritize safety and correctness over style preferences.
 
 ## Quick Reference
 
