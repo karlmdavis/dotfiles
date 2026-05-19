@@ -1,0 +1,38 @@
+#!/bin/sh
+# chezmoi modify_ script.
+#
+# chezmoi runs this with the CURRENT target file on stdin and replaces the
+# target with our stdout.
+# We enforce that the required Claude plugin marketplaces are registered while
+# leaving any already-present entry exactly as Claude Code wrote it -- so the
+# volatile `lastUpdated` timestamps don't cause perpetual `chezmoi diff` noise,
+# and runtime-added marketplaces are never clobbered.
+set -eu
+
+current="$(cat)"
+[ -n "$current" ] || current='{}'
+
+# Claude Code writes this file with no trailing newline; match that exactly
+# (command substitution strips the trailing newline jq adds) so chezmoi sees
+# no diff when the marketplace set is already correct.
+result="$(printf '%s' "$current" | jq \
+  --arg base "$HOME/.claude/plugins/marketplaces" '
+  # Required marketplaces and their upstream source repos.
+  def required:
+    {
+      "superpowers-marketplace": { "source": { "source": "github", "repo": "obra/superpowers-marketplace" } },
+      "claude-plugins-official": { "source": { "source": "github", "repo": "anthropics/claude-plugins-official" } },
+      "anthropic-agent-skills":  { "source": { "source": "github", "repo": "anthropics/skills" } }
+    };
+  reduce (required | to_entries[]) as $e (.;
+    if has($e.key) then .
+    else . + {
+      ($e.key): ($e.value + {
+        "installLocation": ($base + "/" + $e.key),
+        "lastUpdated": "1970-01-01T00:00:00.000Z"
+      })
+    }
+    end)
+')"
+
+printf '%s' "$result"
