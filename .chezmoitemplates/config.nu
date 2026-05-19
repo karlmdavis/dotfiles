@@ -114,6 +114,9 @@ if ($texlive_bin | path exists) {
 
 # (none, at the moment)
 
+# `td` — Todoist CLI via pinned npx fetch (no global install).
+alias td = npx --package=@doist/todoist-cli@1.60.0 -- td
+
 
 ##
 # Other Configuration
