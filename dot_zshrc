@@ -27,6 +27,10 @@ setopt HIST_IGNORE_SPACE
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
 [[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
 
+# Configure Volta.
+export VOLTA_HOME="$HOME/.volta"
+[[ -d "$VOLTA_HOME/bin" ]] && path=("$VOLTA_HOME/bin" $path)
+
 ##
 # Completion.
 #
