@@ -39,6 +39,12 @@ if [ -d "$HOME/.cargo/bin" ] ; then
     PATH="$HOME/.cargo/bin:$PATH"
 fi
 
+# Configure Volta.
+export VOLTA_HOME="$HOME/.volta"
+if [ -d "$VOLTA_HOME/bin" ] ; then
+    PATH="$VOLTA_HOME/bin:$PATH"
+fi
+
 {{ with .chezmoi.osRelease }}
   {{ if eq .id "ubuntu" }}
 ##
