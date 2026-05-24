@@ -17,13 +17,31 @@ setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
 ##
+# PATH.
+#
+# Mirror the same additions as dot_bash_profile.tmpl so interactive zsh sessions have the same
+# binaries available (important on macOS where zsh is the default login shell).
+##
+
+[[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
+[[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
+[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
+
+##
 # Completion.
 #
 # Initializes zsh's completion system so that tab completion works for commands, flags, and
 # arguments. Without this, only basic filename completion is available.
+# Only rebuilds the completion dump when it is older than 24 hours to avoid startup latency;
+# compinit -C skips the security check on subsequent loads (safe on a personal machine).
 ##
 
-autoload -Uz compinit && compinit
+autoload -Uz compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C
+fi
 
 ##
 # Aliases.
