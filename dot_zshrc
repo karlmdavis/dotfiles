@@ -1,0 +1,23 @@
+##
+# History — mirrors nushell: virtually unlimited, write on each command, per-session isolation.
+##
+
+HISTFILE=~/.zsh_history
+HISTSIZE=5000000000
+SAVEHIST=5000000000
+setopt INC_APPEND_HISTORY   # sync_on_enter equivalent: write each command immediately
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+
+##
+# Completion.
+##
+
+autoload -Uz compinit && compinit
+
+##
+# Aliases.
+##
+
+# `td` — Todoist CLI via pinned npx fetch (no global install).
+alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
