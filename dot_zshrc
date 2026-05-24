@@ -1,16 +1,26 @@
 ##
 # History — mirrors nushell: virtually unlimited, write on each command, per-session isolation.
+#
+# Note: Zsh has no truly-unlimited flag (no -1 equivalent); the large integer is a practical
+# ceiling. EXTENDED_HISTORY stores each entry as `: timestamp:elapsed;command`, providing
+# timestamps and command duration natively — the closest zsh gets to structured storage.
+# INC_APPEND_HISTORY_TIME writes after the command completes (so elapsed time is known),
+# mirroring nushell's sync_on_enter = true. Per-session isolation is zsh's default.
 ##
 
 HISTFILE=~/.zsh_history
 HISTSIZE=5000000000
 SAVEHIST=5000000000
-setopt INC_APPEND_HISTORY   # sync_on_enter equivalent: write each command immediately
+setopt EXTENDED_HISTORY         # store `: timestamp:elapsed;command` format
+setopt INC_APPEND_HISTORY_TIME  # write after completion to capture elapsed; mirrors sync_on_enter
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
 ##
 # Completion.
+#
+# Initializes zsh's completion system so that tab completion works for commands, flags, and
+# arguments. Without this, only basic filename completion is available.
 ##
 
 autoload -Uz compinit && compinit
