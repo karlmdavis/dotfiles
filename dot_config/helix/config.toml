@@ -1,0 +1,3 @@
+# Visually wraps all lines too long to fit the current editor without horizontal scrolling.
+[editor.soft-wrap]
+enable = true
