@@ -26,11 +26,11 @@ echo "✓ Shellcheck passed!"
 """
 
 [tasks.test]
-description = "Run wkflw-ntfy unit tests"
+description = "Run unit tests (wkflw-ntfy + claude)"
 run = """
-echo "Running wkflw-ntfy unit tests..."
+echo "Running unit tests..."
 # Note: Add --jobs 4 for parallel execution (Bats 1.0+ has native parallel support)
-bats test/wkflw-ntfy/unit/
+bats test/wkflw-ntfy/unit/ test/claude/
 """
 
 [tasks.ci]
