@@ -31,6 +31,9 @@ use std/util 'path add'
 {{- if .isCMS }}
 # Set username for ctkey, which is used to get AWS CLI tokens.
 $env.CTKEY_USERNAME = 'd6lu'
+
+# Trust the corporate (Zscaler) root CA for Node TLS.
+$env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
 {{- end }}
 
 # Personal scripts kept under version control or as scratch tooling.
@@ -71,56 +74,20 @@ if ($homebrew_prefix | path exists) {
     }
 }
 
-# Add Java (from SDKMAN!) to my path if present.
-let sdkman_java = ($env.HOME | path join ".sdkman/candidates/java/current")
-if ($sdkman_java | path exists) {
-    $env.JAVA_HOME = $sdkman_java
-    path add ($env.JAVA_HOME | path join "bin")
-}
-
-# Add Maven (from SDKMAN!) to my path if present.
-let sdkman_maven = ($env.HOME | path join ".sdkman/candidates/maven/current")
-if ($sdkman_maven | path exists) {
-    path add ($sdkman_maven | path join "bin")
-}
-
 # Add Rust toolchain to my path.
 $env.CARGO_HOME = ($nu.home-path | path join '.cargo')
 path add ($env.CARGO_HOME | path join "bin")
-
-# Add Docker CLI tools to my path.
-let docker_bin = ([$nu.home-path, '.docker', 'bin'] | path join)
-if ($docker_bin | path exists) {
-    path add $docker_bin
-}
 
 # Configure Volta.
 $env.VOLTA_HOME = ($env.HOME | path join '.volta')
 path add ($env.VOLTA_HOME | path join 'bin')
 
-# Enable fnm, to add nvm and NodeJS to the path.
-if (which fnm | is-not-empty) {
-    fnm env --json | from json | load-env
-    path add ($env.FNM_MULTISHELL_PATH | path join "bin")
-    {{- if .isCMS }}
-    $env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
-    {{- end }}
-}
-
 # Configure pipx.
 path add ($env.HOME | path join '.local' | path join 'bin')
 
-# Add basictex/pdflatex to the path (macOS only, if present).
-let texlive_bin = '/usr/local/texlive/2025basic/bin/universal-darwin/'
-if ($texlive_bin | path exists) {
-    path add $texlive_bin
-}
-
-# Add the Obsidian CLI helper to my path (macOS app bundle, if present).
-let obsidian_bin = '/Applications/Obsidian.app/Contents/MacOS'
-if ($obsidian_bin | path exists) {
-    path add $obsidian_bin
-}
+# Source machine-local PATH/env (tools not installed on every system — e.g. SDKMAN, Docker, GUI apps).
+# Edit local.nu in this config dir (created once by chezmoi, never overwritten); `path add` is available.
+source local.nu
 
 
 ##

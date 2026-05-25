@@ -4,7 +4,11 @@
 # Included by ~/.bash_profile (bash) and ~/.zprofile (zsh); the nushell equivalent lives in
 # .chezmoitemplates/config.nu and is kept in sync with this list. Placed in the login files so it runs
 # after macOS path_helper (correct precedence) and stays silent (scp/rsync safe). POSIX sh — the same
-# text works in bash and zsh. Add new tools to the matching section below (and mirror them in config.nu).
+# text works in bash and zsh.
+#
+# Scope: ONLY tools installed on every system (see .chezmoidata/system_packages_autoinstall.yaml, plus
+# Rust via run_onchange_install_rustup.sh). Machine-specific tools go in ~/.config/shell/env.local.sh
+# (sourced near the end) — not here.
 ##
 
 
@@ -35,21 +39,7 @@ _pp "/usr/local/bin"
 # Languages / toolchains
 ##
 
-# SDKMAN: source its init first for the `sdk` manager command (bash/zsh only; nushell cannot source it).
-# Note: sdkman-init appends the selected candidates to PATH at LOW priority (below /usr/bin), so the
-# java/maven front-prepend below has to come after it.
-[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ] && export SDKMAN_DIR="$HOME/.sdkman" && . "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# Java + Maven: front-prepend the selected SDKMAN candidates so `java` beats the macOS /usr/bin/java
-# stub (sdkman-init places them below /usr/bin). Unconditional front-prepend — may leave one harmless
-# duplicate PATH entry, but `java`/`mvn` resolve to SDKMAN, identical to the nushell config.
-if [ -d "$HOME/.sdkman/candidates/java/current" ]; then
-  export JAVA_HOME="$HOME/.sdkman/candidates/java/current"
-  PATH="$JAVA_HOME/bin:$PATH"
-fi
-[ -d "$HOME/.sdkman/candidates/maven/current/bin" ] && PATH="$HOME/.sdkman/candidates/maven/current/bin:$PATH"
-
-# Rust toolchain (rustup / cargo).
+# Rust toolchain (rustup / cargo) — installed on every system via run_onchange_install_rustup.sh.
 export CARGO_HOME="$HOME/.cargo"
 _pp "$CARGO_HOME/bin"
 
@@ -58,52 +48,45 @@ _pp "$CARGO_HOME/bin"
 # Node
 ##
 
-# Volta: Node toolchain manager and shims.
+# Volta: Node toolchain manager and shims (installed via the package manifest).
 export VOLTA_HOME="$HOME/.volta"
 _pp "$VOLTA_HOME/bin"
-
-# fnm: Node version manager; adds the active Node to PATH (only when fnm is installed).
-if command -v fnm >/dev/null 2>&1; then
-  eval "$(fnm env 2>/dev/null)"
-  [ -n "${FNM_MULTISHELL_PATH:-}" ] && _pp "$FNM_MULTISHELL_PATH/bin"
-{{- if .isCMS }}
-
-  # CMS: trust the corporate (Zscaler) root CA for Node TLS.
-  export NODE_EXTRA_CA_CERTS="$HOME/ZscalerRootCertificate-2048-SHA256.crt"
-{{- end }}
-fi
 
 
 ##
 # Apps / extras
 ##
 
-# Docker CLI plugins and binaries (Docker Desktop).
-_pp "$HOME/.docker/bin"
-
 # pipx / pip --user installs.
 _pp "$HOME/.local/bin"
-{{ if eq .chezmoi.os "darwin" }}
-# BasicTeX / pdflatex (macOS only, if installed).
-_pp "/usr/local/texlive/2025basic/bin/universal-darwin"
-
-# Obsidian CLI helper (macOS app bundle, if installed).
-_pp "/Applications/Obsidian.app/Contents/MacOS"
-{{- end }}
 
 
 ##
 # Environment variables
 ##
-{{ if .isCMS }}
+
+{{- if .isCMS }}
 # CMS: username for ctkey (AWS CLI token retrieval).
 export CTKEY_USERNAME="d6lu"
-{{ end }}
+
+# CMS: trust the corporate (Zscaler) root CA for Node TLS.
+export NODE_EXTRA_CA_CERTS="$HOME/ZscalerRootCertificate-2048-SHA256.crt"
+
+{{ end -}}
 # Use Helix as the default editor (matches nushell), when present.
 if command -v hx >/dev/null 2>&1; then
   export EDITOR="hx"
   export VISUAL="hx"
 fi
+
+
+##
+# Machine-local overrides
+##
+
+# Source machine-specific PATH/env (tools NOT installed on every system — e.g. SDKMAN, Docker, GUI apps).
+# Created once by chezmoi, then maintained per machine; the _pp helper above is available to it.
+[ -r "$HOME/.config/shell/env.local.sh" ] && . "$HOME/.config/shell/env.local.sh"
 
 
 ##
