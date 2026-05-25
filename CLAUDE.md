@@ -71,10 +71,13 @@ The repository uses a sophisticated template hierarchy:
 - `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
 - `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
-  - PATH management for Homebrew, Cargo, Volta, Docker, Java/Maven (SDKMAN), fnm, pipx (kept in sync with `shell-env.sh`)
+  - PATH management for Homebrew, Cargo, Volta, pipx, and the generic bin dirs (kept in sync with `shell-env.sh`)
   - Starship prompt setup (with lite/full variants based on font support)
   - Helix editor integration
   - Environment-specific setup (CMS vs personal)
+- Machine-local overrides (per-host, for tools not installed everywhere; sourced by the shared setup):
+  - `dot_config/shell/create_env.local.sh` → `~/.config/shell/env.local.sh` (bash/zsh; e.g. SDKMAN, Docker, GUI apps)
+  - `.chezmoitemplates/local.nu` + per-OS `create_local.nu.tmpl` → nushell `local.nu` (same purpose for nu)
 
 **Terminal Multiplexer:**
 - `dot_config/zellij/config.kdl.tmpl` - Custom keybindings with vim-style navigation, session serialization enabled, dynamically sets nushell as default shell
@@ -106,6 +109,9 @@ Bash and zsh source `.chezmoitemplates/shell-env.sh` from their login files (`~/
 PATH lives in the login files (after macOS `path_helper`, which runs in `/etc/zprofile` and `/etc/profile`
   and would otherwise reorder it); the interactive rc files (`~/.bashrc`, `~/.zshrc`) hold no PATH.
 Nushell uses `path add` (prepends) vs `++=` (appends); all additions check for directory existence first.
+Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on every system — SDKMAN,
+  Docker, GUI apps, etc.) belong in the per-machine local files (`~/.config/shell/env.local.sh` for
+  bash/zsh, `local.nu` for nushell), which the shared setup sources — not in the shared snippets.
 
 **Shell startup file order (relevant to where things go):**
 - zsh: `~/.zshenv` (always) → *(login)* `~/.zprofile` → *(interactive)* `~/.zshrc` → *(login)* `~/.zlogin`.
