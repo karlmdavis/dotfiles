@@ -4,6 +4,9 @@
 # Created once by chezmoi (never overwritten); edit freely per machine. Sourced from config.nu, so
 # `path add` (from `use std/util 'path add'`) is available. Put tools here that are NOT in
 # .chezmoidata/system_packages_autoinstall.yaml. Examples (uncomment / adjust as needed):
+#
+# Do NOT delete this file: config.nu does `source local.nu`, which nushell resolves at parse time, so a
+# missing local.nu breaks nushell startup. If it goes missing, run `chezmoi apply` to recreate it.
 ##
 
 

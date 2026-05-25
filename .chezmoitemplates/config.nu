@@ -87,6 +87,10 @@ path add ($env.HOME | path join '.local' | path join 'bin')
 
 # Source machine-local PATH/env (tools not installed on every system — e.g. SDKMAN, Docker, GUI apps).
 # Edit local.nu in this config dir (created once by chezmoi, never overwritten); `path add` is available.
+#
+# NOTE: nushell resolves `source` at parse time, so local.nu MUST exist or nushell will fail to start
+# (wrapping this in `if (path exists)` does NOT help — the path is parsed regardless of the branch).
+# chezmoi creates it as a create_ stub; if it ever goes missing, run `chezmoi apply` to recreate it.
 source local.nu
 
 
