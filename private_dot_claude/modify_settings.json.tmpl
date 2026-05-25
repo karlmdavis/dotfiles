@@ -1,3 +1,23 @@
+#!/bin/sh
+# chezmoi modify_ script for ~/.claude/settings.json.
+#
+# settings.json is fully version-controlled here, but Claude Code rewrites it at
+# runtime and reorders its keys, which otherwise shows up as perpetual
+# `chezmoi diff` noise (and a "changed since chezmoi last wrote it" prompt).
+# chezmoi runs this with the CURRENT target file on stdin and replaces the
+# target with our stdout, so:
+#   - if the live file is semantically equal to our committed settings
+#     (ignoring key order), emit the live bytes unchanged  -> no diff;
+#   - otherwise emit the committed settings                -> any real runtime
+#     change is reverted on the next apply (chezmoi wins).
+# It self-heals: after a revert, the next runtime rewrite is semantically equal
+# again, so diffs stay quiet.
+set -eu
+
+live="$(cat)"
+[ -n "$live" ] || live='{}'
+
+desired="$(cat <<'SETTINGS_JSON'
 {
   "cleanupPeriodDays": 36525,
   "attribution": {
@@ -158,3 +178,16 @@
   "voiceEnabled": true,
   "inputNeededNotifEnabled": true
 }
+SETTINGS_JSON
+)"
+
+# Compare order-insensitively (jq -S sorts object keys recursively). If jq fails
+# on a malformed live file, fall back to emitting the committed settings.
+live_norm="$(printf '%s' "$live" | jq -S . 2>/dev/null || true)"
+desired_norm="$(printf '%s' "$desired" | jq -S .)"
+
+if [ -n "$live_norm" ] && [ "$live_norm" = "$desired_norm" ]; then
+  printf '%s' "$live"
+else
+  printf '%s' "$desired"
+fi
