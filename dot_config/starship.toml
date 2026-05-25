@@ -6,10 +6,10 @@
 format = """
 [░▒▓](#a3aed2)\
 [ $os$shell ](bg:#a3aed2 fg:#090c0c)\
-[](bg:#6f51c0 fg:#a3aed2)\
+[](bg:#9d7cd8 fg:#a3aed2)\
 $username\
 $hostname\
-[](bg:#769ff0 fg:#6f51c0)\
+[](bg:#769ff0 fg:#9d7cd8)\
 $directory\
 [](fg:#769ff0 bg:#394260)\
 $git_branch\
@@ -37,8 +37,8 @@ Macos = ""
 
 [hostname]
 ssh_only = false
-format = "[@$hostname ](fg:#f0ebff bg:#6f51c0)"
-style = "bg:#6f51c0"
+format = "[@$hostname ](fg:#1a1b26 bg:#9d7cd8)"
+style = "bg:#9d7cd8"
 
 [directory]
 format = "[ $path ]($style)"
@@ -89,11 +89,12 @@ show_notifications = false
 [shell]
 disabled = false
 format = " $indicator"
+bash_indicator = "bash"
 style = "fg:#090c0c bg:#a3aed2"
 
 [username]
 show_always = true
-style_user = "fg:#f0ebff bg:#6f51c0"
-style_root = "bold fg:#ff8da3 bg:#6f51c0"
+style_user = "fg:#1a1b26 bg:#9d7cd8"
+style_root = "bold fg:#8b0000 bg:#9d7cd8"
 format = "[ $user]($style)"
 disabled = false

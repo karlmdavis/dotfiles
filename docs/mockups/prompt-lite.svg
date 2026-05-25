@@ -7,7 +7,7 @@
   <rect width="500" height="60" fill="#1a1b26" rx="8"/>
 
   <!-- Line 1: flat prompt — no color blocks -->
-  <text x="10" y="22" fill="#c0caf5">zsh karl@hostname:~/dotfiles on main (✓) 14:32 took 450ms</text>
+  <text x="10" y="22" fill="#c0caf5">[zsh] karl@hostname:~/dotfiles (on main ✓) 14:32 took 450ms</text>
 
   <!-- Line 2: prompt character -->
   <text x="10" y="46" fill="#c0caf5">&gt;</text>

@@ -12,15 +12,15 @@
   <rect x="0" y="8" width="88" height="24" fill="#a3aed2" rx="4 0 0 4"/>
   <text x="6" y="24" fill="#090c0c"> macOS  zsh </text>
 
-  <!-- Arrow: #a3aed2 → #6f51c0 -->
-  <rect x="88" y="8" width="14" height="24" fill="#6f51c0"/>
+  <!-- Arrow: #a3aed2 → #9d7cd8 -->
+  <rect x="88" y="8" width="14" height="24" fill="#9d7cd8"/>
   <polygon points="88,8 102,20 88,32" fill="#a3aed2"/>
 
-  <!-- Seg 2: user@hostname  (#6f51c0 bg, #f0ebff fg) — purple-deep -->
-  <rect x="102" y="8" width="126" height="24" fill="#6f51c0"/>
-  <text x="104" y="24" fill="#f0ebff"> karl@hostname </text>
+  <!-- Seg 2: user@hostname  (#9d7cd8 bg, #1a1b26 fg) — purple-med -->
+  <rect x="102" y="8" width="126" height="24" fill="#9d7cd8"/>
+  <text x="104" y="24" fill="#1a1b26"> karl@hostname </text>
 
-  <!-- Hard seam: #6f51c0 → #769ff0 (no arrow glyph, just color change) -->
+  <!-- Hard seam: #9d7cd8 → #769ff0 (no arrow glyph, just color change) -->
 
   <!-- Seg 3: directory  (#769ff0 bg, #e3e5e5 fg) -->
   <rect x="228" y="8" width="112" height="24" fill="#769ff0"/>

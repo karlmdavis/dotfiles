@@ -31,10 +31,10 @@ truncation_length = 3
 truncation_symbol = ".../"
 
 [git_branch]
-format = "on $branch "
+format = "\\(on $branch"
 
 [git_status]
-format = "($all_status$ahead_behind) "
+format = "( $all_status$ahead_behind)\\) "
 
 [time]
 disabled = false
@@ -52,7 +52,8 @@ error_symbol = "!>"
 
 [shell]
 disabled = false
-format = "$indicator "
+format = "\\[$indicator\\] "
+bash_indicator = "bash"
 
 [username]
 show_always = true
