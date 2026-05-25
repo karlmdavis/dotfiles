@@ -117,6 +117,10 @@ Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on 
 - zsh: `~/.zshenv` (always) → *(login)* `~/.zprofile` → *(interactive)* `~/.zshrc` → *(login)* `~/.zlogin`.
 - bash: login reads `/etc/profile` then `~/.bash_profile`; interactive non-login reads `~/.bashrc`.
 - SSH interactive sessions are login shells on both macOS and Linux.
+- Non-login interactive shells (e.g. `zsh -i`, or a Linux IDE terminal) don't read the login files, so
+    they inherit PATH from their parent process rather than rebuilding it — this is intentional, since
+    PATH lives in the login files. A fresh non-login shell with no login ancestor gets only the system
+    default PATH; in practice the entry points here (Terminal/iTerm/SSH) are all login shells.
 
 **Auto-launching Zellij:**
 Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome` on any OS
