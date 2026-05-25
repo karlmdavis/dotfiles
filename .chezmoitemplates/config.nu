@@ -33,6 +33,9 @@ use std/util 'path add'
 $env.CTKEY_USERNAME = 'd6lu'
 {{- end }}
 
+# Personal scripts kept under version control or as scratch tooling.
+path add ($env.HOME | path join 'bin')
+
 # Add /usr/local/bin to my path.
 path add '/usr/local/bin'
 
@@ -75,6 +78,12 @@ if ($sdkman_java | path exists) {
     path add ($env.JAVA_HOME | path join "bin")
 }
 
+# Add Maven (from SDKMAN!) to my path if present.
+let sdkman_maven = ($env.HOME | path join ".sdkman/candidates/maven/current")
+if ($sdkman_maven | path exists) {
+    path add ($sdkman_maven | path join "bin")
+}
+
 # Add Rust toolchain to my path.
 $env.CARGO_HOME = ($nu.home-path | path join '.cargo')
 path add ($env.CARGO_HOME | path join "bin")
@@ -105,6 +114,12 @@ path add ($env.HOME | path join '.local' | path join 'bin')
 let texlive_bin = '/usr/local/texlive/2025basic/bin/universal-darwin/'
 if ($texlive_bin | path exists) {
     path add $texlive_bin
+}
+
+# Add the Obsidian CLI helper to my path (macOS app bundle, if present).
+let obsidian_bin = '/Applications/Obsidian.app/Contents/MacOS'
+if ($obsidian_bin | path exists) {
+    path add $obsidian_bin
 }
 
 
@@ -150,11 +165,12 @@ if (which starship | is-not-empty) {
     starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
 }
 
-# Set helix as default editor.
+# Set helix as default editor (EDITOR + VISUAL, matching bash/zsh).
 let helix_bin = ($homebrew_prefix | path join 'bin' | path join 'hx')
 if ($helix_bin | path exists) {
     $env.config.buffer_editor = $helix_bin
     $env.EDITOR = $helix_bin
+    $env.VISUAL = $helix_bin
 }
 
 # Make the `dirs` command available.

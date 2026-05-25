@@ -1,0 +1,14 @@
+##
+# ~/.zshenv — sourced for EVERY zsh invocation (login, interactive, scripts, `ssh host 'cmd'`).
+#
+# Keep this lightweight and silent (scp/rsync safety). PATH/utility setup lives in ~/.zprofile (login,
+# after macOS path_helper) via the shared shell-env snippet — not here — so it gets correct precedence.
+##
+
+
+##
+# PATH hygiene
+##
+
+# Keep PATH entries unique as later startup files prepend to it.
+typeset -U path

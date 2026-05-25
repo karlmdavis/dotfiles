@@ -62,10 +62,16 @@ The repository uses a sophisticated template hierarchy:
 ### Configuration Files
 
 **Shell Configuration:**
-- `dot_bash_profile.tmpl` - On Ubuntu, auto-launches zellij session with nushell; macOS left largely untouched
+- `dot_bash_profile.tmpl` - Bash login shells: shared PATH/utility setup, sources `~/.bashrc`, then the zellij launcher
+- `dot_bashrc.tmpl` - Interactive bash setup (history, completion, aliases, starship); Linux-only niceties gated off macOS
+- `dot_zprofile.tmpl` - Zsh login shells: shared PATH/utility setup, then the zellij launcher
+- `dot_zshenv` - Sourced for every zsh invocation; minimal (keeps PATH entries unique)
+- `dot_zshrc` - Interactive zsh setup (history, completion, aliases, starship); no PATH (see shared snippet)
 - `dot_bash_aliases` - Bash aliases
+- `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
+- `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
-  - PATH management for Homebrew, Cargo, Volta, Docker, Java (SDKMAN)
+  - PATH management for Homebrew, Cargo, Volta, Docker, Java/Maven (SDKMAN), fnm, pipx (kept in sync with `shell-env.sh`)
   - Starship prompt setup (with lite/full variants based on font support)
   - Helix editor integration
   - Environment-specific setup (CMS vs personal)
@@ -93,15 +99,30 @@ The system prompts during `chezmoi init` for `systemType` (personal/cms), which 
 - CMS: Sets `CTKEY_USERNAME` for AWS CLI token management
 - CMS: Configures `NODE_EXTRA_CA_CERTS` for Zscaler certificate
 
-**Nushell Path Management:**
-Config uses `path add` (prepends) vs `++=` (appends) for careful PATH ordering. All path additions check for directory existence before adding.
+**Cross-shell PATH/utility setup:**
+One canonical utility list is shared across shells.
+Bash and zsh source `.chezmoitemplates/shell-env.sh` from their login files (`~/.bash_profile`, `~/.zprofile`),
+  and `.chezmoitemplates/config.nu` mirrors the same list for nushell — add a new tool in both places.
+PATH lives in the login files (after macOS `path_helper`, which runs in `/etc/zprofile` and `/etc/profile`
+  and would otherwise reorder it); the interactive rc files (`~/.bashrc`, `~/.zshrc`) hold no PATH.
+Nushell uses `path add` (prepends) vs `++=` (appends); all additions check for directory existence first.
+
+**Shell startup file order (relevant to where things go):**
+- zsh: `~/.zshenv` (always) → *(login)* `~/.zprofile` → *(interactive)* `~/.zshrc` → *(login)* `~/.zlogin`.
+- bash: login reads `/etc/profile` then `~/.bash_profile`; interactive non-login reads `~/.bashrc`.
+- SSH interactive sessions are login shells on both macOS and Linux.
 
 **Auto-launching Zellij:**
-On Ubuntu login shells, `.bash_profile` automatically exec's `zellij -l welcome` with safeguards for:
-- Non-interactive shells (scp, Ansible)
+Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome` on any OS
+  via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser whose panes run nushell.
+Safeguards:
+- Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
+    scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes (VS Code/Cursor/Zed/JetBrains/Xcode)
+    are never disturbed
+- IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`)
 - `NO_ZELLIJ=1` environment variable opt-out
 - Recursion prevention (checks `$ZELLIJ` variable)
-- Fallback to bash if zellij missing
+- Fallback to the normal shell if zellij missing
 
 ## Development Toolchain
 
