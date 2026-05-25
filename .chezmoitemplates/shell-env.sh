@@ -35,12 +35,19 @@ _pp "/usr/local/bin"
 # Languages / toolchains
 ##
 
-# Java home from SDKMAN's selected JDK.
-[ -d "$HOME/.sdkman/candidates/java/current" ] && export JAVA_HOME="$HOME/.sdkman/candidates/java/current"
-
-# SDKMAN: sourcing its init provides the `sdk` command plus selected candidates (java, mvn) on PATH.
-# (bash/zsh only — nushell cannot source this; config.nu adds the java/maven bins directly.)
+# SDKMAN: source its init first for the `sdk` manager command (bash/zsh only; nushell cannot source it).
+# Note: sdkman-init appends the selected candidates to PATH at LOW priority (below /usr/bin), so the
+# java/maven front-prepend below has to come after it.
 [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ] && export SDKMAN_DIR="$HOME/.sdkman" && . "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# Java + Maven: front-prepend the selected SDKMAN candidates so `java` beats the macOS /usr/bin/java
+# stub (sdkman-init places them below /usr/bin). Unconditional front-prepend — may leave one harmless
+# duplicate PATH entry, but `java`/`mvn` resolve to SDKMAN, identical to the nushell config.
+if [ -d "$HOME/.sdkman/candidates/java/current" ]; then
+  export JAVA_HOME="$HOME/.sdkman/candidates/java/current"
+  PATH="$JAVA_HOME/bin:$PATH"
+fi
+[ -d "$HOME/.sdkman/candidates/maven/current/bin" ] && PATH="$HOME/.sdkman/candidates/maven/current/bin:$PATH"
 
 # Rust toolchain (rustup / cargo).
 export CARGO_HOME="$HOME/.cargo"
