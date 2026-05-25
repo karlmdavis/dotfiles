@@ -19,9 +19,9 @@ setopt HIST_IGNORE_SPACE
 ##
 # PATH
 #
-# Intentionally NOT set here. PATH/utility setup lives in ~/.zshenv (uniqueness) and ~/.zprofile
-# (login, after macOS path_helper) via the shared shell-env snippet — kept consistent with bash and
-# nushell. See .chezmoitemplates/shell-env.sh.
+# Intentionally NOT set here. PATH entries live in ~/.zprofile (login, after macOS path_helper) via the
+# shared shell-env snippet — kept consistent with bash and nushell. ~/.zshenv only enforces uniqueness
+# (typeset -U path). See .chezmoitemplates/shell-env.sh.
 ##
 
 ##
