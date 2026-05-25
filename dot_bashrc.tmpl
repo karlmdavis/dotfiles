@@ -33,7 +33,7 @@ shopt -s histappend
 # Keep $LINES/$COLUMNS correct after each command.
 shopt -s checkwinsize
 
-{{ if ne .chezmoi.os "darwin" }}
+{{ if ne .chezmoi.os "darwin" -}}
 ##
 # Linux-only interactive niceties (absent / no-ops on macOS)
 ##
@@ -50,7 +50,8 @@ fi
 if ! shopt -oq posix; then
   [ -f /usr/share/bash-completion/bash_completion ] && . /usr/share/bash-completion/bash_completion
 fi
-{{ end }}
+
+{{ end -}}
 ##
 # Aliases & local overrides
 ##
