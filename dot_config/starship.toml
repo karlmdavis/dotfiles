@@ -5,11 +5,12 @@
 ##
 format = """
 [░▒▓](#a3aed2)\
-[ $os ](bg:#a3aed2 fg:#090c0c)\
-[](bg:#9ab0d9 fg:#a3aed2)\
+[ $os$shell ](bg:#a3aed2 fg:#090c0c)\
+[](bg:#9d7cd8 fg:#a3aed2)\
+$username\
 $hostname\
+[](bg:#769ff0 fg:#9d7cd8)\
 $directory\
-[](bg:#769ff0 fg:#9ab0d9)\
 [](fg:#769ff0 bg:#394260)\
 $git_branch\
 $git_status\
@@ -35,9 +36,9 @@ style = "bold"
 Macos = ""
 
 [hostname]
-ssh_only = true
-format = "[\uf109 $hostname ](fg:#e3e5e5 bg:#9ab0d9)"
-style = "bg:#9ab0d9"
+ssh_only = false
+format = "[@$hostname ](fg:#1a1b26 bg:#9d7cd8)"
+style = "bg:#9d7cd8"
 
 [directory]
 format = "[ $path ]($style)"
@@ -84,3 +85,16 @@ show_milliseconds = true
 # which provide better focus detection and session-specific notifications.
 show_notifications = false
 # min_time_to_notify = 45_000
+
+[shell]
+disabled = false
+format = " $indicator"
+bash_indicator = "bash"
+style = "fg:#090c0c bg:#a3aed2"
+
+[username]
+show_always = true
+style_user = "fg:#1a1b26 bg:#9d7cd8"
+style_root = "bold fg:#8b0000 bg:#9d7cd8"
+format = "[ $user]($style)"
+disabled = false

@@ -45,6 +45,8 @@ if [ -d "$VOLTA_HOME/bin" ] ; then
     PATH="$VOLTA_HOME/bin:$PATH"
 fi
 
+export PATH
+
 {{ with .chezmoi.osRelease }}
   {{ if eq .id "ubuntu" }}
 ##

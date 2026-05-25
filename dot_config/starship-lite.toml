@@ -9,6 +9,8 @@
 ##
 
 format = """
+$shell\
+$username\
 $hostname\
 $directory\
 $git_branch\
@@ -20,8 +22,8 @@ $character
 """
 
 [hostname]
-ssh_only = true
-format = "@$hostname "
+ssh_only = false
+format = "@$hostname:"
 
 [directory]
 format = "$path "
@@ -29,10 +31,10 @@ truncation_length = 3
 truncation_symbol = ".../"
 
 [git_branch]
-format = "on $branch "
+format = "\\(on $branch"
 
 [git_status]
-format = "($all_status$ahead_behind) "
+format = "( $all_status$ahead_behind)\\) "
 
 [time]
 disabled = false
@@ -47,3 +49,15 @@ show_milliseconds = true
 [character]
 success_symbol = ">"
 error_symbol = "!>"
+
+[shell]
+disabled = false
+format = "\\[$indicator\\] "
+bash_indicator = "bash"
+
+[username]
+show_always = true
+format = "$user"
+style_user = ""
+style_root = "bold red"
+disabled = false

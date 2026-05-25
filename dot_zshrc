@@ -23,6 +23,7 @@ setopt HIST_IGNORE_SPACE
 # binaries available (important on macOS where zsh is the default login shell).
 ##
 
+typeset -U path
 [[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
 [[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
@@ -53,3 +54,12 @@ fi
 
 # `td` — Todoist CLI via pinned npx fetch (no global install).
 alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
+
+##
+# Prompt.
+##
+
+# Initialize Starship prompt if installed (matches bash and nushell setup).
+if command -v starship &>/dev/null; then
+  eval "$(starship init zsh)"
+fi
