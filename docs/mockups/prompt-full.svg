@@ -12,46 +12,43 @@
   <rect x="0" y="8" width="88" height="24" fill="#a3aed2" rx="4 0 0 4"/>
   <text x="6" y="24" fill="#090c0c"> macOS  zsh </text>
 
-  <!-- Arrow: #a3aed2 → #9ab0d9 -->
-  <polygon points="88,8 102,20 88,32" fill="#a3aed2"/>
-  <rect x="88" y="8" width="14" height="24" fill="#9ab0d9"/>
+  <!-- Arrow: #a3aed2 → #6f51c0 -->
+  <rect x="88" y="8" width="14" height="24" fill="#6f51c0"/>
   <polygon points="88,8 102,20 88,32" fill="#a3aed2"/>
 
-  <!-- Seg 2: user@hostname  (#9ab0d9 bg, #e3e5e5 fg) -->
-  <rect x="102" y="8" width="126" height="24" fill="#9ab0d9"/>
-  <text x="104" y="24" fill="#e3e5e5"> karl@hostname </text>
+  <!-- Seg 2: user@hostname  (#6f51c0 bg, #f0ebff fg) — purple-deep -->
+  <rect x="102" y="8" width="126" height="24" fill="#6f51c0"/>
+  <text x="104" y="24" fill="#f0ebff"> karl@hostname </text>
 
-  <!-- Arrow: #9ab0d9 → #769ff0 -->
-  <rect x="228" y="8" width="14" height="24" fill="#769ff0"/>
-  <polygon points="228,8 242,20 228,32" fill="#9ab0d9"/>
+  <!-- Hard seam: #6f51c0 → #769ff0 (no arrow glyph, just color change) -->
 
   <!-- Seg 3: directory  (#769ff0 bg, #e3e5e5 fg) -->
-  <rect x="242" y="8" width="112" height="24" fill="#769ff0"/>
-  <text x="244" y="24" fill="#e3e5e5"> ~/dotfiles </text>
+  <rect x="228" y="8" width="112" height="24" fill="#769ff0"/>
+  <text x="230" y="24" fill="#e3e5e5"> ~/dotfiles </text>
 
   <!-- Arrow: #769ff0 → #394260 -->
-  <rect x="354" y="8" width="14" height="24" fill="#394260"/>
-  <polygon points="354,8 368,20 354,32" fill="#769ff0"/>
+  <rect x="340" y="8" width="14" height="24" fill="#394260"/>
+  <polygon points="340,8 354,20 340,32" fill="#769ff0"/>
 
   <!-- Seg 4: git  (#394260 bg, #769ff0 fg) -->
-  <rect x="368" y="8" width="136" height="24" fill="#394260"/>
-  <text x="370" y="24" fill="#769ff0">  main ✓ +2 -1 </text>
+  <rect x="354" y="8" width="136" height="24" fill="#394260"/>
+  <text x="356" y="24" fill="#769ff0">  main ✓ +2 -1 </text>
 
   <!-- Arrow: #394260 → #212736 -->
-  <rect x="504" y="8" width="14" height="24" fill="#212736"/>
-  <polygon points="504,8 518,20 504,32" fill="#394260"/>
+  <rect x="490" y="8" width="14" height="24" fill="#212736"/>
+  <polygon points="490,8 504,20 490,32" fill="#394260"/>
 
   <!-- Seg 5: time  (#212736 bg, #a0a9cb fg) -->
-  <rect x="518" y="8" width="90" height="24" fill="#212736"/>
-  <text x="520" y="24" fill="#a0a9cb">   14:32 </text>
+  <rect x="504" y="8" width="90" height="24" fill="#212736"/>
+  <text x="506" y="24" fill="#a0a9cb">   14:32 </text>
 
   <!-- Arrow: #212736 → #1d2230 -->
-  <rect x="608" y="8" width="14" height="24" fill="#1d2230"/>
-  <polygon points="608,8 622,20 608,32" fill="#212736"/>
+  <rect x="594" y="8" width="14" height="24" fill="#1d2230"/>
+  <polygon points="594,8 608,20 594,32" fill="#212736"/>
 
   <!-- Seg 6: cmd_duration  (#1d2230 bg) -->
-  <rect x="622" y="8" width="98" height="24" fill="#1d2230"/>
-  <text x="624" y="24" fill="#c0caf5"> ⏱ 450ms </text>
+  <rect x="608" y="8" width="112" height="24" fill="#1d2230"/>
+  <text x="610" y="24" fill="#c0caf5"> ⏱ 450ms </text>
 
   <!-- === Line 2: Prompt character === -->
   <text x="6" y="64" fill="#9ece6a" font-size="16">❯</text>
