@@ -31,7 +31,10 @@ _pp "$HOME/bin"
 _pp "/usr/local/bin"
 
 # Homebrew: one eval adds bin+sbin to PATH and sets HOMEBREW_*, MANPATH, INFOPATH.
-{{ $brew := "/home/linuxbrew/.linuxbrew" }}{{ if eq .chezmoi.os "darwin" }}{{ $brew = "/opt/homebrew" }}{{ end -}}
+{{ $brew := "/home/linuxbrew/.linuxbrew" -}}
+{{ if eq .chezmoi.os "darwin" -}}
+{{ $brew = "/opt/homebrew" -}}
+{{ end -}}
 [ -x "{{ $brew }}/bin/brew" ] && eval "$({{ $brew }}/bin/brew shellenv)"
 
 
