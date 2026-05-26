@@ -15,8 +15,8 @@ if command -v cargo >/dev/null 2>&1 || [ -x "$HOME/.cargo/bin/cargo" ]; then
 fi
 
 # Install rustup + the stable toolchain. --no-modify-path because PATH is managed by shell-env.
-# Best-effort: a network/cert failure must NOT abort the rest of `chezmoi apply` — cargo simply stays
-# unavailable until this runs successfully (it re-runs on the next apply, since cargo is still absent).
+# Best-effort: a network/cert failure must NOT abort `chezmoi apply`. As a plain run_ script this runs on
+# every apply (the cargo guard above no-ops it once installed), so a failed install is retried next time.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
   | sh -s -- -y --default-toolchain stable --profile default --no-modify-path \
   || echo "rustup install skipped (offline or TLS/cert issue?); cargo unavailable until it succeeds" >&2

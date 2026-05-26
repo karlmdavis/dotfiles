@@ -7,7 +7,7 @@
 # text works in bash and zsh.
 #
 # Scope: ONLY tools installed on every system (see .chezmoidata/system_packages_autoinstall.yaml, plus
-# Rust via run_onchange_install_rustup.sh). Machine-specific tools go in ~/.config/shell/env.local.sh
+# Rust via run_install_rustup.sh). Machine-specific tools go in ~/.config/shell/env.local.sh
 # (sourced near the end) — not here.
 ##
 
@@ -42,7 +42,7 @@ _pp "/usr/local/bin"
 # Languages / toolchains
 ##
 
-# Rust toolchain (rustup / cargo) — installed on every system via run_onchange_install_rustup.sh.
+# Rust toolchain (rustup / cargo) — installed on every system via run_install_rustup.sh.
 export CARGO_HOME="$HOME/.cargo"
 _pp "$CARGO_HOME/bin"
 
