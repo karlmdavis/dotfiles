@@ -28,6 +28,8 @@ packages:
         - jq
         # Desktop notifications with click action support.
         - terminal-notifier
+        # Polyglot tool version manager (asdf-style, Rust impl); shells activate it from rc files.
+        - mise
         # Manage JS environments (Rust impl).
         - volta
         # More modern alternative to esbuild (Zig impl).
@@ -66,6 +68,8 @@ packages:
         - gh
         # JSON parsing utility for shell scripts.
         - jq
+        # Polyglot tool version manager (asdf-style, Rust impl); shells activate it from rc files.
+        - mise
         # Manage JS environments (Rust impl).
         - volta
         # More modern alternative to esbuild (Zig impl).

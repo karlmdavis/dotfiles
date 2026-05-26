@@ -48,6 +48,16 @@ fi
 alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
 
 ##
+# Tool version manager.
+##
+
+# mise — installs a precmd hook that rewrites PATH on each `cd` based on the nearest
+# .mise.toml / .tool-versions. Idempotent; the guard makes this a no-op when mise isn't installed
+# (mise itself is in the package manifest, so on a freshly-applied system it will be present).
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+
+##
 # Prompt.
 ##
 

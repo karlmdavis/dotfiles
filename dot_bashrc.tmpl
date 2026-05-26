@@ -64,6 +64,14 @@ fi
 
 
 ##
+# Tool version manager
+##
+
+# mise — see dot_zshrc for rationale. No-op when mise is absent.
+command -v mise >/dev/null 2>&1 && eval "$(mise activate bash)"
+
+
+##
 # Prompt
 ##
 

@@ -137,6 +137,14 @@ if (which starship | is-not-empty) {
     starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.nu")
 }
 
+# mise — tool version manager. Generates a nushell module that rewrites PATH on each `cd` based on the
+# nearest .mise.toml / .tool-versions. Reuses the vendor/autoload mechanism set up above for starship.
+# No-op when mise isn't installed (mise is in the package manifest, so on a freshly-applied system
+# it will be present).
+if (which mise | is-not-empty) {
+    mise activate nu | save -f ($nu.data-dir | path join "vendor/autoload/mise.nu")
+}
+
 # Set helix as default editor (EDITOR + VISUAL, matching bash/zsh).
 let helix_bin = ($homebrew_prefix | path join 'bin' | path join 'hx')
 if ($helix_bin | path exists) {
