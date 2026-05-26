@@ -128,11 +128,11 @@ Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exe
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
     scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes (VS Code/Cursor/Zed/JetBrains/Xcode)
-    are never disturbed
-- IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`)
-- `NO_ZELLIJ=1` environment variable opt-out
-- Recursion prevention (checks `$ZELLIJ` variable)
-- Fallback to the normal shell if zellij missing
+    are never disturbed.
+- IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`).
+- `NO_ZELLIJ=1` environment variable opt-out.
+- Recursion prevention (checks `$ZELLIJ` variable).
+- Fallback to the normal shell if zellij missing.
 
 ## Development Toolchain
 
