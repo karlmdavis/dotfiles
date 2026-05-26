@@ -25,6 +25,7 @@ desired="$(cat <<'SETTINGS_JSON'
     "pr": ""
   },
   "permissions": {
+    "defaultMode": "auto",
     "allow": [
       {{- /* === Git Operations === */}}
       "Bash(git add:*)",
@@ -160,10 +161,20 @@ desired="$(cat <<'SETTINGS_JSON'
     ]
   },
   "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true,
-    "swift-lsp@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "hookify@claude-plugins-official": true,
+    "playground@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
-    "chrome-devtools-mcp@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "slack@claude-plugins-official": true,
+    "superpowers@superpowers-marketplace": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
   "voice": {
