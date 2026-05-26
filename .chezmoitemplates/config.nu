@@ -33,12 +33,12 @@ use std/util 'path add'
 $env.CTKEY_USERNAME = 'd6lu'
 
 # Trust the corporate (Zscaler) root CA for Node TLS (only when the cert is present).
-let zscaler_cert = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+let zscaler_cert = ($nu.home-dir | path join "ZscalerRootCertificate-2048-SHA256.crt")
 if ($zscaler_cert | path exists) { $env.NODE_EXTRA_CA_CERTS = $zscaler_cert }
 {{- end }}
 
 # Personal scripts kept under version control or as scratch tooling.
-path add ($env.HOME | path join 'bin')
+path add ($nu.home-dir | path join 'bin')
 
 # Add /usr/local/bin to my path.
 path add '/usr/local/bin'
@@ -76,15 +76,15 @@ if ($homebrew_prefix | path exists) {
 }
 
 # Add Rust toolchain to my path.
-$env.CARGO_HOME = ($nu.home-path | path join '.cargo')
+$env.CARGO_HOME = ($nu.home-dir | path join '.cargo')
 path add ($env.CARGO_HOME | path join "bin")
 
 # Configure Volta.
-$env.VOLTA_HOME = ($env.HOME | path join '.volta')
+$env.VOLTA_HOME = ($nu.home-dir | path join '.volta')
 path add ($env.VOLTA_HOME | path join 'bin')
 
 # Configure pipx.
-path add ($env.HOME | path join '.local' | path join 'bin')
+path add ($nu.home-dir | path join '.local' | path join 'bin')
 
 # Source machine-local PATH/env (tools not installed on every system — e.g. SDKMAN, Docker, GUI apps).
 # Edit local.nu in this config dir (created once by chezmoi, never overwritten); `path add` is available.
@@ -123,8 +123,8 @@ mkdir ($nu.data-dir | path join "vendor/autoload")
 
 # Linux console sessions (e.g. Ubuntu Server with a physical monitor) do not support fancy fonts.
 # Decide which starship config to use: lite for TERM=linux or when NO_NERD_FONT set.
-let starship_config_full = ($env.HOME | path join ".config" | path join "starship.toml")
-let starship_config_lite = ($env.HOME | path join ".config" | path join "starship-lite.toml")
+let starship_config_full = ($nu.home-dir | path join ".config" | path join "starship.toml")
+let starship_config_lite = ($nu.home-dir | path join ".config" | path join "starship-lite.toml")
 if ( ("TERM" in $env) and ($env.TERM == 'linux') ) or ("NO_NERD_FONT" in $env) {
     if ($starship_config_lite | path exists) {
         $env.STARSHIP_CONFIG = $starship_config_lite

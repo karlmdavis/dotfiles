@@ -16,12 +16,12 @@
 
 # nushell can't source sdkman-init.sh (no `sdk` command here); add the candidate bins directly.
 
-# let sdkman_java = ($env.HOME | path join ".sdkman/candidates/java/current")
+# let sdkman_java = ($nu.home-dir | path join ".sdkman/candidates/java/current")
 # if ($sdkman_java | path exists) {
 #     $env.JAVA_HOME = $sdkman_java
 #     path add ($sdkman_java | path join "bin")
 # }
-# let sdkman_maven = ($env.HOME | path join ".sdkman/candidates/maven/current")
+# let sdkman_maven = ($nu.home-dir | path join ".sdkman/candidates/maven/current")
 # if ($sdkman_maven | path exists) { path add ($sdkman_maven | path join "bin") }
 
 
@@ -29,7 +29,7 @@
 # Docker
 ##
 
-# let docker_bin = ([$nu.home-path, '.docker', 'bin'] | path join)
+# let docker_bin = ([$nu.home-dir, '.docker', 'bin'] | path join)
 # if ($docker_bin | path exists) { path add $docker_bin }
 
 
