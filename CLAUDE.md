@@ -104,8 +104,9 @@ The system prompts during `chezmoi init` for `systemType` (personal/cms), which 
 
 **Cross-shell PATH/utility setup:**
 One canonical utility list is shared across shells.
-Bash and zsh source `.chezmoitemplates/shell-env.sh` from their login files (`~/.bash_profile`, `~/.zprofile`),
-  and `.chezmoitemplates/config.nu` mirrors the same list for nushell — add a new tool in both places.
+Bash and zsh source `.chezmoitemplates/shell-env.sh` from their login files
+  (`~/.bash_profile`, `~/.zprofile`), and `.chezmoitemplates/config.nu` mirrors the same list for nushell
+  — add a new tool in both places.
 PATH lives in the login files (after macOS `path_helper`, which runs in `/etc/zprofile` and `/etc/profile`
   and would otherwise reorder it); the interactive rc files (`~/.bashrc`, `~/.zshrc`) hold no PATH.
 Nushell uses `path add` (prepends) vs `++=` (appends); all additions check for directory existence first.
@@ -114,7 +115,8 @@ Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on 
   bash/zsh, `local.nu` for nushell), which the shared setup sources — not in the shared snippets.
 
 **Shell startup file order (relevant to where things go):**
-- zsh: `~/.zshenv` (always) → *(login)* `~/.zprofile` → *(interactive)* `~/.zshrc` → *(login)* `~/.zlogin`.
+- zsh: `~/.zshenv` (always) → *(login)* `~/.zprofile` → *(interactive)* `~/.zshrc` →
+    *(login)* `~/.zlogin`.
 - bash: login reads `/etc/profile` then `~/.bash_profile`; interactive non-login reads `~/.bashrc`.
 - SSH interactive sessions are login shells on both macOS and Linux.
 - Non-login interactive shells (e.g. `zsh -i`, or a Linux IDE terminal) don't read the login files, so
@@ -123,12 +125,13 @@ Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on 
     default PATH; in practice the entry points here (Terminal/iTerm/SSH) are all login shells.
 
 **Auto-launching Zellij:**
-Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome` on any OS
-  via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser whose panes run nushell.
+Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome`
+  on any OS via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser
+  whose panes run nushell.
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
-    scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes (VS Code/Cursor/Zed/JetBrains/Xcode)
-    are never disturbed.
+    scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes
+    (VS Code/Cursor/Zed/JetBrains/Xcode) are never disturbed.
 - IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`).
 - `NO_ZELLIJ=1` environment variable opt-out.
 - Recursion prevention (checks `$ZELLIJ` variable).
