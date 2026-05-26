@@ -19,6 +19,7 @@ shellcheck \
   private_dot_local/lib/wkflw-ntfy/escalation/executable_* \
   private_dot_local/lib/wkflw-ntfy/hooks/executable_* \
   run_once_after_wkflw-ntfy-generate-topic.sh.tmpl \
+  run_onchange_install_rustup.sh \
   test/wkflw-ntfy/helpers/*.bash \
   test/wkflw-ntfy/mocks/executable_*
 
