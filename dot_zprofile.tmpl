@@ -1,0 +1,10 @@
+##
+# ~/.zprofile — sourced for zsh LOGIN shells, after /etc/zprofile (macOS path_helper).
+#
+# Shared PATH/utility setup (kept consistent with bash and nushell), then the interactive zellij
+# launcher. Entries live in the shared snippets included below (each documents itself).
+##
+
+{{ template "shell-env.sh" . }}
+
+{{ template "zellij-launch.sh" . }}

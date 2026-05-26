@@ -1,0 +1,71 @@
+##
+# ~/.bashrc (managed by chezmoi) — INTERACTIVE bash setup only.
+#
+# History, completion, aliases, prompt. PATH/utility setup lives in ~/.bash_profile via the shared
+# shell-env snippet (consistent with zsh and nushell). Sourced by ~/.bash_profile for login shells and
+# directly for non-login interactive shells.
+##
+
+
+##
+# Interactivity guard
+##
+
+# Do nothing for non-interactive shells (scripts, `ssh host 'cmd'`); keeps stdout clean for scp.
+case $- in
+  *i*) ;;
+  *) return ;;
+esac
+
+
+##
+# History
+##
+
+# Large history with de-duplication, mirroring the zsh/nushell history philosophy.
+HISTSIZE=1000000
+HISTFILESIZE=1000000000
+HISTCONTROL=ignoreboth
+
+# Append to the history file instead of overwriting it.
+shopt -s histappend
+
+# Keep $LINES/$COLUMNS correct after each command.
+shopt -s checkwinsize
+
+{{ if ne .chezmoi.os "darwin" -}}
+##
+# Linux-only interactive niceties (absent / no-ops on macOS)
+##
+
+# Let `less` display non-text input (archives, etc.).
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# Colorize ls/grep via GNU dircolors.
+if command -v dircolors >/dev/null 2>&1; then
+  [ -r ~/.dircolors ] && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+
+# Programmable completion (Debian/Ubuntu).
+if ! shopt -oq posix; then
+  [ -f /usr/share/bash-completion/bash_completion ] && . /usr/share/bash-completion/bash_completion
+fi
+
+{{ end -}}
+##
+# Aliases & local overrides
+##
+
+# Shared aliases (managed separately as ~/.bash_aliases).
+[ -f "$HOME/.bash_aliases" ] && . "$HOME/.bash_aliases"
+
+# Per-machine, unmanaged escape hatch.
+[ -f "$HOME/.bashrc_local" ] && . "$HOME/.bashrc_local"
+
+
+##
+# Prompt
+##
+
+# Starship prompt (matches zsh and nushell), if installed.
+command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"

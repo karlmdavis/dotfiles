@@ -17,20 +17,12 @@ setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
 ##
-# PATH.
+# PATH
 #
-# Mirror the same additions as dot_bash_profile.tmpl so interactive zsh sessions have the same
-# binaries available (important on macOS where zsh is the default login shell).
+# Intentionally NOT set here. PATH entries live in ~/.zprofile (login, after macOS path_helper) via the
+# shared shell-env snippet — kept consistent with bash and nushell. ~/.zshenv only enforces uniqueness
+# (typeset -U path). See .chezmoitemplates/shell-env.sh.
 ##
-
-typeset -U path
-[[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
-[[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
-[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
-
-# Configure Volta.
-export VOLTA_HOME="$HOME/.volta"
-[[ -d "$VOLTA_HOME/bin" ]] && path=("$VOLTA_HOME/bin" $path)
 
 ##
 # Completion.

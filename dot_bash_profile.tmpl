@@ -1,83 +1,24 @@
 #!/usr/bin/env bash
 
 ##
-# ~/.bash_profile (managed by chezmoi)
+# ~/.bash_profile (managed by chezmoi) — bash LOGIN shells, sourced after /etc/profile (path_helper).
 #
-# Purpose: On Ubuntu interactive login shells, auto-attach or create the persistent zellij session
-# running nushell (if available) using the builtin 'welcome' layout. Provides safe guards so
-# non-interactive SSH/scp/Ansible sessions are unaffected. macOS left effectively untouched
-# (guarded by OS check).
-#
-# Opt-out: set NO_ZELLIJ=1 in environment before launching login shell/ssh.
-# Example:
-#     $ NO_ZELLIJ=1 ssh host
-#
-# Fallback: If zellij is missing, remain in normal bash session.
+# Shared PATH/utility setup (consistent with zsh ~/.zprofile and nushell config.nu), then interactive
+# bash setup (~/.bashrc), then the interactive zellij launcher. Background/non-interactive shells are
+# unaffected. Opt out of the zellij launch with NO_ZELLIJ=1.
 #
 # Canonically:
-# - ~/.bash_profile should contain (potentially non-idempotent) environment setup, e.g.,
-#   PATH modifications and variable exports.
-# - ~/.bashrc should contain idempotent interactive shell setup, e.g., prompt config, completions,
-#   aliases, and functions.
+# - ~/.bash_profile holds (potentially non-idempotent) environment setup, e.g. PATH and exports.
+# - ~/.bashrc holds idempotent interactive setup, e.g. prompt, completions, aliases, functions.
 ##
 
-# Source ~/.bashrc if it exists.
-if [ -f "$HOME/.bashrc" ] ; then
-    . "$HOME/.bashrc"
-fi
+{{ template "shell-env.sh" . }}
 
-# Add the user's private bin directories to the PATH, if they exist.
-if [ -d "$HOME/bin" ] ; then
-    PATH="$HOME/bin:$PATH"
-fi
-if [ -d "$HOME/.local/bin" ] ; then
-    PATH="$HOME/.local/bin:$PATH"
-fi
-
-# Add Cargo's bin directory to the PATH, if it exists.
-if [ -d "$HOME/.cargo/bin" ] ; then
-    PATH="$HOME/.cargo/bin:$PATH"
-fi
-
-# Configure Volta.
-export VOLTA_HOME="$HOME/.volta"
-if [ -d "$VOLTA_HOME/bin" ] ; then
-    PATH="$VOLTA_HOME/bin:$PATH"
-fi
-
-export PATH
-
-{{ with .chezmoi.osRelease }}
-  {{ if eq .id "ubuntu" }}
 ##
-# This section only applies to Ubuntu and must appear at the end of ~/.bash_profile, after all of
-# the other environment setup is complete..
+# Interactive bash setup (prompt, history, completion, aliases)
 ##
 
-# Run only for login + interactive shells.
-case $- in
-  *i*) ;;  # interactive
-  *) return ;;  # non-interactive
-esac
+# Source ~/.bashrc (also sourced directly for non-login interactive shells).
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 
-# Do not interfere with non-interactive remote commands (ssh host 'cmd').
-[ -n "${SSH_ORIGINAL_COMMAND:-}" ] && return
-
-# Allow manual suppression.
-[ -n "${NO_ZELLIJ:-}" ] && return
-
-# Avoid recursion if already inside zellij.
-[ -n "${ZELLIJ:-}" ] && return
-
-# Skip zellij for VS Code Remote SSH connections (prevents OOM from multiple background sessions).
-[ -n "${VSCODE_INJECTION:-}" ] && return
-
-# Skip zellij for VS Code integrated terminals.
-[ "${TERM_PROGRAM:-}" = "vscode" ] && return
-
-# Attach/create zellij session using the built-in welcome layout (when the zellij binary exists).
-if command -v zellij >/dev/null 2>&1; then
-  exec zellij -l welcome
-fi
-  {{ end }}
-{{ end }}
+{{ template "zellij-launch.sh" . }}
