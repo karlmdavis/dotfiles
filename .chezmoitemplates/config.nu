@@ -32,8 +32,9 @@ use std/util 'path add'
 # Set username for ctkey, which is used to get AWS CLI tokens.
 $env.CTKEY_USERNAME = 'd6lu'
 
-# Trust the corporate (Zscaler) root CA for Node TLS.
-$env.NODE_EXTRA_CA_CERTS = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+# Trust the corporate (Zscaler) root CA for Node TLS (only when the cert is present).
+let zscaler_cert = ($env.HOME | path join "ZscalerRootCertificate-2048-SHA256.crt")
+if ($zscaler_cert | path exists) { $env.NODE_EXTRA_CA_CERTS = $zscaler_cert }
 {{- end }}
 
 # Personal scripts kept under version control or as scratch tooling.

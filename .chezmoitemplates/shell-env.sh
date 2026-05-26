@@ -72,8 +72,9 @@ _pp "$HOME/.local/bin"
 # CMS: username for ctkey (AWS CLI token retrieval).
 export CTKEY_USERNAME="d6lu"
 
-# CMS: trust the corporate (Zscaler) root CA for Node TLS.
-export NODE_EXTRA_CA_CERTS="$HOME/ZscalerRootCertificate-2048-SHA256.crt"
+# CMS: trust the corporate (Zscaler) root CA for Node TLS (only when the cert is present, so Node
+# doesn't warn on every invocation if it hasn't been deployed yet).
+[ -f "$HOME/ZscalerRootCertificate-2048-SHA256.crt" ] && export NODE_EXTRA_CA_CERTS="$HOME/ZscalerRootCertificate-2048-SHA256.crt"
 
 {{ end -}}
 # Use Helix as the default editor (matches nushell), when present.
