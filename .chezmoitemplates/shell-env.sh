@@ -68,7 +68,7 @@ _pp "$HOME/.local/bin"
 # Environment variables
 ##
 
-{{- if .isCMS }}
+{{ if .isCMS -}}
 # CMS: username for ctkey (AWS CLI token retrieval).
 export CTKEY_USERNAME="d6lu"
 
