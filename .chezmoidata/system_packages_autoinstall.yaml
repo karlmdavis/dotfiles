@@ -9,6 +9,8 @@ packages:
       taps:
         # More modern alternative to esbuild (Zig impl).
         - oven-sh/bun
+        # Aerospace tiling window manager (macOS).
+        - nikitabobko/tap
       brews:
         # Manage dotfiles with incredible UX (Go impl).
         - chezmoi
@@ -38,11 +40,17 @@ packages:
         #- tokei
         # Python build tool.
         - uv
+        # YAML processor for shell scripts (used by Aerospace HUD).
+        - yq
         # Get overview of system CPU, memory, etc. resource usage.
         #- btop
       casks:
         # Modern font for coding with solid emoji support.
         - font-jetbrains-mono-nerd-font
+        # i3-like tiling window manager for macOS (from nikitabobko/tap).
+        - aerospace
+        # Desktop automation framework for macOS (used for workspace HUD notifications).
+        - hammerspoon
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
