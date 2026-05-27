@@ -12,9 +12,6 @@ web_server true
 web_sharing "on"
 web_server_ip "127.0.0.1"
 web_server_port 58082
-web_server_cert "{{ .chezmoi.homeDir }}/.config/zellij/server.crt"
-web_server_key  "{{ .chezmoi.homeDir }}/.config/zellij/server.key"
-enforce_https_for_localhost true
 
 {{- $nu := lookPath "nu" }}
 {{- if $nu }}
