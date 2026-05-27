@@ -28,6 +28,8 @@ Library/Application Support/nushell/local.nu
 .config/i3status
 {{- end }}
 
-# Zellij web server TLS certificates (machine-local, not version controlled)
+# Zellij web server TLS certificates are generated into the target dir by
+# run_generate-zellij-web-certs.sh.tmpl and never enter the source repo.
+# Listed here to prevent accidental `chezmoi add` of these files.
 .config/zellij/server.crt
 .config/zellij/server.key

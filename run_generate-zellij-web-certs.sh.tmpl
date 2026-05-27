@@ -3,8 +3,9 @@ set -euo pipefail
 CERT="{{ .chezmoi.homeDir }}/.config/zellij/server.crt"
 KEY="{{ .chezmoi.homeDir }}/.config/zellij/server.key"
 [ -f "$CERT" ] && [ -f "$KEY" ] && exit 0
+mkdir -p "$(dirname "$CERT")"
 openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
   -keyout "$KEY" -out "$CERT" \
   -subj "/CN=localhost" \
-  -addext "subjectAltName=IP:127.0.0.1,DNS:localhost" 2>/dev/null
+  -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
 chmod 600 "$KEY"
