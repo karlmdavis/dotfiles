@@ -1,0 +1,8 @@
+// Machine-specific Claude Code settings (JSONC — line comments allowed).
+// Deep-merged into ~/.claude/settings.json by chezmoi at apply time.
+// See: ~/.local/share/chezmoi/private_dot_claude/modify_settings.json.tmpl
+//
+// Nested objects are merged recursively; arrays and scalars are replaced.
+// After editing, run `chezmoi apply` to regenerate ~/.claude/settings.json.
+{
+}
