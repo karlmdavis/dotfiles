@@ -131,7 +131,7 @@ on-mode-changed = []
 {{- if stat $yaml }}
 {{- $content := output "cat" $yaml }}
 {{- $data := fromYaml $content }}
-{{- if index $data "window-rules" }}
+{{- if and $data (index $data "window-rules") }}
 
 # Window detection rules (generated from ~/.config/aerospace/workspaces.yaml)
 {{ range index $data "window-rules" }}
