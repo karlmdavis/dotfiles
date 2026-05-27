@@ -614,5 +614,11 @@
       "Alpha Component" : 1,
       "Green Component" : 0.7921568751335144
     }
+  }, {
+    "Name" : "karl@scaleway-mini",
+    "Guid" : "84801F28-C1B9-4965-9D5B-A35107C9A0E1",
+    "Dynamic Profile Parent Name" : "zellij",
+    "Command" : "zellij attach --remember https:\/\/scaleway-mini.tail26736d.ts.net:58082\/",
+    "Custom Command" : "Yes"
   }]
 }
