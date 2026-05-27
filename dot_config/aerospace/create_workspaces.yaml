@@ -1,0 +1,27 @@
+# Aerospace workspace configuration (machine-specific, not overwritten by chezmoi).
+# See: ~/.local/share/chezmoi/dot_aerospace.toml.tmpl
+#
+# 'workspaces' maps single-character workspace IDs to display names shown in the
+# HUD notification when switching workspaces.
+#
+# 'window-rules' auto-assigns applications to workspaces when windows open. Each
+# rule needs 'app-id' and 'workspace'; 'title-regex' is optional for apps with
+# multiple window types. Rules are evaluated in order — first match wins.
+#
+# Find an app's bundle ID with:
+#   mdls -name kMDItemCFBundleIdentifier /Applications/AppName.app
+#
+# Example:
+# workspaces:
+#   N: Notes
+#   C: Comms
+#   S: Scheduling
+#
+# window-rules:
+#   - app-id: com.tinyspeck.slackmacgap
+#     workspace: C
+#   - app-id: com.microsoft.Outlook
+#     title-regex: '[Cc]alendar'
+#     workspace: S
+#   - app-id: com.microsoft.Outlook
+#     workspace: C

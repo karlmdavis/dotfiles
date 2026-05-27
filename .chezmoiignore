@@ -15,6 +15,9 @@ test/
 # Only apply MacOS-only files when we're _actually_ on MacOS.
 Library/Application Support/nushell/config.nu
 Library/Application Support/nushell/local.nu
+.aerospace.toml
+.config/aerospace/
+.hammerspoon/
 {{ end }}
 {{- if ne .chezmoi.os "linux" }}
 # Only apply Linux-only files when we're _actually on_ Linux.
