@@ -27,3 +27,7 @@ Library/Application Support/nushell/local.nu
 .config/i3
 .config/i3status
 {{- end }}
+
+# Zellij web server TLS certificates (machine-local, not version controlled)
+.config/zellij/server.crt
+.config/zellij/server.key
