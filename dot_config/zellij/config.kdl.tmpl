@@ -4,20 +4,6 @@ session_serialization true
 serialize_pane_viewport true
 scrollback_lines_to_serialize 0
 
-web_client {
-    font "monospace"
-}
-
-web_server true
-web_sharing "on"
-web_server_ip "127.0.0.1"
-web_server_port 58082
-web_server_cert "{{ .chezmoi.homeDir }}/.config/zellij/server.crt"
-web_server_key  "{{ .chezmoi.homeDir }}/.config/zellij/server.key"
-// enforce_https_for_localhost true is intentionally omitted: zellij 0.44.3 bug
-// causes it to ignore web_server_cert/key from config, failing startup. The cert
-// options above still cause the web server to bind with TLS when present.
-
 {{- $nu := lookPath "nu" }}
 {{- if $nu }}
 default_shell "{{ $nu }}"
