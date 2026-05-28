@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# cmd-notify — desktop notification when a long-running command completes.
+#
+# Called from shell hooks (nu/bash/zsh):
+#   cmd-notify [--dry-run] <command_text> <duration_seconds> <exit_code> <cwd>
+#
+# --dry-run prints the notifier invocation to stdout instead of running it; drives tests.
+#
+# Skips silently when:
+#   - CMD_NOTIFY_DISABLE=1
+#   - duration < CMD_NOTIFY_THRESHOLD (default 60s)
+#   - command is empty or its leading token is in the TUI/REPL blocklist
+#
+# Notifications are grouped by the command's leading token so repeated runs of the same
+# command collapse instead of piling up.
+#
+# Optional icons: looked up by leading-token in $CMD_NOTIFY_ICONS (default
+# ~/.local/share/cmd-notify/icons.txt; one `key=url` per line, `#` comments). The first
+# successful fetch caches the PNG at ~/.cache/cmd-notify/icons/<key>.png; a sibling
+# <key>.miss sentinel prevents retrying after a failed download.
+set -uo pipefail
+
+[[ "${CMD_NOTIFY_DISABLE:-0}" == "1" ]] && exit 0
+
+DRY_RUN=0
+if [[ "${1:-}" == "--dry-run" ]]; then
+    DRY_RUN=1
+    shift
+fi
+
+CMD="${1-}"
+DURATION="${2:-0}"
+EXIT_CODE="${3:-0}"
+CWD="${4:-?}"
+
+THRESHOLD="${CMD_NOTIFY_THRESHOLD:-60}"
+
+# Coerce DURATION to int; bail if not numeric.
+case "$DURATION" in
+    ''|*[!0-9]*) exit 0 ;;
+esac
+
+(( DURATION >= THRESHOLD )) || exit 0
+[[ -n "$CMD" ]] || exit 0
+
+# Leading whitespace-delimited token, path-stripped. `read` splits on $IFS (spaces, tabs,
+# newlines), so commands like "vim\nfoo" still treat "vim" as the base.
+read -r first_token _ <<<"$CMD" || true
+cmd_base="${first_token##*/}"
+[[ -n "$cmd_base" ]] || exit 0
+
+# TUI/REPL blocklist — foreground interactive sessions don't need notifications.
+case "$cmd_base" in
+    hx|vim|nvim|nano|emacs|less|more|man|htop|top|btop|bash|zsh|fish|nu|ssh|claude) exit 0 ;;
+esac
+
+# Sanitize command for display: collapse whitespace/control chars, then truncate.
+display_cmd="$(printf '%s' "$CMD" | tr '\000-\037' '   ')"
+if (( ${#display_cmd} > 40 )); then
+    display_cmd="${display_cmd:0:39}…"
+fi
+
+# Human-readable duration.
+if (( DURATION < 60 )); then
+    dur_str="${DURATION}s"
+elif (( DURATION < 3600 )); then
+    dur_str="$((DURATION / 60))m $((DURATION % 60))s"
+else
+    dur_str="$((DURATION / 3600))h $(((DURATION % 3600) / 60))m"
+fi
+
+if [[ "$EXIT_CODE" == "0" ]]; then
+    status="succeeded"
+else
+    status="failed (exit $EXIT_CODE)"
+fi
+
+cwd_base="${CWD##*/}"
+[[ -z "$cwd_base" ]] && cwd_base="/"
+
+TITLE="$display_cmd"
+BODY="$status in $dur_str · $cwd_base"
+GROUP="cmd-notify:$cmd_base"
+
+# Resolve icon (cache hit → use; sentinel → skip; cold → fetch).
+icon=""
+icon_dir="${XDG_CACHE_HOME:-$HOME/.cache}/cmd-notify/icons"
+icon_path="$icon_dir/$cmd_base.png"
+miss_path="$icon_dir/$cmd_base.miss"
+
+if [[ -f "$icon_path" ]]; then
+    icon="$icon_path"
+elif [[ ! -f "$miss_path" ]]; then
+    icons_file="${CMD_NOTIFY_ICONS:-$HOME/.local/share/cmd-notify/icons.txt}"
+    if [[ -f "$icons_file" ]]; then
+        url="$(grep -E "^${cmd_base}=" "$icons_file" 2>/dev/null | head -n1 | cut -d= -f2-)"
+        if [[ -n "$url" ]]; then
+            mkdir -p "$icon_dir"
+            tmp="$(mktemp "${icon_dir}/.${cmd_base}.fetch.XXXXXX")"
+            if curl --max-time 5 --silent --fail --location --output "$tmp" "$url" 2>/dev/null; then
+                mv "$tmp" "$icon_path"
+                icon="$icon_path"
+            else
+                rm -f "$tmp"
+                : >"$miss_path"
+            fi
+        fi
+    fi
+fi
+
+platform="${CMD_NOTIFY_PLATFORM:-$(uname -s)}"
+
+if [[ "$platform" == "Darwin" ]]; then
+    args=(-title "$TITLE" -message "$BODY" -group "$GROUP")
+    [[ -n "$icon" ]] && args+=(-contentImage "$icon")
+    if (( DRY_RUN )); then
+        printf 'terminal-notifier'
+        for a in "${args[@]}"; do printf ' %s' "$a"; done
+        printf '\n'
+    elif command -v terminal-notifier >/dev/null 2>&1; then
+        terminal-notifier "${args[@]}" >/dev/null 2>&1 || true
+    fi
+else
+    args=(-h "string:x-canonical-private-synchronous:cmd-notify-$cmd_base")
+    [[ -n "$icon" ]] && args+=(--icon "$icon")
+    if (( DRY_RUN )); then
+        printf 'notify-send'
+        for a in "${args[@]}"; do printf ' %s' "$a"; done
+        printf ' %s %s\n' "$TITLE" "$BODY"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send "${args[@]}" "$TITLE" "$BODY" >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0

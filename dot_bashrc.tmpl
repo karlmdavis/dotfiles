@@ -77,3 +77,32 @@ command -v mise >/dev/null 2>&1 && eval "$(mise activate bash)"
 
 # Starship prompt (matches zsh and nushell), if installed.
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
+
+
+##
+# Long-running command notifications.
+#
+# Captures the command and start time via DEBUG trap, then runs cmd-notify from PROMPT_COMMAND
+# once the command finishes. The in_prompt guard prevents the DEBUG trap from firing recursively
+# for PROMPT_COMMAND itself. Helper is a no-op when missing or when CMD_NOTIFY_DISABLE=1.
+##
+
+if [ -x "$HOME/.local/bin/cmd-notify" ]; then
+    __cmd_notify_pre() {
+        [ -n "${__cmd_notify_in_prompt:-}" ] && return
+        __cmd_notify_start=${EPOCHSECONDS:-$(date +%s)}
+        __cmd_notify_cmd=$BASH_COMMAND
+    }
+    __cmd_notify_post() {
+        local exit=$?
+        __cmd_notify_in_prompt=1
+        if [ -n "${__cmd_notify_start:-}" ]; then
+            local now=${EPOCHSECONDS:-$(date +%s)}
+            "$HOME/.local/bin/cmd-notify" "$__cmd_notify_cmd" $((now - __cmd_notify_start)) "$exit" "$PWD" || true
+            unset __cmd_notify_start __cmd_notify_cmd
+        fi
+        unset __cmd_notify_in_prompt
+    }
+    trap '__cmd_notify_pre' DEBUG
+    PROMPT_COMMAND="__cmd_notify_post${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+fi

@@ -37,7 +37,7 @@ mise tasks
 
 **Task reference:**
 
-- `:lint` - Run shellcheck on all bash scripts (wkflw-ntfy V2)
+- `:lint` - Run shellcheck on managed bash scripts
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
@@ -53,13 +53,7 @@ mise run ci
 
 ## Testing
 
-This project follows a **comprehensive unit testing approach** with mock-based isolation:
-
-### Test Strategy
-
-- **Unit Tests:** Comprehensive coverage of all components in isolation.
-- **Mocked Dependencies:** osascript, terminal-notifier, curl, notify-send.
-- **No external dependencies:** Tests run completely offline.
+Unit tests live under `test/` and use the bats framework.
 
 ### Running Tests
 
@@ -74,19 +68,10 @@ mise run ci                 # Lint + test in parallel
 ```
 
 **Test structure:**
-- `test/wkflw-ntfy/unit/` - Component unit tests (bats).
-- `test/wkflw-ntfy/mocks/` - Mock executables for external dependencies.
-- `test/wkflw-ntfy/helpers/` - Shared test utilities.
-
-### Test Coverage
-
-Unit tests cover all wkflw-ntfy V2 components:
-1. **Core:** Config loading, logging, environment detection, strategy selection.
-2. **Markers:** Create, check, delete operations for escalation tracking.
-3. **Platform:** macOS (window ops, notifications), Linux (notifications).
-4. **Push:** ntfy.sh integration.
-5. **Escalation:** Worker spawning and execution.
-6. **Hooks:** Claude Code and nushell integration.
+- `test/cmd-notify/` - Long-running command notifier tests.
+    Drives the helper with `--dry-run` and asserts on the would-be notifier invocation; no
+    external mocks needed.
+- `test/claude/` - Tests for the Claude Code `modify_settings.json.tmpl` merge script.
 
 ## Pre-commit Hooks
 
@@ -106,11 +91,9 @@ git commit --no-verify
 mise run lint
 ```
 
-Shellcheck validates all bash scripts in:
-- `private_dot_local/bin/executable_ntfy-*.sh`
-- `run_once_ntfy-generate-topic.sh`
-- `test/test_helpers.bash`
-- `test/mocks/*`
+Shellcheck validates the managed bash scripts listed in `.mise.toml`'s `[tasks.lint]` block —
+  currently `private_dot_local/bin/executable_cmd-notify` and
+  `.chezmoiscripts/run_install_rustup.sh`.
 
 ## Chezmoi Workflow
 

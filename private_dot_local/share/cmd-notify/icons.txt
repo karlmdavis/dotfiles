@@ -1,0 +1,18 @@
+# cmd-notify icon URLs.
+# Format: <command_basename>=<icon URL>
+# Fetched lazily on first use; cached at ~/.cache/cmd-notify/icons/<basename>.png.
+# A failed fetch writes a sibling <basename>.miss sentinel to prevent retry storms.
+# To force a refresh, delete the cached file (and any .miss sentinel).
+#
+# IMPORTANT: URLs should resolve to a raster image format (PNG or JPEG). SVG and ICO will be
+# downloaded successfully but terminal-notifier won't render them — they'll silently fall
+# back to no icon. If you need a logo that's only published as SVG, convert it locally and
+# point at a file:// URL or commit the PNG somewhere fetchable.
+#
+# This is a starter set — extend with your own; one entry per command basename.
+
+gh=https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+docker=https://www.docker.com/app/uploads/2024/02/cropped-docker-logo-favicon-192x192.png
+mise=https://mise.jdx.dev/logo.png
+npm=https://static.npmjs.com/58a19602036db1daee0d7863c94673a4.png
+bun=https://bun.sh/logo.png

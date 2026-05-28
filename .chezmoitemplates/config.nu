@@ -158,39 +158,25 @@ use std/dirs
 
 
 ##
-# Workflow Notifications (wkflw-ntfy V2)
+# Long-running command notifications.
 #
-# Notify when long-running commands complete.
-# Uses progressive escalation: desktop → mobile push if not acknowledged.
-# Implementation in ~/.local/lib/wkflw-ntfy/
+# Captures command + start time in pre_execution, invokes cmd-notify in pre_prompt so the
+# duration / exit code / cwd are known. Helper is a no-op when missing or when
+# CMD_NOTIFY_DISABLE=1.
 ##
 
-const wkflw_ntfy_handler = '{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/nushell-handler.sh'
-if ($wkflw_ntfy_handler | path exists) {
-    # Track command start time and command text
-    $env.config.hooks = {
-        pre_execution: [{
-            code: {||
-                $env.__WKFLW_NTFY_START = (date now | format date '%s')
-                $env.__WKFLW_NTFY_CMD = (commandline)
-            }
-        }]
-        pre_prompt: [{
-            code: {||
-                if '__WKFLW_NTFY_START' in $env {
-                    let duration = ((date now | format date '%s') | into int) - ($env.__WKFLW_NTFY_START | into int)
-                    let cmd = $env.__WKFLW_NTFY_CMD
-                    let exit_code = $env.LAST_EXIT_CODE
-                    let cwd = (pwd)
-
-                    # Call bash handler with command details
-                    bash $wkflw_ntfy_handler $cmd $duration $exit_code $cwd
-
-                    # Clean up
-                    hide-env __WKFLW_NTFY_START
-                    hide-env __WKFLW_NTFY_CMD
-                }
-            }
-        }]
-    }
+const cmd_notify = '{{ .chezmoi.homeDir }}/.local/bin/cmd-notify'
+if ($cmd_notify | path exists) {
+    $env.config.hooks.pre_execution = ($env.config.hooks.pre_execution ++ [{||
+        $env.__CMD_NOTIFY_START = (date now | format date '%s')
+        $env.__CMD_NOTIFY_CMD = (commandline)
+    }])
+    $env.config.hooks.pre_prompt = ($env.config.hooks.pre_prompt ++ [{||
+        if '__CMD_NOTIFY_START' in $env {
+            let duration = ((date now | format date '%s') | into int) - ($env.__CMD_NOTIFY_START | into int)
+            ^$cmd_notify $env.__CMD_NOTIFY_CMD $duration $env.LAST_EXIT_CODE (pwd)
+            hide-env __CMD_NOTIFY_START
+            hide-env __CMD_NOTIFY_CMD
+        }
+    }])
 }

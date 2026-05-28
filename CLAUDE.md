@@ -227,7 +227,7 @@ Commands support bash command interpolation with `!`backticks`` for dynamic cont
 This repository uses mise for task automation and testing.
 
 **Key tasks:**
-- `:lint` - Run shellcheck on all bash scripts (V2 wkflw-ntfy scripts)
+- `:lint` - Run shellcheck on managed bash scripts
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
@@ -242,30 +242,27 @@ mise run ci
 
 ### Testing Approach
 
-**Comprehensive unit test coverage:**
-- Component isolation testing (config, logging, environment, strategy, markers, escalation)
-- Platform-specific tests (macOS window ops, notifications, Linux)
-- Mock-based testing for external dependencies
-
-**Test structure:**
-- `test/wkflw-ntfy/unit/` - Unit tests using bats framework
-- `test/wkflw-ntfy/mocks/` - Mock executables (osascript, terminal-notifier, curl, notify-send)
-- `test/wkflw-ntfy/helpers/` - Shared test utilities
+Tests use the bats framework and live under `test/`.
+The `cmd-notify` suite (`test/cmd-notify/`) drives the helper with its `--dry-run` flag and
+  asserts on the would-be notifier invocation, so no external mocks are needed.
 
 **Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test in parallel).
 
-### Notification System Architecture (V2)
+### Long-Running Command Notifications
 
-The wkflw-ntfy V2 system uses composable bash scripts following Unix philosophy:
-- **Core utilities** (`private_dot_local/lib/wkflw-ntfy/core/`): Config, logging, environment detection,
-    strategy selection
-- **Markers** (`marker/`): Atomic operations for escalation tracking
-- **Platform support** (`macos/`, `linux/`): Desktop notifications and window management
-- **Push notifications** (`push/`): Mobile push via ntfy.sh
-- **Escalation** (`escalation/`): Progressive escalation (desktop → mobile)
-- **Hooks** (`hooks/`): Integration with Claude Code and nushell
+`~/.local/bin/cmd-notify` (source: `private_dot_local/bin/executable_cmd-notify`) is a single
+  bash helper that fires a desktop notification when a command in any interactive shell exceeds
+  `CMD_NOTIFY_THRESHOLD` seconds (default 60).
+Notifications are grouped per command basename so repeats collapse, and an optional icon is
+  looked up in `~/.local/share/cmd-notify/icons.txt` (`key=url` format) and lazy-fetched to
+  `~/.cache/cmd-notify/icons/`.
+Shell hooks live in `.chezmoitemplates/config.nu` (nu), `dot_bashrc.tmpl` (bash), and
+  `dot_zshrc` (zsh).
+Disable with `CMD_NOTIFY_DISABLE=1`.
 
-See `private_dot_local/lib/wkflw-ntfy/README.md` for complete architecture documentation.
+Claude Code's "needs attention" / "task done" notifications are handled by Claude's native
+  settings (`preferredNotifChannel`, `agentPushNotifEnabled`, `inputNeededNotifEnabled` in
+  `private_dot_claude/modify_settings.json.tmpl`) — no custom hook scripts.
 
 ## Documentation Standards
 

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# wkflw-ntfy V2 (removed 2026-05-28). chezmoi does not delete previously-installed files when
+# their source disappears, so both the installed lib tree and the runtime state dir get cleaned
+# up here.
+set -euo pipefail
+
+rm -rf "$HOME/.local/lib/wkflw-ntfy" "$HOME/.local/state/wkflw-ntfy"

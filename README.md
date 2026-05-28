@@ -37,51 +37,29 @@ Scripts that should run on `chezmoi apply` but should not exist as files on the 
 See [`.claude/rules/chezmoi-script-placement.md`](./.claude/rules/chezmoi-script-placement.md)
   for the placement rule.
 
-## Long-Running Task Notifications
+## Long-Running Command Notifications
 
-This dotfiles repo includes a notification system that alerts you when:
-- **Claude Code** finishes work after 3+ minutes
-- **Shell commands** complete after 3+ minutes
+Interactive shells (nu, bash, zsh) fire a desktop notification when a command takes longer than
+  `CMD_NOTIFY_THRESHOLD` seconds (default 60).
+The notification shows the command (trimmed to 40 chars), success/failure, duration, and the
+  current directory's basename.
+Repeated runs of the same command collapse via the platform's grouping mechanism.
 
-### How It Works
+The helper is `~/.local/bin/cmd-notify`.
+Source: `private_dot_local/bin/executable_cmd-notify`.
+Shell wiring lives in `.chezmoitemplates/config.nu` (nu), `dot_bashrc.tmpl` (bash), and
+  `dot_zshrc` (zsh).
 
-The system uses **hybrid presence detection** to avoid notification spam:
-- ✅ **Sends notification** when you're away (unfocused terminal OR idle for 10+ seconds)
-- ⏱️ **30-second grace period** if you're currently focused (gives you time to switch back)
-- ❌ **No notification** if you return within the grace period
+Per-command icons are optional.
+Edit `~/.local/share/cmd-notify/icons.txt` (`key=url`, one per line) and the helper fetches
+  them lazily on first sight, caching to `~/.cache/cmd-notify/icons/`.
 
-Notifications are delivered via [ntfy](https://ntfy.sh) to your phone/tablet.
+Disable temporarily with `CMD_NOTIFY_DISABLE=1`.
+Disable per-shell by removing the relevant hook block.
 
-### Setup
-
-1. **Install ntfy app on your devices:**
-   - iOS: https://apps.apple.com/us/app/ntfy/id1625396347
-   - Android: https://play.google.com/store/apps/details?id=io.heckel.ntfy
-
-2. **Apply dotfiles:**
-   ```bash
-   chezmoi apply
-   ```
-   This generates a unique notification topic (stored in `~/.local/share/ntfy-topic`).
-
-3. **Subscribe to your topic:**
-   - Check the output from step 2 for your topic UUID
-   - Open ntfy app → tap **+** → paste your topic → Subscribe
-
-4. **You're done!** Notifications will appear automatically when:
-   - You walk away from a long-running task
-   - The terminal loses focus while work completes
-   - You go idle for 10+ seconds
-
-### Configuration
-
-- **Duration threshold (Claude):** 30 seconds (env: `NTFY_CLAUDE_DURATION_THRESHOLD`)
-- **Duration threshold (Nushell):** 30 seconds (env: `NTFY_NU_DURATION_THRESHOLD`)
-- **Grace period:** 30 seconds (env: `NTFY_GRACE_PERIOD`)
-- **Idle threshold:** 10 seconds (env: `NTFY_IDLE_THRESHOLD`)
-- **Topic file:** `~/.local/share/ntfy-topic` (NOT in git - regenerate with `chezmoi apply --force`)
-
-For implementation details, see `private_dot_local/bin/ntfy-*.sh` and `private_dot_local/lib/ntfy-nu-hooks.nu`.
+Claude Code's own "needs attention" / "task done" notifications are handled by its native
+  settings (`preferredNotifChannel: "iterm2_with_bell"`, mobile push, etc.), configured in
+  `private_dot_claude/modify_settings.json.tmpl` — no custom hook scripts.
 
 ## License
 

@@ -65,3 +65,27 @@ command -v mise &>/dev/null && eval "$(mise activate zsh)"
 if command -v starship &>/dev/null; then
   eval "$(starship init zsh)"
 fi
+
+
+##
+# Long-running command notifications.
+#
+# Uses zsh's native preexec/precmd hooks (much cleaner than bash's DEBUG trap dance).
+# Helper is a no-op when missing or when CMD_NOTIFY_DISABLE=1.
+##
+
+if [[ -x $HOME/.local/bin/cmd-notify ]]; then
+  __cmd_notify_preexec() {
+    __cmd_notify_start=$EPOCHSECONDS
+    __cmd_notify_cmd=$1
+  }
+  __cmd_notify_precmd() {
+    local exit=$?
+    [[ -z ${__cmd_notify_start:-} ]] && return
+    "$HOME/.local/bin/cmd-notify" "$__cmd_notify_cmd" $((EPOCHSECONDS - __cmd_notify_start)) "$exit" "$PWD" 2>/dev/null
+    unset __cmd_notify_start __cmd_notify_cmd
+  }
+  autoload -Uz add-zsh-hook
+  add-zsh-hook preexec __cmd_notify_preexec
+  add-zsh-hook precmd __cmd_notify_precmd
+fi

@@ -134,28 +134,6 @@ desired="$(cat <<'SETTINGS_JSON'
       "Read(**/.ssh/id_*)"
     ]
   },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/claude-stop.sh"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/lib/wkflw-ntfy/hooks/claude-notification.sh"
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "chrome-devtools-mcp@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,

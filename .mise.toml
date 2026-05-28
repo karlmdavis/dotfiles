@@ -7,31 +7,21 @@ bats = "latest"
 # Note: nushell is provided by system installation
 
 [tasks.lint]
-description = "Run shellcheck on all bash scripts"
+description = "Run shellcheck on managed bash scripts"
 run = """
 echo "Running shellcheck..."
 shellcheck \
-  private_dot_local/lib/wkflw-ntfy/core/executable_* \
-  private_dot_local/lib/wkflw-ntfy/marker/executable_* \
-  private_dot_local/lib/wkflw-ntfy/macos/executable_wkflw-ntfy-macos-* \
-  private_dot_local/lib/wkflw-ntfy/linux/executable_* \
-  private_dot_local/lib/wkflw-ntfy/push/executable_* \
-  private_dot_local/lib/wkflw-ntfy/escalation/executable_* \
-  private_dot_local/lib/wkflw-ntfy/hooks/executable_* \
-  run_once_after_wkflw-ntfy-generate-topic.sh.tmpl \
-  run_install_rustup.sh \
-  test/wkflw-ntfy/helpers/*.bash \
-  test/wkflw-ntfy/mocks/executable_*
+  private_dot_local/bin/executable_cmd-notify \
+  .chezmoiscripts/run_install_rustup.sh
 
 echo "✓ Shellcheck passed!"
 """
 
 [tasks.test]
-description = "Run unit tests (wkflw-ntfy + claude)"
+description = "Run unit tests"
 run = """
 echo "Running unit tests..."
-# Note: Add --jobs 4 for parallel execution (Bats 1.0+ has native parallel support)
-bats test/wkflw-ntfy/unit/ test/claude/
+bats test/cmd-notify/ test/claude/
 """
 
 [tasks.ci]
