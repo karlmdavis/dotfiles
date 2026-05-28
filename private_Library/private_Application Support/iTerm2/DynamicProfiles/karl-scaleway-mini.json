@@ -1,0 +1,9 @@
+{
+  "Profiles": [{
+    "Name" : "karl@scaleway-mini",
+    "Guid" : "84801F28-C1B9-4965-9D5B-A35107C9A0E1",
+    "Dynamic Profile Parent Name" : "zellij",
+    "Command" : "it2ssh karl@scaleway-mini",
+    "Custom Command" : "Yes"
+  }]
+}
