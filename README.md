@@ -32,6 +32,11 @@ I've set chezmoi to automatically commit and push any changes to its managed fil
 There's obviously a surprise vs. consistency tradeoff there, but I think it's the safer move.
 See `[.chezmoi.toml.tmpl](./.chezmoi.toml.tmpl)` to adjust that, if needed.
 
+Scripts that should run on `chezmoi apply` but should not exist as files on the target system
+  (installers, dated one-time cleanup scripts, etc.) live in `.chezmoiscripts/`.
+See [`.claude/rules/chezmoi-script-placement.md`](./.claude/rules/chezmoi-script-placement.md)
+  for the placement rule.
+
 ## Long-Running Task Notifications
 
 This dotfiles repo includes a notification system that alerts you when:

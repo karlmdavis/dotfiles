@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Zellij web-server cert generation was reverted in commits 25a99a4 / 25b37d9, but the
+# generated server.crt / server.key files on already-applied systems were never cleaned up.
+# This removes them on next `chezmoi apply` for any host that ran the older config.
+set -euo pipefail
+
+rm -f "$HOME/.config/zellij/server.crt" "$HOME/.config/zellij/server.key"

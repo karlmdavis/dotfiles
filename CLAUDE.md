@@ -84,7 +84,17 @@ The repository uses a sophisticated template hierarchy:
 
 **Package Management:**
 - `.chezmoidata/system_packages_autoinstall.yaml` - Declarative package manifest for macOS (Homebrew) and Ubuntu (apt + Homebrew)
-- `run_onchange_system_packages_autoinstall.sh.tmpl` - Script that runs when manifest changes, uses `brew bundle` for installation
+- `.chezmoiscripts/run_onchange_system_packages_autoinstall.sh.tmpl` - Script that runs when manifest changes, uses `brew bundle` for installation
+
+### Chezmoi Script Placement
+
+Scripts that should run on `chezmoi apply` but should NOT exist as files on the target system
+  live in `.chezmoiscripts/` at the repo root.
+This includes installers (rustup, `brew bundle`), and dated one-time cleanup scripts
+  for state left behind when a feature is removed.
+See [`.claude/rules/chezmoi-script-placement.md`](./.claude/rules/chezmoi-script-placement.md)
+  for the full rule (when to use `.chezmoiscripts/` vs `private_dot_*/` vs the repo root, and
+  the convention of pairing feature removals with dated cleanup scripts).
 
 ### Key Design Patterns
 
