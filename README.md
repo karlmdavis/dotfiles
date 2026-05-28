@@ -41,7 +41,7 @@ See `[.chezmoi.toml.tmpl](./.chezmoi.toml.tmpl)` to adjust that, if needed.
 ├── .chezmoi.toml.tmpl           # chezmoi init prompts + auto-commit/push config
 ├── .chezmoidata/                # data injected into .tmpl files (e.g. package manifest)
 ├── .chezmoiignore               # OS-conditional skip patterns
-├── .chezmoiscripts/             # run-only scripts; not installed. See .claude/rules/chezmoi-script-placement.md
+├── .chezmoiscripts/             # run-only scripts; not installed. See .claude/rules/file-placement.md
 ├── .chezmoitemplates/           # shared template partials (shell-env.sh, config.nu, ...)
 ├── .claude/                     # agent config for this repo
 │   └── rules/                   # short, decisive guidance files for agents
