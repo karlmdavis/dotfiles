@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Removed from source on 2026-05-28 when iTerm2 color schemes moved under
+# private_Library/private_Application Support/iTerm2/color-schemes/. chezmoi does not
+# auto-remove files orphaned by source moves, so clean up the old path explicitly.
+# Runs on all OSes because the original source applied everywhere.
+rm -rf "${HOME}/.iterm2-color-schemes"
+
+{{ if ne .chezmoi.os "darwin" -}}
+# Non-darwin only: clean up macOS-only files that previously leaked because
+# .chezmoiignore listed individual nushell leaves instead of a blanket Library/ entry.
+# On 2026-05-28 .chezmoiignore switched to blanket Library/; chezmoi won't remove the
+# already-applied debris on its own, so do it here.
+
+# Remove the iTerm2 tree that leaked from private_Library/ before iTerm2 was covered.
+rm -rf "${HOME}/Library/Application Support/iTerm2"
+
+# Sweep up empty ~/Library/ parents (the nushell stub dirs from per-leaf ignores, plus
+# what's left after the iTerm2 removal above). --ignore-fail-on-non-empty protects any
+# unrelated user data that might already live under ~/Library/.
+rmdir --ignore-fail-on-non-empty \
+    "${HOME}/Library/Application Support/nushell" \
+    "${HOME}/Library/Application Support" \
+    "${HOME}/Library" 2>/dev/null || true
+{{- end }}

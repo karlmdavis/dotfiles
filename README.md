@@ -91,8 +91,9 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     [`~/.aerospace.toml`](dot_aerospace.toml.tmpl).
 - [Hammerspoon](https://www.hammerspoon.org/) (macOS automation):
     [`~/.hammerspoon/`](dot_hammerspoon/).
-- [iTerm2](https://iterm2.com/) color schemes:
-    [`~/.iterm2-color-schemes/`](dot_iterm2-color-schemes/).
+- [iTerm2](https://iterm2.com/) (macOS terminal):
+    [`~/Library/Application Support/iTerm2/DynamicProfiles/`](private_Library/private_Application%20Support/iTerm2/DynamicProfiles/),
+    see also: [color schemes stash](private_Library/private_Application%20Support/iTerm2/color-schemes/).
 - [tmux](https://github.com/tmux/tmux):
     [`~/.tmux.conf`](dot_tmux.conf).
 - [Zellij](https://zellij.dev/):

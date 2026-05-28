@@ -95,6 +95,9 @@ The top-level `README.md`'s "Repository Map" section is the source of truth for 
 See [`.claude/rules/file-placement.md`](./.claude/rules/file-placement.md) for the full rule
   (when to use `.chezmoiscripts/` vs `private_dot_*/` vs the repo root, the cleanup-debt
   convention for feature removals, and when to update the map itself).
+For platform/OS differences (when to use `.chezmoiignore` vs template conditionals vs
+  per-machine locals, and the empty-parent-dir gotcha), see
+  [`.claude/rules/platform-differences.md`](./.claude/rules/platform-differences.md).
 
 ### Key Design Patterns
 
