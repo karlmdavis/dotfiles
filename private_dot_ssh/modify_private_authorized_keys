@@ -1,0 +1,53 @@
+#!/bin/sh
+# chezmoi modify_ script for ~/.ssh/authorized_keys.
+#
+# chezmoi pipes the live target file in on stdin and replaces the target with
+# our stdout. We guarantee the two canonical public keys below are present,
+# normalize their comment field to the canonical value, and leave every other
+# line (other keys, options-prefixed entries, comments, blank lines) untouched.
+# Match is by key blob (field 2), which uniquely identifies the key.
+set -eu
+
+exec awk '
+BEGIN {
+  n = 0
+
+  type[++n] = "ssh-rsa"
+  blob[n]    = "AAAAB3NzaC1yc2EAAAABIwAAAfsA5B5cndBaI3XHMlSm6tbYJa+nwT+6j8EBOesbPKsxtghYDhCR5TII7TcDXnKPqWMmgSoLpYygYnoJpmrycXOFjC2ue7aSoD/KXxxDaNjml50pwvJlcwdxRhryXMhoc/tVQZ47HBnIy/KKF2TaHqqjXvwOJZflCl1jHuS7Z7j0MsyFxWpPVAu1SKKEVteCzTN5pKskigYKkJGggpkhthhOsM9XpPfXFZmlfYF4kEBhOnucRI9fWnjgz3aw+V3oStLSQqlFTdwFEVOdLpZyZDl+XTpF7+RPbl3ChkD9XgG9Q/ViJLSrVrITtgjzASbOIMF+ZGodUvIuWDuaCUX1lSr9YEWEkxKpVSVHO3JVMS+X+QqOkNvMffvrjxlIZ20C3ESSZ/PwVpZJRue9YmR/zBALT5AHcWAgH01265yIkmGz+2ZPpYPGn5YT6Ly0PP0yT1GSOBxhW55zeOwyhqade1XnLLw7Cz188z5OZ4O6U4ndZqaNpBU7tWK8C1vX6VILdibxhoCXLox6seSS27894YwqD4lA6YYifYKAQ/kZ/OVlCvhu4F/PetEgoVBivxADbWHKFcqF0okObvYLSRXeGMNKSuTqBrOimBsCekEzeGmMvvRt32CIUYHSzlVoAo1Jwgi7TLVTlXm0/rhAzDs2wq3xfhLRM85BertozqU="
+  comment[n] = "The personal, passphrase-protected SSH key for Karl M. Davis."
+
+  type[++n] = "ecdsa-sha2-nistp256"
+  blob[n]    = "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEzoHynGA3rnwhji/xbIPzyzeelhXwxvJynckxuwyylMqOBD2mIVZR63Zn6J5gZbQMNcgGXPrvr4HgCVO0QBp5E="
+  comment[n] = "karl-iphone-faceid-key"
+
+  for (i = 1; i <= n; i++) {
+    by_blob[blob[i]] = i
+    needed[i] = 1
+  }
+}
+
+# Pass blank lines and comments through unchanged.
+NF == 0 || $1 ~ /^#/ { print; next }
+
+{
+  # Field 2 is the key blob on a normal authorized_keys entry. For
+  # options-prefixed lines (e.g. command="...",no-pty ssh-rsa AAAA... comment),
+  # $2 will be something else and will not match a known blob, so those lines
+  # fall through and print verbatim.
+  if ($2 in by_blob) {
+    i = by_blob[$2]
+    print type[i] " " blob[i] " " comment[i]
+    needed[i] = 0
+    next
+  }
+  print
+}
+
+END {
+  for (i = 1; i <= n; i++) {
+    if (needed[i]) {
+      print type[i] " " blob[i] " " comment[i]
+    }
+  }
+}
+'
