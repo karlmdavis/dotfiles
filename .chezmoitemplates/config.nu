@@ -138,7 +138,7 @@ if (which starship | is-not-empty) {
 }
 
 # mise — tool version manager. Generates a nushell module that rewrites PATH on each `cd` based on the
-# nearest .mise.toml / .tool-versions. Reuses the vendor/autoload mechanism set up above for starship.
+# nearest mise.toml / .tool-versions. Reuses the vendor/autoload mechanism set up above for starship.
 # No-op when mise isn't installed (mise is in the package manifest, so on a freshly-applied system
 # it will be present).
 if (which mise | is-not-empty) {

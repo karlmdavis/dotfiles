@@ -91,7 +91,7 @@ git commit --no-verify
 mise run lint
 ```
 
-Shellcheck validates the managed bash scripts listed in `.mise.toml`'s `[tasks.lint]` block —
+Shellcheck validates the managed bash scripts listed in `mise.toml`'s `[tasks.lint]` block —
   currently `private_dot_local/bin/executable_cmd-notify` and
   `.chezmoiscripts/run_install_rustup.sh`.
 

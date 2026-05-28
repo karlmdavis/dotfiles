@@ -46,7 +46,7 @@ See `[.chezmoi.toml.tmpl](./.chezmoi.toml.tmpl)` to adjust that, if needed.
 ├── .claude/                     # agent config for this repo
 │   └── rules/                   # short, decisive guidance files for agents
 ├── .githooks/pre-commit         # runs `mise run ci` before each commit
-├── .mise.toml                   # task runner: lint, test, ci, install-hooks
+├── mise.toml                    # task runner: lint, test, ci, install-hooks
 ├── CLAUDE.md                    # repo-level guidance for Claude Code
 ├── CONTRIBUTING.md
 ├── LICENSE

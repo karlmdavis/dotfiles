@@ -6,7 +6,7 @@ CONTRIBUTING.md
 dev/
 
 # Ignore testing and development files.
-.mise.toml
+mise.toml
 .githooks/
 docs/
 test/
