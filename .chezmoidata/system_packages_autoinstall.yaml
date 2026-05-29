@@ -42,6 +42,8 @@ packages:
         - uv
         # YAML processor for shell scripts (used by Aerospace HUD).
         - yq
+        # Switch display resolutions from CLI (used by Hammerspoon hotkeys).
+        - displayplacer
         # Get overview of system CPU, memory, etc. resource usage.
         #- btop
       casks:
