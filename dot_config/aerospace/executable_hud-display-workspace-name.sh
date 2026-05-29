@@ -28,5 +28,8 @@ DISPLAY="${PREFIX}${NAME}"
 if pgrep -xq Hammerspoon; then
     open -g "hammerspoon://workspace?name=${DISPLAY}"
 else
+    # Hammerspoon not running: launch it (so it's ready next time and registers itself as a
+    # login item), but show the osascript notification now since it won't catch this event.
+    open -ga Hammerspoon &>/dev/null || true
     osascript -e "display notification \"${DISPLAY}\" with title \"Workspace\"" &>/dev/null || true
 fi
