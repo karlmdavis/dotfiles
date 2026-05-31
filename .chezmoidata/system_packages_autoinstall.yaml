@@ -53,6 +53,8 @@ packages:
         - aerospace
         # Desktop automation framework for macOS (used for workspace HUD notifications).
         - hammerspoon
+        # macOS menu bar system monitor (CPU, RAM, disk, network, battery).
+        - stats
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
