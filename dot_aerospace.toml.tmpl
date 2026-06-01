@@ -45,6 +45,11 @@ on-mode-changed = []
     alt-shift-k = 'move up'
     alt-shift-l = 'move right'
 
+    ctrl-alt-shift-h = 'join-with left'
+    ctrl-alt-shift-j = 'join-with down'
+    ctrl-alt-shift-k = 'join-with up'
+    ctrl-alt-shift-l = 'join-with right'
+
     alt-minus = 'resize smart -50'
     alt-equal = 'resize smart +50'
 
@@ -122,11 +127,6 @@ on-mode-changed = []
     r = ['flatten-workspace-tree', 'mode main']
     f = ['layout floating tiling', 'mode main']
     backspace = ['close-all-windows-but-current', 'mode main']
-
-    alt-shift-h = ['join-with left', 'mode main']
-    alt-shift-j = ['join-with down', 'mode main']
-    alt-shift-k = ['join-with up', 'mode main']
-    alt-shift-l = ['join-with right', 'mode main']
 {{- $yaml := joinPath .chezmoi.homeDir ".config/aerospace/workspaces.yaml" }}
 {{- if stat $yaml }}
 {{- $content := output "cat" $yaml }}
