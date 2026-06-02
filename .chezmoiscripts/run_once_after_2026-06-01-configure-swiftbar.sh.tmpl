@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Point SwiftBar at the chezmoi-managed plugin directory and launch it, so the AeroSpace
+# workspace indicator plugin loads without the user having to configure anything by hand.
+# Runs once (on first apply after this script lands); re-run by removing its hash from
+# ~/.config/chezmoi/chezmoistate.boltdb or with `chezmoi state delete-bucket --bucket=scriptState`.
+
+PLUGIN_DIR="${HOME}/.config/swiftbar/plugins"
+
+defaults write com.ameba.SwiftBar PluginDirectory "$PLUGIN_DIR"
+# Don't show SwiftBar's own bundled demo plugins / about item clutter.
+defaults write com.ameba.SwiftBar DisableBundleApp -bool true
+
+# Launch (or no-op if already running) so the plugin loads now and SwiftBar registers itself
+# as a login item for future boots. -g keeps it from stealing focus.
+open -g -a SwiftBar || true
+
+# Known gotcha: SwiftBar may persist the plugin folder as a security-scoped sandbox bookmark
+# and ignore the `defaults write` above, prompting for a folder pick on first launch. If the
+# menu bar shows no workspace indicator, open SwiftBar → Preferences and select
+# "$PLUGIN_DIR" once; thereafter it sticks.
+echo "SwiftBar configured to load plugins from: $PLUGIN_DIR"
+echo "If the workspace indicator doesn't appear, set that folder via SwiftBar → Preferences once."
+{{ end -}}

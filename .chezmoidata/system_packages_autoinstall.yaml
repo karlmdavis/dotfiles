@@ -57,6 +57,8 @@ packages:
         - stats
         # macOS menu bar manager — hide/show/arrange menu bar items (fork of Ice).
         - thaw
+        # Scriptable macOS menu bar app (renders the AeroSpace workspace indicator plugin).
+        - swiftbar
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
