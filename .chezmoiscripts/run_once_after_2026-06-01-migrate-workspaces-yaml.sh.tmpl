@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Migrate ~/.config/aerospace/workspaces.yaml from the OLD flat "ID: Name" map to the nested
+# "ID: {name: Name}" schema introduced 2026-06-01 (which also adds optional icon/hint per
+# workspace). That file is seeded once from create_workspaces.yaml and never overwritten by
+# chezmoi, so a system that already pulled the old format won't get restructured on its own. The
+# SwiftBar plugin tolerates the old shape, but the HUD's new `.name` yq path would silently fall
+# back to bare IDs until the file is migrated.
+#
+# This only restructures (string value -> {name: <string>}); it does NOT inject icon/hint, which
+# are per-workspace human choices left for the file's owner to add. The transform is idempotent:
+# entries that are already maps are left untouched, so re-running is a no-op.
+#
+# Runs once (on first apply after this script lands); re-run by clearing its hash from
+# ~/.config/chezmoi/chezmoistate.boltdb or with `chezmoi state delete-bucket --bucket=scriptState`.
+
+YAML="${HOME}/.config/aerospace/workspaces.yaml"
+
+# Fresh systems get the new-format seed from create_workspaces.yaml; nothing to migrate here.
+if [[ ! -f "$YAML" ]]; then
+    exit 0
+fi
+
+# Without yq we can't safely transform YAML; skip rather than risk mangling the file by hand.
+if ! command -v yq &>/dev/null; then
+    echo "workspaces.yaml migration skipped: yq not found on PATH."
+    exit 0
+fi
+
+# Only act when there's actually something to migrate: count workspace entries that are still
+# plain strings (the old shape) rather than maps. If zero, the file is already nested and we leave
+# it untouched. This is the idempotency guard — crucially, we DON'T detect "needs work" by diffing
+# yq's output against the original, because yq re-emits non-ASCII as \U… escapes, so a file full
+# of emoji would always look "changed" and get needlessly (and uglily) rewritten.
+NEEDS=$(yq '[(.workspaces // {})[] | select(tag != "!!map")] | length' "$YAML" 2>/dev/null || echo 0)
+if [[ "$NEEDS" != *[1-9]* ]]; then
+    exit 0
+fi
+
+# Transform string-valued workspace entries into {name: <string>}; leave existing maps alone.
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+
+if ! yq '.workspaces[] |= (select(tag != "!!map") = {"name": .})' "$YAML" >"$TMP"; then
+    echo "workspaces.yaml migration failed: yq could not transform the file; left unchanged." >&2
+    exit 1
+fi
+
+# Sanity-check the output parses before clobbering the original (so a yq hiccup never truncates it).
+if ! yq '.' "$TMP" >/dev/null 2>&1; then
+    echo "workspaces.yaml migration failed: transformed file did not parse; left unchanged." >&2
+    exit 1
+fi
+
+mv "$TMP" "$YAML"
+trap - EXIT
+echo "Migrated $YAML to the nested workspaces schema (string names -> {name: ...})."
+echo "You can now add optional 'icon:' (emoji) and 'hint:' fields per workspace."
+{{ end -}}

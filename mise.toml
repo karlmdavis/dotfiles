@@ -1,6 +1,18 @@
 # Mise configuration for dotfiles repository
 # Task runner for linting and testing
 
+# Treat this repo as a mise monorepo so embedded mini-projects can carry their own mise.toml and be
+# driven from here via `//<path>:<task>`. `experimental` is required for the monorepo feature and
+# is set in-file so bare `mise run` (and the pre-commit hook) work without MISE_EXPERIMENTAL=1.
+experimental_monorepo_root = true
+
+[settings]
+experimental = true
+
+[monorepo]
+# Subprojects with their own mise.toml. Single-level globs only (no `**`).
+config_roots = ["private_dot_local/lib/aerospace-workspaces"]
+
 [tools]
 shellcheck = "latest"
 bats = "latest"
@@ -22,6 +34,7 @@ description = "Run unit tests"
 run = """
 echo "Running unit tests..."
 bats test/cmd-notify/ test/claude/
+mise run '//private_dot_local/lib/aerospace-workspaces:test'
 """
 
 [tasks.ci]

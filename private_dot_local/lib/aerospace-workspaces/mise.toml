@@ -1,0 +1,10 @@
+# Subproject config for the aerospace-workspaces embedded mini-project (mise monorepo member).
+# Referenced from the repo root as `//private_dot_local/lib/aerospace-workspaces:test`.
+
+[tasks.test]
+description = "Run pytest for the aerospace-workspaces package"
+# pytest runs in a fully ephemeral uv env: --no-project avoids creating a .venv / writing uv.lock
+# in this source dir, and --with pulls pytest + pyyaml on the fly (no persistent mise tool).
+# -p no:cacheprovider stops pytest from writing a .pytest_cache here.
+env = { PYTHONDONTWRITEBYTECODE = "1" }  # no __pycache__/*.pyc left in the source tree.
+run = "uv run --no-project --with pytest --with pyyaml pytest -q -p no:cacheprovider"

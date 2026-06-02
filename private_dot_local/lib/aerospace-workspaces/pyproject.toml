@@ -1,0 +1,11 @@
+[project]
+name = "aerospace-workspaces"
+version = "0.1.0"
+description = "Shared AeroSpace workspace helpers for the SwiftBar plugin and the workspace-switch HUD."
+requires-python = ">=3.11"
+dependencies = ["pyyaml"]
+
+[tool.pytest.ini_options]
+# Run pytest from this directory; the package imports as `aerospace_workspaces`.
+pythonpath = ["."]
+testpaths = ["tests"]

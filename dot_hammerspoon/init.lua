@@ -2,7 +2,17 @@ require("hs.ipc")
 hs.autoLaunch(true)
 
 hs.urlevent.bind("workspace", function(_, params)
-    hs.alert.show(params.name, { textSize = 36, strokeWidth = 0 }, nil, 0.8)
+    -- `name` already arrives with its emoji prepended (see hud-display-workspace-name.sh). When a
+    -- `hint` is present, show it as a smaller, dimmer second line below the name (and linger a bit
+    -- longer so it's readable); otherwise keep the original single-line flash.
+    local name = params.name or ""
+    if params.hint and params.hint ~= "" then
+        local text = hs.styledtext.new(name, { font = { size = 36 }, color = { white = 1 } })
+            .. hs.styledtext.new("\n" .. params.hint, { font = { size = 20 }, color = { white = 0.6 } })
+        hs.alert.show(text, { strokeWidth = 0 }, nil, 1.5)
+    else
+        hs.alert.show(name, { textSize = 36, strokeWidth = 0 }, nil, 0.8)
+    end
 end)
 
 -- Resolution switching: 4K desk mode vs windowed Screen-Sharing mode.

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{{ if eq .chezmoi.os "darwin" -}}
+# The workspace-switch HUD was rewritten from bash to Python and renamed
+# hud-display-workspace-name.sh -> hud-display-workspace-name.py (2026-06-02). chezmoi does NOT
+# remove a target file when its source is renamed, so already-applied systems keep the orphaned
+# .sh; remove it here. The aerospace keybindings now call the .py, so the .sh is dead.
+#
+# Runs once (on first apply after this script lands); re-run by clearing its hash from
+# ~/.config/chezmoi/chezmoistate.boltdb or with `chezmoi state delete-bucket --bucket=scriptState`.
+
+OLD="${HOME}/.config/aerospace/hud-display-workspace-name.sh"
+if [[ -f "$OLD" ]]; then
+    rm -f "$OLD"
+    echo "Removed orphaned $OLD (replaced by hud-display-workspace-name.py)."
+fi
+{{ end -}}

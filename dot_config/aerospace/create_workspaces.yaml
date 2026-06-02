@@ -1,8 +1,13 @@
 # Aerospace workspace configuration (machine-specific, not overwritten by chezmoi).
 # See: ~/.local/share/chezmoi/dot_aerospace.toml.tmpl
 #
-# 'workspaces' maps single-character workspace IDs to display names shown in the
-# HUD notification when switching workspaces.
+# 'workspaces' maps single-character workspace IDs to a record of optional display fields:
+#   icon  - an emoji shown as the workspace's icon in the SwiftBar menu bar and the
+#           workspace-switch HUD (plain Unicode text, so both can render it).
+#   name  - a short human-readable name shown alongside the ID.
+#   hint  - extra context for IDs whose name isn't obvious; SwiftBar shows it as a hover
+#           tooltip and the HUD shows it as a dimmer second line.
+# All three fields are optional; a workspace with no 'name' falls back to the bare ID.
 #
 # 'window-rules' auto-assigns applications to workspaces when windows open. Each
 # rule needs 'app-id' and 'workspace'; 'title-regex' is optional for apps with
@@ -13,9 +18,16 @@
 #
 # Example:
 # workspaces:
-#   N: Notes
-#   C: Comms
-#   S: Scheduling
+#   N:
+#     icon: 📝
+#     name: Notes
+#   C:
+#     icon: 💬
+#     name: Comms
+#   V:
+#     icon: 📹
+#     name: Meetings
+#     hint: 'the "v" is for "video calls"'
 #
 # window-rules:
 #   - app-id: com.tinyspeck.slackmacgap

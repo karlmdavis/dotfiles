@@ -1,1 +1,8 @@
 .worktrees/
+
+# Python build/test artifacts from embedded mini-projects (e.g. private_dot_local/lib/*).
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+uv.lock

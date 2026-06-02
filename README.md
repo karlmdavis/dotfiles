@@ -88,12 +88,20 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 #### Terminal & Windowing
 
 - [AeroSpace](https://nikitabobko.github.io/AeroSpace/guide) (macOS tiling WM):
-    [`~/.aerospace.toml`](dot_aerospace.toml.tmpl).
+    [`~/.aerospace.toml`](dot_aerospace.toml.tmpl),
+    see also: [workspace-switch HUD shim](dot_config/aerospace/executable_hud-display-workspace-name.py)
+    (logic in the [`aerospace-workspaces`](private_dot_local/lib/aerospace-workspaces/) package),
+    [`workspaces.yaml` icon/name/hint map](dot_config/aerospace/create_workspaces.yaml).
 - [Hammerspoon](https://www.hammerspoon.org/) (macOS automation):
     [`~/.hammerspoon/`](dot_hammerspoon/).
 - [iTerm2](https://iterm2.com/) (macOS terminal):
     [`~/Library/Application Support/iTerm2/DynamicProfiles/`](private_Library/private_Application%20Support/iTerm2/DynamicProfiles/),
     see also: [color schemes stash](private_Library/private_Application%20Support/iTerm2/color-schemes/).
+- [SwiftBar](https://swiftbar.app/) (macOS menu bar): AeroSpace workspace indicator at
+    [`~/.config/swiftbar/plugins/`](dot_config/swiftbar/plugins/) (a thin shim over the
+    [`aerospace-workspaces`](private_dot_local/lib/aerospace-workspaces/) package),
+    reuses the AeroSpace [`workspaces.yaml`](dot_config/aerospace/create_workspaces.yaml)
+    icon/name/hint map.
 - [tmux](https://github.com/tmux/tmux):
     [`~/.tmux.conf`](dot_tmux.conf).
 - [Zellij](https://zellij.dev/):
@@ -135,6 +143,10 @@ Custom development authored here; each could plausibly be broken out into its ow
     [`~/.local/bin/cmd-notify`](private_dot_local/bin/executable_cmd-notify),
     see also: [icon URL map](private_dot_local/share/cmd-notify/icons.txt),
     [tests](test/cmd-notify/).
+- `aerospace-workspaces` (shared AeroSpace workspace logic for the SwiftBar plugin + HUD):
+    [`~/.local/lib/aerospace-workspaces/`](private_dot_local/lib/aerospace-workspaces/),
+    a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind
+    two thin `uv`-script shims.
 - Custom Claude skills:
     [`private_dot_claude/skills/`](private_dot_claude/skills/).
 - Custom Claude slash commands:
