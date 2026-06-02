@@ -55,6 +55,8 @@ packages:
         - hammerspoon
         # macOS menu bar system monitor (CPU, RAM, disk, network, battery).
         - stats
+        # macOS menu bar manager — hide/show/arrange menu bar items (fork of Ice).
+        - thaw
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:
