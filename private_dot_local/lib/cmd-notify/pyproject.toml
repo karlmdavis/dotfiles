@@ -1,0 +1,13 @@
+[project]
+name = "cmd-notify"
+version = "0.1.0"
+description = "Desktop notification when a long-running shell command completes."
+requires-python = ">=3.11"
+# No runtime dependencies: the icon fetch uses stdlib urllib; dispatch shells out to the platform
+# notifier (terminal-notifier / notify-send).
+dependencies = []
+
+[tool.pytest.ini_options]
+# Run pytest from this directory; the package imports as `cmd_notify`.
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -12,10 +12,13 @@ docs/
 test/
 
 # Embedded mini-project dev files: keep the tooling/tests/caches out of the installed target.
-# (Only the runtime package under .local/lib/aerospace-workspaces/aerospace_workspaces/ installs.)
+# (Only the runtime package dir under each .local/lib/<project>/ installs.)
 .local/lib/aerospace-workspaces/mise.toml
 .local/lib/aerospace-workspaces/pyproject.toml
 .local/lib/aerospace-workspaces/tests
+.local/lib/cmd-notify/mise.toml
+.local/lib/cmd-notify/pyproject.toml
+.local/lib/cmd-notify/tests
 .local/lib/**/__pycache__
 .local/lib/**/.pytest_cache
 .local/lib/**/*.pyc

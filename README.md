@@ -140,9 +140,10 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 Custom development authored here; each could plausibly be broken out into its own repo.
 
 - `cmd-notify` (long-running command notifier):
-    [`~/.local/bin/cmd-notify`](private_dot_local/bin/executable_cmd-notify),
-    see also: [icon URL map](private_dot_local/share/cmd-notify/icons.txt),
-    [tests](test/cmd-notify/).
+    [`~/.local/lib/cmd-notify/`](private_dot_local/lib/cmd-notify/),
+    a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind a
+    thin shim at [`~/.local/bin/cmd-notify`](private_dot_local/bin/executable_cmd-notify),
+    see also: [icon URL map](private_dot_local/share/cmd-notify/icons.txt).
 - `aerospace-workspaces` (shared AeroSpace workspace logic for the SwiftBar plugin + HUD):
     [`~/.local/lib/aerospace-workspaces/`](private_dot_local/lib/aerospace-workspaces/),
     a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind
@@ -160,8 +161,9 @@ The notification shows the command (trimmed to 40 chars), success/failure, durat
   current directory's basename.
 Repeated runs of the same command collapse via the platform's grouping mechanism.
 
-The helper is `~/.local/bin/cmd-notify`.
-Source: `private_dot_local/bin/executable_cmd-notify`.
+The helper is `~/.local/bin/cmd-notify`, a thin shim (source:
+  `private_dot_local/bin/executable_cmd-notify`) over the `cmd_notify` Python package at
+  `~/.local/lib/cmd-notify/` (source + pytest tests: `private_dot_local/lib/cmd-notify/`).
 Shell wiring lives in `.chezmoitemplates/config.nu` (nu), `dot_bashrc.tmpl` (bash), and
   `dot_zshrc` (zsh).
 

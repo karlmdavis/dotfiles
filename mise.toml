@@ -11,7 +11,10 @@ experimental = true
 
 [monorepo]
 # Subprojects with their own mise.toml. Single-level globs only (no `**`).
-config_roots = ["private_dot_local/lib/aerospace-workspaces"]
+config_roots = [
+  "private_dot_local/lib/aerospace-workspaces",
+  "private_dot_local/lib/cmd-notify",
+]
 
 [tools]
 shellcheck = "latest"
@@ -23,7 +26,6 @@ description = "Run shellcheck on managed bash scripts"
 run = """
 echo "Running shellcheck..."
 shellcheck \
-  private_dot_local/bin/executable_cmd-notify \
   .chezmoiscripts/run_install_rustup.sh
 
 echo "✓ Shellcheck passed!"
@@ -33,8 +35,9 @@ echo "✓ Shellcheck passed!"
 description = "Run unit tests"
 run = """
 echo "Running unit tests..."
-bats test/cmd-notify/ test/claude/
+bats test/claude/
 mise run '//private_dot_local/lib/aerospace-workspaces:test'
+mise run '//private_dot_local/lib/cmd-notify:test'
 """
 
 [tasks.ci]

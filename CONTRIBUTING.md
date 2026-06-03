@@ -9,6 +9,8 @@ This repository uses [mise](https://mise.jdx.dev/) as a task runner for linting 
 - **mise** - Tool version manager and task runner
 - **shellcheck** - Bash script linter (installed via mise)
 - **bats-core** - Bash testing framework (installed via mise)
+- **uv** - Runs the embedded Python mini-projects' pytest suites as an ephemeral (no persistent
+    pytest tool); installed via the package manifest.
 - **nushell** - Shell with testing support (installed via system package manager)
 
 ### Initial Setup
@@ -49,11 +51,16 @@ mise run test
 mise run ci
 ```
 
-**Note:** This repo uses simple task names (`:lint`, `:test`) without `//` prefixes. No special quoting needed in any shell.
+**Note:** Top-level tasks use simple names (`:lint`, `:test`). The repo is also a mise monorepo:
+  embedded mini-projects under `private_dot_local/lib/*` carry their own `mise.toml`, and the root
+  `:test` cascades into them via `//<path>:<task>` (e.g.
+  `//private_dot_local/lib/cmd-notify:test`).
 
 ## Testing
 
-Unit tests live under `test/` and use the bats framework.
+Two test idioms coexist: **bats** under `test/` for shell/template helpers, and **pytest** for the
+  embedded Python mini-projects (`private_dot_local/lib/*/tests/`), the latter run as a `uv`
+  ephemeral via the mise monorepo.
 
 ### Running Tests
 
@@ -68,10 +75,12 @@ mise run ci                 # Lint + test in parallel
 ```
 
 **Test structure:**
-- `test/cmd-notify/` - Long-running command notifier tests.
-    Drives the helper with `--dry-run` and asserts on the would-be notifier invocation; no
-    external mocks needed.
-- `test/claude/` - Tests for the Claude Code `modify_settings.json.tmpl` merge script.
+- `private_dot_local/lib/cmd-notify/tests/` - Long-running command notifier (pytest).
+    Drives the helper with `--dry-run` / env seams and asserts on the would-be notifier
+    invocation; no external mocks needed.
+- `private_dot_local/lib/aerospace-workspaces/tests/` - AeroSpace workspace indicator + HUD
+    (pytest).
+- `test/claude/` - Tests for the Claude Code `modify_settings.json.tmpl` merge script (bats).
 
 ## Pre-commit Hooks
 
@@ -92,8 +101,8 @@ mise run lint
 ```
 
 Shellcheck validates the managed bash scripts listed in `mise.toml`'s `[tasks.lint]` block —
-  currently `private_dot_local/bin/executable_cmd-notify` and
-  `.chezmoiscripts/run_install_rustup.sh`.
+  currently `.chezmoiscripts/run_install_rustup.sh`.
+(The Python mini-projects are covered by their pytest suites, not shellcheck.)
 
 ## Chezmoi Workflow
 

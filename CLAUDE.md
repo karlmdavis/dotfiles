@@ -241,21 +241,32 @@ mise run test
 mise run ci
 ```
 
-**Note:** This is a dotfiles repo, not a monorepo. Task names use simple `:task` syntax (no `//` prefixes needed).
+**Note:** Top-level tasks use simple `:task` syntax. Embedded mini-projects (see below) are mise
+  monorepo members with their own `mise.toml`; the root `:test` cascades into them via
+  `//<path>:<task>` (e.g. `//private_dot_local/lib/cmd-notify:test`).
 
 ### Testing Approach
 
-Tests use the bats framework and live under `test/`.
-The `cmd-notify` suite (`test/cmd-notify/`) drives the helper with its `--dry-run` flag and
-  asserts on the would-be notifier invocation, so no external mocks are needed.
+Two test idioms coexist:
+- **bats** (under `test/`) for the shell/template helpers — currently `test/claude/` (the
+    `modify_settings.json.tmpl` merge script).
+- **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
+    `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
+    The root `mise run test` cascades into each via the mise monorepo.
+
+Both follow the same no-mock philosophy: drive the code through `--dry-run` / env seams and assert
+  on the would-be side effect (e.g. `cmd-notify`'s would-be notifier invocation), rather than
+  mocking. `cmd-notify`'s logic lives in the `cmd_notify` package with the side-effecting I/O (icon
+  fetch, notifier dispatch) isolated behind pure functions.
 
 **Pre-commit hooks:** Run `:ci` automatically before each commit (lint + test in parallel).
 
 ### Long-Running Command Notifications
 
-`~/.local/bin/cmd-notify` (source: `private_dot_local/bin/executable_cmd-notify`) is a single
-  bash helper that fires a desktop notification when a command in any interactive shell exceeds
-  `CMD_NOTIFY_THRESHOLD` seconds (default 60).
+`~/.local/bin/cmd-notify` (a thin shim, source: `private_dot_local/bin/executable_cmd-notify`,
+  over the `cmd_notify` Python package at `private_dot_local/lib/cmd-notify/`) fires a desktop
+  notification when a command in any interactive shell exceeds `CMD_NOTIFY_THRESHOLD` seconds
+  (default 60).
 Notifications are grouped per command basename so repeats collapse, and an optional icon is
   looked up in `~/.local/share/cmd-notify/icons.txt` (`key=url` format) and lazy-fetched to
   `~/.cache/cmd-notify/icons/`.
