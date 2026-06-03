@@ -1,8 +1,21 @@
 require("hs.ipc")
 hs.autoLaunch(true)
 
+-- Auto-reload this config whenever a .lua file in the config dir changes on disk (e.g. after
+-- `chezmoi apply`), so edits take effect without a manual reload. A long-running Hammerspoon
+-- otherwise keeps executing the config it loaded at startup — which is exactly why the
+-- workspace-hint handler didn't take effect after it was added.
+configWatcher = hs.pathwatcher.new(hs.configdir, function(paths)
+    for _, p in ipairs(paths) do
+        if p:sub(-4) == ".lua" then
+            hs.reload()
+            return
+        end
+    end
+end):start()
+
 hs.urlevent.bind("workspace", function(_, params)
-    -- `name` already arrives with its emoji prepended (see hud-display-workspace-name.sh). When a
+    -- `name` already arrives with its emoji prepended (see hud-display-workspace-name.py). When a
     -- `hint` is present, show it as a smaller, dimmer second line below the name (and linger a bit
     -- longer so it's readable); otherwise keep the original single-line flash.
     local name = params.name or ""
