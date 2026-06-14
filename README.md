@@ -125,7 +125,7 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 - [PostgreSQL psql](https://www.postgresql.org/docs/current/app-psql.html):
     [`~/.psqlrc`](dot_psqlrc).
 - [Rust toolchain](https://www.rust-lang.org/) (installer only):
-    [`.chezmoiscripts/run_install_rustup.sh`](.chezmoiscripts/run_install_rustup.sh).
+    [`.chezmoiscripts/run_onchange_install_rustup.sh`](.chezmoiscripts/run_onchange_install_rustup.sh).
 
 #### System Ops
 
