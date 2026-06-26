@@ -14,6 +14,12 @@ configWatcher = hs.pathwatcher.new(hs.configdir, function(paths)
     end
 end):start()
 
+-- Keyboard-shortcut cheat-sheet HUD: ⌥⇧/ toggles a panel of curated shortcuts (data in
+-- shortcuts.lua, rendering in shortcuts_hud.lua). Also reachable via hammerspoon://shortcuts.
+local shortcutsHud = require("shortcuts_hud")
+hs.hotkey.bind({ "alt", "shift" }, "/", function() shortcutsHud.toggle() end)
+hs.urlevent.bind("shortcuts", function() shortcutsHud.toggle() end)
+
 hs.urlevent.bind("workspace", function(_, params)
     -- `name` already arrives with its emoji prepended (see hud-display-workspace-name.py). When a
     -- `hint` is present, show it as a smaller, dimmer second line below the name (and linger a bit
