@@ -1,0 +1,12 @@
+{{ if and .isCMS (eq .chezmoi.os "darwin") -}}
+#!/usr/bin/env bash
+# CMS workstations no longer deploy the iTerm2 remote-host DynamicProfiles (excluded via
+# .chezmoiignore as of 2026-06-26). chezmoi does not delete previously-installed files when their
+# source becomes ignored, so remove any already-deployed ones here. Harmless if absent.
+set -euo pipefail
+
+profiles_dir="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
+for f in karl-scaleway-mini.json karl-eddings.json karl-mantis.json work-wifi-longview.json; do
+  rm -f "$profiles_dir/$f"
+done
+{{ end -}}

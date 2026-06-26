@@ -1,0 +1,9 @@
+{
+  "Profiles": [{
+    "Name" : "karl@mantis",
+    "Guid" : "E279E6B2-4A78-4EAE-81DB-39BB2952C855",
+    "Dynamic Profile Parent Name" : "zellij",
+    "Command" : "/opt/homebrew/bin/mosh --server=/opt/homebrew/bin/mosh-server karl@mantis.tail26736d.ts.net",
+    "Custom Command" : "Yes"
+  }]
+}

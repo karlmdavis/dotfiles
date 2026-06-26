@@ -85,6 +85,20 @@ When adding a tool that ships on every system, update both files.
 CLAUDE.md's "Cross-shell PATH/utility setup" section is the canonical write-up of this
   invariant.
 
+### Per-host / per-role exclusion (beyond OS)
+
+Sometimes a file should apply on only *some* machines of the same OS — keyed on the host
+  itself, or on whether it's a personal vs CMS (work) box.
+Gate these in [`.chezmoiignore`](../../.chezmoiignore) (it's a template) using the built-in
+  `.chezmoi.hostname` and the repo's `.isCMS` boolean — no new init prompt is needed for
+  either.
+The worked example is the macOS iTerm2 block: it self-excludes the profile for the host you're
+  on with `.../DynamicProfiles/karl-{{ "{{" }} .chezmoi.hostname {{ "}}" }}.json` (so mantis
+  never gets a profile that SSHes into mantis), and under `{{ "{{" }} if .isCMS {{ "}}" }}` it
+  excludes every personal remote-host profile so the work machine can't reach personal systems.
+Reclassifying an already-applied file this way incurs cleanup debt (see below) — pair it with a
+  cleanup script gated on the same condition.
+
 ### Cleanup debt
 
 When you reclassify a file from "applied here" to "ignored here" — or move a managed

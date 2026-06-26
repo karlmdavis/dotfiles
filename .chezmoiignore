@@ -41,3 +41,18 @@ Library/
 .config/i3
 .config/i3status
 {{- end }}
+
+{{ if eq .chezmoi.os "darwin" }}
+# iTerm2 remote-host profiles deploy per-machine (the base `zellij` profile always applies):
+#   - never deploy the profile for the host you're on (no SSHing into yourself); keyed on
+#     hostname, so karl-<hostname>.json self-excludes (e.g. karl-mantis.json on mantis).
+#   - on CMS (work) workstations, deploy none of the remote-host profiles, so the work machine
+#     can't reach personal systems.
+Library/Application Support/iTerm2/DynamicProfiles/karl-{{ .chezmoi.hostname }}.json
+{{- if .isCMS }}
+Library/Application Support/iTerm2/DynamicProfiles/karl-scaleway-mini.json
+Library/Application Support/iTerm2/DynamicProfiles/karl-eddings.json
+Library/Application Support/iTerm2/DynamicProfiles/karl-mantis.json
+Library/Application Support/iTerm2/DynamicProfiles/work-wifi-longview.json
+{{- end }}
+{{- end }}

@@ -3,7 +3,7 @@
     "Name" : "karl@scaleway-mini",
     "Guid" : "84801F28-C1B9-4965-9D5B-A35107C9A0E1",
     "Dynamic Profile Parent Name" : "zellij",
-    "Command" : "it2ssh karl@scaleway-mini",
+    "Command" : "/opt/homebrew/bin/mosh --server=/opt/homebrew/bin/mosh-server karl@scaleway-mini.tail26736d.ts.net",
     "Custom Command" : "Yes"
   }]
 }

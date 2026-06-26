@@ -1,6 +1,6 @@
 {
   "Profiles": [{
-    "Name" : "work-wifi-longview",
+    "Name" : "karl@work-wifi-longview",
     "Guid" : "3D895BC3-EFBE-414A-9571-264457318CBC",
     "Dynamic Profile Parent Name" : "zellij",
     "Command" : "it2ssh work-laptop-wifi.intranet.justdavis.com",

@@ -1,0 +1,9 @@
+{
+  "Profiles": [{
+    "Name" : "karl@eddings",
+    "Guid" : "B1A20E77-7F20-4B01-AF06-69BB4B4259ED",
+    "Dynamic Profile Parent Name" : "zellij",
+    "Command" : "/opt/homebrew/bin/mosh karl@eddings.tail26736d.ts.net",
+    "Custom Command" : "Yes"
+  }]
+}
