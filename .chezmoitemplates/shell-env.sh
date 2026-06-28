@@ -88,6 +88,12 @@ fi
 # Aliases
 ##
 
+# Expand aliases in non-interactive shells (e.g. Hermes agent sessions, bash -l -c).
+# zsh expands aliases by default; bash does not without this.
+if [ -n "$BASH_VERSION" ]; then
+  shopt -s expand_aliases 2>/dev/null
+fi
+
 # `td` — Todoist CLI via pinned npx fetch (no global install).
 # Mirrors the nushell alias in .chezmoitemplates/config.nu.
 alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
