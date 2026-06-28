@@ -156,6 +156,11 @@ desired="$(cat <<'SETTINGS_JSON'
     "mode": "hold"
   },
   "skipDangerousModePermissionPrompt": true,
+  "tui": "fullscreen",
+  "statusLine": {
+    "type": "command",
+    "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
+  },
   "preferredNotifChannel": "iterm2_with_bell",
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
