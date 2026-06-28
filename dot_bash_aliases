@@ -1,5 +1,2 @@
 alias :e='vim'
-alias :ls='echo "Don'"'"'t be a dipshit."'
-
-# `td` — Todoist CLI via pinned npx fetch (no global install).
-alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
+alias :ls='echo "Don'\''t be a dipshit."'

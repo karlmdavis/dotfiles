@@ -85,6 +85,15 @@ fi
 
 
 ##
+# Aliases
+##
+
+# `td` — Todoist CLI via pinned npx fetch (no global install).
+# Mirrors the nushell alias in .chezmoitemplates/config.nu.
+alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
+
+
+##
 # Machine-local overrides
 ##
 
