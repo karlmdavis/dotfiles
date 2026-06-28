@@ -52,6 +52,12 @@ unset _zcd
 # Aliases
 ##
 
+# Shell-wide aliases (td, etc.) live in the shared shell-env.sh snippet, sourced
+# unconditionally by ~/.bash_profile and ~/.zprofile — not here. This section
+# is for zsh-specific aliases only (none currently).
+
+##
+
 ##
 # Tool version manager.
 ##

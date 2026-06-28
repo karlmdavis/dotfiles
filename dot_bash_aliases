@@ -1,2 +1,6 @@
+# Shell-wide aliases (td, etc.) live in the shared shell-env.sh snippet, sourced
+# unconditionally by ~/.bash_profile and ~/.zprofile — not here. This file is
+# for bash-specific aliases only.
+
 alias :e='vim'
 alias :ls='echo "Don'\''t be a dipshit."'
