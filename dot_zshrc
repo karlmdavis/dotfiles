@@ -34,11 +34,19 @@ setopt HIST_IGNORE_SPACE
 ##
 
 autoload -Uz compinit
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
-  compinit
+# Rebuild the dump (and run the security audit) at most once a day; otherwise load the cached
+# dump fast with -C (no audit). The staleness check must be a real glob (array assignment): inside
+# [[ ]] no filename generation happens, so the old [[ -n ...(#q...) ]] form was always true and the
+# audit ran on every shell. -i makes the audit silently ignore untrusted files (e.g. Docker
+# Desktop's _docker symlinks, owned by another account) instead of presenting a blocking [y/n]
+# prompt that corrupts the terminal pane.
+_zcd=(${ZDOTDIR:-$HOME}/.zcompdump(N.mh+24))
+if (( $#_zcd )); then
+  compinit -i
 else
   compinit -C
 fi
+unset _zcd
 
 ##
 # Aliases.
