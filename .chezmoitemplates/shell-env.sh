@@ -83,7 +83,6 @@ if command -v hx >/dev/null 2>&1; then
   export VISUAL="hx"
 fi
 
-
 ##
 # Aliases
 ##

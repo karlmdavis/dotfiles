@@ -166,7 +166,20 @@ desired="$(cat <<'SETTINGS_JSON'
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "inputNeededNotifEnabled": true
+  "inputNeededNotifEnabled": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{ .chezmoi.homeDir }}/.local/lib/check-mise-usage.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
 SETTINGS_JSON
 )"
