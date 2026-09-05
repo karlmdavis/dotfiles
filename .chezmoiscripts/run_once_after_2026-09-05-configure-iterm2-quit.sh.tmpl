@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Stop iTerm2 from asking "Are you sure you want to quit?" when it has open sessions.
+# That prompt blocks macOS software-update restarts: on 2026-09-05 scaleway-mini's 26.6.2
+# restart was aborted by loginwindow with "iTerm2 did not quit", which (on a remote box
+# where Tailscale's GUI app had already quit) meant a lockout until the SSH fallback was used.
+# Quit-with-sessions is harmless here: zellij sessions persist independently of iTerm2.
+# Runs once per machine; re-run by removing its hash from ~/.config/chezmoi/chezmoistate.boltdb
+# or with `chezmoi state delete-bucket --bucket=scriptState`.
+
+defaults write com.googlecode.iterm2 PromptOnQuit -bool false
+echo "iTerm2: PromptOnQuit disabled (quit no longer blocks logout/restart)"
+{{ end -}}
