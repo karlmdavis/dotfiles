@@ -132,6 +132,19 @@ exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallpl
     r = ['flatten-workspace-tree', 'mode main']
     f = ['layout floating tiling', 'mode main']
     backspace = ['close-all-windows-but-current', 'mode main']
+
+# Keyboard passthrough for remote-desktop sessions. Deliberately EMPTY: with this mode active
+# AeroSpace registers no hotkeys at all, so ⌥ 2 & friends fall through to the focused app and
+# Screen Sharing forwards them to the remote Mac (which runs this same config). Without it macOS
+# resolves AeroSpace's system-wide Carbon hotkeys before Screen Sharing ever sees the key event,
+# so "View > Keyboard Controls Remote Device" has nothing to forward.
+#
+# Entering and leaving this mode is driven by Hammerspoon on Screen Sharing app activation --
+# see the remote-desktop keyboard passthrough section of dot_hammerspoon/init.lua. The escape
+# hatch is ⌃⌥⌘⇧ P, deliberately a Hammerspoon hotkey rather than an AeroSpace binding: it has to
+# keep working with every AeroSpace binding unregistered, and two apps cannot both register the
+# same Carbon hotkey. `aerospace mode main` in a terminal is the last resort.
+[mode.passthrough.binding]
 {{- $yaml := joinPath .chezmoi.homeDir ".config/aerospace/workspaces.yaml" }}
 {{- if stat $yaml }}
 {{- $content := output "cat" $yaml }}

@@ -119,3 +119,51 @@ end
 
 hs.hotkey.bind({"ctrl", "alt", "cmd"}, "4", function() switchResolution("4k") end)
 hs.hotkey.bind({"ctrl", "alt", "cmd"}, "1", function() switchResolution("screenshare") end)
+
+-- Remote-desktop keyboard passthrough. AeroSpace registers its bindings as system-wide Carbon
+-- hotkeys, which macOS resolves *before* delivering the key event to the frontmost app — so
+-- Screen Sharing never received ⌥ 2 and had nothing to forward, and "View > Keyboard Controls
+-- Remote Device" has no say over another app's hotkey registration. Flipping AeroSpace into its
+-- empty `passthrough` mode (see dot_aerospace.toml.tmpl) unregisters every binding, letting the
+-- chord reach Screen Sharing and, from there, the remote Mac's AeroSpace — which runs this same
+-- config, so no separate local/remote keybindings are needed.
+local AEROSPACE = "/opt/homebrew/bin/aerospace"
+local REMOTE_APPS = { ["com.apple.ScreenSharing"] = true }
+local passthrough = false
+
+local function isRemoteApp(app)
+    return app ~= nil and REMOTE_APPS[app:bundleID()] == true
+end
+
+local function setPassthrough(enable, announce)
+    if enable == passthrough then return end
+    passthrough = enable
+    hs.task.new(AEROSPACE, nil, { "mode", enable and "passthrough" or "main" }):start()
+    if announce then
+        hs.alert.show(enable and "⌨️ → remote" or "⌨️ → local", alertStyle, nil, 0.8)
+    end
+end
+
+-- App *activation* is the trigger rather than AeroSpace's own on-focus-changed: it fires once per
+-- app switch instead of on every window focus change, and it keeps working when Screen Sharing is
+-- in a native macOS full-screen space. Global so the watcher survives garbage collection.
+remoteKeyWatcher = hs.application.watcher.new(function(_, event, app)
+    if event ~= hs.application.watcher.activated then return end
+    setPassthrough(isRemoteApp(app), false)
+end)
+remoteKeyWatcher:start()
+
+-- Manual toggle / escape hatch. Hammerspoon registers its own system-wide hotkey, so this still
+-- fires while AeroSpace has every binding unregistered. Escaping keeps local control until you
+-- switch apps and come back — the watcher re-decides on the next activation.
+hs.hotkey.bind({ "ctrl", "alt", "cmd", "shift" }, "p", function()
+    setPassthrough(not passthrough, true)
+end)
+
+-- Force AeroSpace's mode to match on load. Hammerspoon may have reloaded (configWatcher, after a
+-- `chezmoi apply`) while AeroSpace was left sitting in `passthrough`, and the local `passthrough`
+-- flag always starts false — so seed it inverted to defeat the no-op guard in setPassthrough and
+-- guarantee the mode command is actually issued.
+local frontIsRemote = isRemoteApp(hs.application.frontmostApplication())
+passthrough = not frontIsRemote
+setPassthrough(frontIsRemote, false)

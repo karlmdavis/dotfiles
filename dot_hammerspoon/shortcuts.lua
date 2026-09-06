@@ -45,6 +45,7 @@ return {
         items = {
             { keys = "⌃⌥⌘ 4", desc = "4K desk mode" },
             { keys = "⌃⌥⌘ 1", desc = "Screen-Sharing windowed mode" },
+            { keys = "⌃⌥⌘⇧ P", desc = "Toggle remote-keyboard passthrough (auto on Screen Sharing)" },
             { keys = "⌥⇧ /", desc = "Toggle this shortcut panel · Esc closes" },
         },
     },
