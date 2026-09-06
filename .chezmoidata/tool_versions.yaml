@@ -4,7 +4,11 @@
 #
 # Referenced from ../.chezmoitemplates/shell-aliases.sh (bash/zsh) and ../.chezmoitemplates/config.nu
 # (nushell), so a version lives in exactly one place across all three shells.
+#
+# Also referenced from ../.chezmoiscripts/run_onchange_todoist_skill.sh.tmpl: the Todoist CLI ships its own
+# Claude Code skill, so bumping todoist_cli below re-installs that skill to match. Bump the pin and let
+# `chezmoi apply` do the rest -- do not hand-edit ~/.claude/skills/todoist-cli/.
 ##
 tools:
   # Todoist CLI, run via `npx --package=... -- td` (no global install).
-  todoist_cli: "@doist/todoist-cli@1.60.0"
+  todoist_cli: "@doist/todoist-cli@5.2.1"

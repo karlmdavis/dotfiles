@@ -135,6 +135,9 @@ So `.chezmoitemplates/shell-aliases.sh` is included from BOTH entry points: the 
   Redefining an alias is idempotent, so the overlap is harmless.
 Pinned versions used by aliases live in `.chezmoidata/tool_versions.yaml` and are shared with the
   nushell equivalents in `.chezmoitemplates/config.nu`, so a version is edited in exactly one place.
+The Todoist CLI additionally ships its own Claude Code skill, so bumping `todoist_cli` in that file also
+  re-installs the skill via `.chezmoiscripts/run_onchange_todoist_skill.sh.tmpl`, keeping
+  `~/.claude/skills/todoist-cli/` (vendor-owned, not chezmoi-managed source) in step with the pin.
 Nushell uses `path add` (prepends) vs `++=` (appends); all additions check for directory existence first.
 Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on every system — SDKMAN,
   Docker, GUI apps, etc.) belong in the per-machine local files (`~/.config/shell/env.local.sh` for
