@@ -66,9 +66,10 @@ The repository uses a sophisticated template hierarchy:
 - `dot_bashrc.tmpl` - Interactive bash setup (history, completion, aliases, starship); Linux-only niceties gated off macOS
 - `dot_zprofile.tmpl` - Zsh login shells: shared PATH/utility setup, then the zellij launcher
 - `dot_zshenv` - Sourced for every zsh invocation; minimal (keeps PATH entries unique)
-- `dot_zshrc` - Interactive zsh setup (history, completion, aliases, starship); no PATH (see shared snippet)
-- `dot_bash_aliases` - Bash aliases
+- `dot_zshrc.tmpl` - Interactive zsh setup (history, completion, aliases, starship); no PATH (see shared snippet)
+- `dot_bash_aliases` - Bash-specific aliases only (shell-wide ones live in `shell-aliases.sh`)
 - `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
+- `.chezmoitemplates/shell-aliases.sh` - Canonical shell-wide aliases, included by BOTH the login and rc files
 - `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
   - PATH management for Homebrew, Cargo, Volta, pipx, and the generic bin dirs (kept in sync with `shell-env.sh`)
@@ -122,6 +123,18 @@ Bash and zsh source `.chezmoitemplates/shell-env.sh` from their login files
   — add a new tool in both places.
 PATH lives in the login files (after macOS `path_helper`, which runs in `/etc/zprofile` and `/etc/profile`
   and would otherwise reorder it); the interactive rc files (`~/.bashrc`, `~/.zshrc`) hold no PATH.
+
+**Cross-shell aliases:**
+Aliases are a different kind of thing from PATH/env and must NOT go in `shell-env.sh`.
+Env vars and PATH are inherited by child processes, so setting them once in the login files covers
+  every descendant shell. Aliases are per-shell-instance state and are not inherited.
+So `.chezmoitemplates/shell-aliases.sh` is included from BOTH entry points: the login files
+  (`~/.bash_profile`, `~/.zprofile`) for non-interactive login shells, which never reach `~/.bashrc`
+  (it returns early when non-interactive) or `~/.zshrc` (zsh skips it when non-interactive); and the rc
+  files (`~/.bashrc`, `~/.zshrc`) for non-login interactive shells, which never read the login files.
+  Redefining an alias is idempotent, so the overlap is harmless.
+Pinned versions used by aliases live in `.chezmoidata/tool_versions.yaml` and are shared with the
+  nushell equivalents in `.chezmoitemplates/config.nu`, so a version is edited in exactly one place.
 Nushell uses `path add` (prepends) vs `++=` (appends); all additions check for directory existence first.
 Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on every system — SDKMAN,
   Docker, GUI apps, etc.) belong in the per-machine local files (`~/.config/shell/env.local.sh` for
@@ -271,7 +284,7 @@ Notifications are grouped per command basename so repeats collapse, and an optio
   looked up in `~/.local/share/cmd-notify/icons.txt` (`key=url` format) and lazy-fetched to
   `~/.cache/cmd-notify/icons/`.
 Shell hooks live in `.chezmoitemplates/config.nu` (nu), `dot_bashrc.tmpl` (bash), and
-  `dot_zshrc` (zsh).
+  `dot_zshrc.tmpl` (zsh).
 Disable with `CMD_NOTIFY_DISABLE=1`.
 
 Claude Code's "needs attention" / "task done" notifications are handled by Claude's native

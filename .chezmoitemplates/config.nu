@@ -97,7 +97,9 @@ source local.nu
 ##
 
 # `td` — Todoist CLI via pinned npx fetch (no global install).
-alias td = npx --package=@doist/todoist-cli@1.60.0 -- td
+# Version pinned in .chezmoidata/tool_versions.yaml, shared with the bash/zsh alias in
+# .chezmoitemplates/shell-aliases.sh.
+alias td = npx --package={{ .tools.todoist_cli }} -- td
 
 
 ##

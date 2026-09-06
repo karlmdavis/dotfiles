@@ -1,6 +1,6 @@
-# Shell-wide aliases (td, etc.) live in the shared shell-env.sh snippet, sourced
-# unconditionally by ~/.bash_profile and ~/.zprofile — not here. This file is
-# for bash-specific aliases only.
+# Shell-wide aliases (td, etc.) live in the shared shell-aliases.sh snippet, included
+# by ~/.bash_profile (for non-interactive login shells) and ~/.bashrc (for non-login
+# interactive ones) — not here. This file is for bash-specific aliases only.
 
 alias :e='vim'
 alias :ls='echo "Don'\''t be a dipshit."'

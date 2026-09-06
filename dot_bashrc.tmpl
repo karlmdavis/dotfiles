@@ -56,7 +56,9 @@ fi
 # Aliases & local overrides
 ##
 
-# Shared aliases (managed separately as ~/.bash_aliases).
+{{ template "shell-aliases.sh" . }}
+
+# Bash-specific aliases (managed separately as ~/.bash_aliases).
 [ -f "$HOME/.bash_aliases" ] && . "$HOME/.bash_aliases"
 
 # Per-machine, unmanaged escape hatch.

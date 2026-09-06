@@ -1,0 +1,10 @@
+##
+# Pinned versions for tools fetched on demand rather than installed via the package manifest
+# (see system_packages_autoinstall.yaml for those).
+#
+# Referenced from ../.chezmoitemplates/shell-aliases.sh (bash/zsh) and ../.chezmoitemplates/config.nu
+# (nushell), so a version lives in exactly one place across all three shells.
+##
+tools:
+  # Todoist CLI, run via `npx --package=... -- td` (no global install).
+  todoist_cli: "@doist/todoist-cli@1.60.0"

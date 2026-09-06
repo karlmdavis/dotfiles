@@ -1,6 +1,10 @@
 ##
 # Shared PATH / utility / environment setup.
 #
+# Env vars and PATH only -- they are inherited by child processes, so setting them once in the
+# login files covers every descendant shell. Aliases are NOT inherited and live in the sibling
+# snippet .chezmoitemplates/shell-aliases.sh, which is included from the rc files as well.
+#
 # Included by ~/.bash_profile (bash) and ~/.zprofile (zsh); the nushell equivalent lives in
 # .chezmoitemplates/config.nu and is kept in sync with this list. Placed in the login files so it runs
 # after macOS path_helper (correct precedence) and stays silent (scp/rsync safe). POSIX sh — the same
@@ -79,21 +83,6 @@ if command -v hx >/dev/null 2>&1; then
   export EDITOR="hx"
   export VISUAL="hx"
 fi
-
-##
-# Aliases
-##
-
-# Expand aliases in non-interactive shells (e.g. Hermes agent sessions, bash -l -c).
-# zsh expands aliases by default; bash does not without this.
-if [ -n "$BASH_VERSION" ]; then
-  shopt -s expand_aliases 2>/dev/null
-fi
-
-# `td` — Todoist CLI via pinned npx fetch (no global install).
-# Mirrors the nushell alias in .chezmoitemplates/config.nu.
-alias td='npx --package=@doist/todoist-cli@1.60.0 -- td'
-
 
 ##
 # Machine-local overrides

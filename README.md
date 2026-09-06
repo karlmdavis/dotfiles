@@ -42,7 +42,7 @@ See `[.chezmoi.toml.tmpl](./.chezmoi.toml.tmpl)` to adjust that, if needed.
 ├── .chezmoidata/                # data injected into .tmpl files (e.g. package manifest)
 ├── .chezmoiignore               # OS-conditional skip patterns
 ├── .chezmoiscripts/             # run-only scripts; not installed. See .claude/rules/file-placement.md
-├── .chezmoitemplates/           # shared template partials (shell-env.sh, config.nu, ...)
+├── .chezmoitemplates/           # shared template partials (shell-env.sh, shell-aliases.sh, config.nu, ...)
 ├── .claude/                     # agent config for this repo
 │   └── rules/                   # short, decisive guidance files for agents
 ├── .githooks/pre-commit         # runs `mise run ci` before each commit
@@ -81,7 +81,7 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     [`~/.config/starship.toml`](dot_config/starship.toml),
     see also: [lite (no-nerd-font) variant](dot_config/starship-lite.toml).
 - [Zsh](https://www.zsh.org/):
-    [`~/.zshrc`](dot_zshrc),
+    [`~/.zshrc`](dot_zshrc.tmpl),
     see also: [`~/.zprofile`](dot_zprofile.tmpl),
     [`~/.zshenv`](dot_zshenv).
 
@@ -165,7 +165,7 @@ The helper is `~/.local/bin/cmd-notify`, a thin shim (source:
   `private_dot_local/bin/executable_cmd-notify`) over the `cmd_notify` Python package at
   `~/.local/lib/cmd-notify/` (source + pytest tests: `private_dot_local/lib/cmd-notify/`).
 Shell wiring lives in `.chezmoitemplates/config.nu` (nu), `dot_bashrc.tmpl` (bash), and
-  `dot_zshrc` (zsh).
+  `dot_zshrc.tmpl` (zsh).
 
 Per-command icons are optional.
 Edit `~/.local/share/cmd-notify/icons.txt` (`key=url`, one per line) and the helper fetches
