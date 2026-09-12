@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Before 2026-05-26 chezmoi managed ~/.claude/settings.local.json from a template whose only
+# content was empty permission lists. That source was dropped and later replaced by a
+# `create_` JSONC stub, but `create_` never overwrites an existing file, so hosts that got the
+# old template still carry `{"permissions":{"allow":[],"deny":[],"ask":[]}}` (2026-09-11).
+# That stub carries no information, so remove it when (and only when) the file is exactly that,
+# letting the `create_` stub regenerate it in this same apply. A file with any real content
+# (machine-specific allow rules etc.) is left untouched.
+#
+# `run_once_before` so the removal happens before chezmoi applies `create_settings.local.json`.
+# Re-run by clearing its hash with `chezmoi state delete-bucket --bucket=scriptState`.
+
+FILE="{{ .chezmoi.homeDir }}/.claude/settings.local.json"
+STUB='{"permissions":{"allow":[],"ask":[],"deny":[]}}'
+
+if [[ -f "$FILE" ]] && command -v jq >/dev/null 2>&1; then
+    if [[ "$(jq -S -c . "$FILE" 2>/dev/null || true)" == "$STUB" ]]; then
+        rm -f "$FILE"
+        echo "Removed legacy empty-permissions stub $FILE (chezmoi will regenerate the JSONC overlay)."
+    fi
+fi

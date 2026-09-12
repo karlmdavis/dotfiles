@@ -2,11 +2,13 @@
 # chezmoi modify_ script for ~/.claude/settings.json.
 #
 # The base settings are version-controlled below. Machine-specific overrides live in
-# ~/.claude/settings.local.json (JSONC; // line comments allowed) and are deep-merged
-# on top at apply time. Claude Code rewrites settings.json at runtime and reorders keys,
-# so this script compares semantically (via jq -S) to avoid perpetual diff noise:
-#   - if the live file is semantically equal to our merged desired settings, emit the
-#     live bytes unchanged (no diff);
+# ~/.claude/settings.local.json (JSONC; // line comments allowed; this repo's overlay,
+# not a Claude Code file) and are merged on top at apply time (objects recurse, lists
+# union, scalars replace). Claude Code rewrites settings.json at runtime: it reorders
+# keys and persists a few choices of its own (e.g. `/model` writes `model`). So:
+#   - runtime-owned keys (RUNTIME_KEYS below) are carried through from the live file;
+#   - the comparison is semantic (via jq -S): if the live file equals our merged
+#     desired settings, emit the live bytes unchanged (no diff);
 #   - otherwise emit the merged desired settings (chezmoi wins).
 set -eu
 
@@ -184,11 +186,33 @@ desired="$(cat <<'SETTINGS_JSON'
 SETTINGS_JSON
 )"
 
-# Deep-merge machine-specific overrides from settings.local.json (if present).
-LOCAL_FILE="{{ .chezmoi.homeDir }}/.claude/settings.local.json"
+# Merge machine-specific overrides from settings.local.json (if present):
+# objects merge recursively, lists are unioned (overlay entries appended, no
+# duplicates, order preserved) so a local allow/deny list can only ever add to
+# the committed one, and scalars are replaced. CLAUDE_SETTINGS_LOCAL overrides
+# the path (test seam).
+LOCAL_FILE="${CLAUDE_SETTINGS_LOCAL:-{{ .chezmoi.homeDir }}/.claude/settings.local.json}"
 if [ -f "$LOCAL_FILE" ]; then
   local_json="$(grep -v '^\s*//' "$LOCAL_FILE")"
-  desired="$(printf '%s' "$desired" | jq --argjson local "$local_json" '. * $local')"
+  desired="$(printf '%s' "$desired" | jq --argjson local "$local_json" '
+    def overlay(b):
+      if type == "object" and (b | type) == "object" then
+        reduce (b | keys_unsorted[]) as $k (.; .[$k] = (.[$k] | overlay(b[$k])))
+      elif type == "array" and (b | type) == "array" then
+        reduce (. + b)[] as $x ([]; if index([$x]) then . else . + [$x] end)
+      else b end;
+    overlay($local)')"
+fi
+
+# Carry runtime-owned top-level keys through from the live file. Claude Code writes
+# these itself (e.g. `/model` saves `model`), so stripping them would make every
+# apply undo the user's choice and every status show a diff. Template values still
+# win where both define a key. If Claude Code starts persisting a new key and
+# `chezmoi status` shows this file as perpetually modified, add the key here.
+RUNTIME_KEYS='["model"]'
+if printf '%s' "$live" | jq -e . >/dev/null 2>&1; then
+  desired="$(printf '%s' "$live" | jq --argjson keys "$RUNTIME_KEYS" --argjson desired "$desired" \
+    'with_entries(select(.key as $k | $keys | index($k))) + $desired')"
 fi
 
 # Compare order-insensitively (jq -S sorts object keys recursively). If jq fails
