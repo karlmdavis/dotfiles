@@ -1,23 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Before 2026-05-26 chezmoi managed ~/.claude/settings.local.json from a template whose only
-# content was empty permission lists. That source was dropped and later replaced by a
+# From 2025-11-07 to 2026-05-26 chezmoi managed ~/.claude/settings.local.json from a template
+# whose only content was empty permission lists. That source was dropped and later replaced by a
 # `create_` JSONC stub, but `create_` never overwrites an existing file, so hosts that got the
-# old template still carry `{"permissions":{"allow":[],"deny":[],"ask":[]}}` (2026-09-11).
-# That stub carries no information, so remove it when (and only when) the file is exactly that,
-# letting the `create_` stub regenerate it in this same apply. A file with any real content
-# (machine-specific allow rules etc.) is left untouched.
+# old template still carry `{"permissions":{"allow":[],"deny":[],"ask":[]}}`.
+# Since the overlay merge unions lists, that stub is now a harmless no-op, but it lacks the JSONC
+# header that explains how to use the file; remove it when (and only when) the file is exactly
+# that stub, so the `create_` stub regenerates it in this same apply. A file with any real
+# content (machine-specific allow rules etc.) is left untouched.
 #
 # `run_once_before` so the removal happens before chezmoi applies `create_settings.local.json`.
-# Re-run by clearing its hash with `chezmoi state delete-bucket --bucket=scriptState`.
+# Re-run with `chezmoi state delete-bucket --bucket=scriptState` (note: that re-runs every
+# `run_once_` script, not just this one).
 
 FILE="{{ .chezmoi.homeDir }}/.claude/settings.local.json"
-STUB='{"permissions":{"allow":[],"ask":[],"deny":[]}}'
 
-if [[ -f "$FILE" ]] && command -v jq >/dev/null 2>&1; then
-    if [[ "$(jq -S -c . "$FILE" 2>/dev/null || true)" == "$STUB" ]]; then
-        rm -f "$FILE"
-        echo "Removed legacy empty-permissions stub $FILE (chezmoi will regenerate the JSONC overlay)."
+[[ -f "$FILE" ]] || exit 0
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "cleanup-stale-claude-settings-local: jq not found; leaving $FILE alone (re-run: chezmoi state delete-bucket --bucket=scriptState)" >&2
+    exit 0
+fi
+
+# The file is compared after `jq -S -c` (sorted keys), so normalize the legacy literal the same
+# way rather than hand-ordering it.
+STUB="$(printf '%s' '{"permissions":{"allow":[],"deny":[],"ask":[]}}' | jq -S -c .)"
+
+# jq fails on the JSONC `create_` stub (comments) and on unreadable files; both are "not the
+# legacy stub", so leave them alone. Report the unreadable case rather than passing silently.
+if ! actual="$(jq -S -c . "$FILE" 2>/dev/null)"; then
+    if [[ ! -r "$FILE" ]]; then
+        echo "cleanup-stale-claude-settings-local: cannot read $FILE; leaving it alone" >&2
     fi
+    exit 0
+fi
+
+if [[ "$actual" == "$STUB" ]]; then
+    rm -f "$FILE"
+    echo "Removed legacy empty-permissions stub $FILE (chezmoi will regenerate the JSONC overlay)."
 fi

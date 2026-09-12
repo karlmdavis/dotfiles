@@ -2,17 +2,23 @@
 # chezmoi modify_ script for ~/.claude/settings.json.
 #
 # The base settings are version-controlled below. Machine-specific overrides live in
-# ~/.claude/settings.local.json (JSONC; // line comments allowed; this repo's overlay,
-# not a Claude Code file) and are merged on top at apply time (objects recurse, lists
-# union, scalars replace). Claude Code rewrites settings.json at runtime: it reorders
-# keys and persists a few choices of its own (e.g. `/model` writes `model`). So:
-#   - runtime-owned keys (RUNTIME_KEYS below) are carried through from the live file;
+# ~/.claude/settings.local.json (this repo's overlay, not a Claude Code file) and are
+# merged on top at apply time; the merge block below is the canonical description of
+# the rules. Claude Code rewrites settings.json at runtime: it reorders keys and
+# persists a few choices of its own (e.g. `/model` writes `model`). So:
+#   - runtime-owned top-level keys (RUNTIME_KEYS below) are carried through from the
+#     live file;
 #   - the comparison is semantic (via jq -S): if the live file equals our merged
-#     desired settings, emit the live bytes unchanged (no diff);
+#     desired settings, emit the live bytes unchanged (byte-exact, so no diff);
 #   - otherwise emit the merged desired settings (chezmoi wins).
+# stdout is the file, so all diagnostics go to stderr.
 set -eu
 
-live="$(cat)"
+# Read stdin byte-exactly: $(...) would strip trailing newlines, and Claude Code
+# writes the file with one, so a stripped pass-through would differ by one byte
+# and show as modified forever.
+live="$(cat; printf x)"
+live="${live%x}"
 [ -n "$live" ] || live='{}'
 
 desired="$(cat <<'SETTINGS_JSON'
@@ -186,20 +192,36 @@ desired="$(cat <<'SETTINGS_JSON'
 SETTINGS_JSON
 )"
 
-# Merge machine-specific overrides from settings.local.json (if present):
-# objects merge recursively, lists are unioned (overlay entries appended, no
-# duplicates, order preserved) so a local allow/deny list can only ever add to
-# the committed one, and scalars are replaced. CLAUDE_SETTINGS_LOCAL overrides
-# the path (test seam).
+# Merge machine-specific overrides from settings.local.json (if present). Rules:
+#   - only whole-line `//` comments are stripped (no trailing comments);
+#   - a file that is empty or only comments/whitespace is treated as `{}`;
+#   - objects merge recursively;
+#   - lists are unioned (overlay entries appended, no duplicates, order preserved), so a
+#     local allow/deny list can only ever add to the committed one;
+#   - scalars are replaced, and `null` may replace anything (unsets the key for
+#     Claude Code);
+#   - anything else (malformed JSON, a non-object document, or replacing a committed
+#     object/list with a different structured type) aborts the apply with an error
+#     naming this file, rather than silently dropping settings.
+# CLAUDE_SETTINGS_LOCAL overrides the path (test seam).
 LOCAL_FILE="${CLAUDE_SETTINGS_LOCAL:-{{ .chezmoi.homeDir }}/.claude/settings.local.json}"
 if [ -f "$LOCAL_FILE" ]; then
-  local_json="$(grep -v '^\s*//' "$LOCAL_FILE")"
-  desired="$(printf '%s' "$desired" | jq --argjson local "$local_json" '
+  local_json="$(grep -v '^[[:space:]]*//' "$LOCAL_FILE" || true)"
+  if [ -z "$(printf '%s' "$local_json" | tr -d '[:space:]')" ]; then
+    local_json='{}'
+  fi
+  if ! printf '%s' "$local_json" | jq -e 'type == "object"' >/dev/null 2>&1; then
+    echo "settings.json: $LOCAL_FILE is not a JSON object (only whole-line // comments are allowed); fix or delete it" >&2
+    exit 1
+  fi
+  desired="$(printf '%s' "$desired" | jq --arg file "$LOCAL_FILE" --argjson local "$local_json" '
     def overlay(b):
       if type == "object" and (b | type) == "object" then
         reduce (b | keys_unsorted[]) as $k (.; .[$k] = (.[$k] | overlay(b[$k])))
       elif type == "array" and (b | type) == "array" then
         reduce (. + b)[] as $x ([]; if index([$x]) then . else . + [$x] end)
+      elif (type == "object" or type == "array") and b != null then
+        error("settings.json: \($file) tries to replace a committed \(type) with \(b | type) (only null may do that)")
       else b end;
     overlay($local)')"
 fi
@@ -207,23 +229,31 @@ fi
 # Carry runtime-owned top-level keys through from the live file. These are the few
 # keys whose value is legitimately chosen inside Claude Code per machine (`/model`
 # saves `model`); stripping them would make every apply undo that choice and every
-# status show a diff. Template values still win where both define a key. Keep this
-# list short: when Claude Code starts persisting some other key, declare it in the
-# template above (chezmoi wins) rather than adding it here, unless it genuinely
-# should vary per machine and be set from inside Claude Code.
+# status show a diff. Template and overlay values still win where both define a key.
+# Keep this list short: when Claude Code starts persisting some other key, declare
+# it in the template above (chezmoi wins) rather than adding it here, unless it
+# genuinely should vary per machine and be set from inside Claude Code.
 RUNTIME_KEYS='["model"]'
-if printf '%s' "$live" | jq -e . >/dev/null 2>&1; then
+if printf '%s' "$live" | jq -e 'type == "object"' >/dev/null 2>&1; then
+  live_is_object=1
   desired="$(printf '%s' "$live" | jq --argjson keys "$RUNTIME_KEYS" --argjson desired "$desired" \
     'with_entries(select(.key as $k | $keys | index($k))) + $desired')"
+else
+  live_is_object=0
+  echo "settings.json: live file is not a JSON object; replacing it with the managed settings (runtime keys such as model are lost)" >&2
 fi
 
-# Compare order-insensitively (jq -S sorts object keys recursively). If jq fails
-# on a malformed live file, fall back to emitting the merged desired settings.
-live_norm="$(printf '%s' "$live" | jq -S . 2>/dev/null || true)"
-desired_norm="$(printf '%s' "$desired" | jq -S .)"
+# Never emit anything but an object: a bug above must abort, not blank the file.
+if ! printf '%s' "$desired" | jq -e 'type == "object"' >/dev/null 2>&1; then
+  echo "settings.json: refusing to write a non-object result (bug in the merge above)" >&2
+  exit 1
+fi
 
-if [ -n "$live_norm" ] && [ "$live_norm" = "$desired_norm" ]; then
+# Compare order-insensitively (jq -S sorts object keys recursively). Emit the
+# managed settings with a trailing newline, as Claude Code's own writer does.
+desired_norm="$(printf '%s' "$desired" | jq -S .)"
+if [ "$live_is_object" -eq 1 ] && [ "$(printf '%s' "$live" | jq -S .)" = "$desired_norm" ]; then
   printf '%s' "$live"
 else
-  printf '%s' "$desired"
+  printf '%s\n' "$desired"
 fi
