@@ -204,11 +204,13 @@ if [ -f "$LOCAL_FILE" ]; then
     overlay($local)')"
 fi
 
-# Carry runtime-owned top-level keys through from the live file. Claude Code writes
-# these itself (e.g. `/model` saves `model`), so stripping them would make every
-# apply undo the user's choice and every status show a diff. Template values still
-# win where both define a key. If Claude Code starts persisting a new key and
-# `chezmoi status` shows this file as perpetually modified, add the key here.
+# Carry runtime-owned top-level keys through from the live file. These are the few
+# keys whose value is legitimately chosen inside Claude Code per machine (`/model`
+# saves `model`); stripping them would make every apply undo that choice and every
+# status show a diff. Template values still win where both define a key. Keep this
+# list short: when Claude Code starts persisting some other key, declare it in the
+# template above (chezmoi wins) rather than adding it here, unless it genuinely
+# should vary per machine and be set from inside Claude Code.
 RUNTIME_KEYS='["model"]'
 if printf '%s' "$live" | jq -e . >/dev/null 2>&1; then
   desired="$(printf '%s' "$live" | jq --argjson keys "$RUNTIME_KEYS" --argjson desired "$desired" \
