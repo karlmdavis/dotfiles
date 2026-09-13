@@ -81,21 +81,13 @@ assert_aborted_naming_overlay() {
   [ "$(tail -c 1 "$BATS_TEST_TMPDIR/out.json" | od -An -c | tr -d ' ')" = '\n' ]
 }
 
-@test "key reordering is emitted unchanged (no diff)" {
-  # Same data, keys sorted -> a different byte order than the committed file.
-  printf '%s' "$DESIRED" | jq -S . > "$BATS_TEST_TMPDIR/reordered.json"
-  reordered="$(cat "$BATS_TEST_TMPDIR/reordered.json")"
-  [ "$reordered" != "$DESIRED" ]   # sanity: the order really did change
-
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/reordered.json"
-  [ "$status" -eq 0 ]
-  [ "$output" = "$reordered" ]
-}
-
-@test "pass-through is byte-exact, including the trailing newline" {
-  # jq emits a trailing newline, as Claude Code does when it rewrites the file.
-  # bats `run` and $(...) both strip trailing newlines, so compare files instead.
+@test "reordered keys plus a runtime key pass through byte-exact, trailing newline included" {
+  # What Claude Code hands back after a rewrite: keys sorted (a different byte
+  # order than the committed file), `model` persisted, trailing newline. bats
+  # `run` and $(...) both strip trailing newlines, so compare files instead.
   printf '%s' "$DESIRED" | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
+  [ "$(cat "$BATS_TEST_TMPDIR/live.json")" != "$DESIRED" ]   # sanity: the order really did change
+
   sh "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
   cmp "$BATS_TEST_TMPDIR/live.json" "$BATS_TEST_TMPDIR/out.json"
 }
@@ -127,7 +119,7 @@ assert_aborted_naming_overlay() {
   assert_contains "$stderr" "not a JSON object"   # the fallback is reported, not silent
 }
 
-@test "valid-JSON-but-not-an-object input falls back to the committed settings" {
+@test "input that is not exactly one JSON object falls back to the committed settings" {
   for live in '5' '"str"' 'true' '[]' 'null' '{} {}' '5 {}'; do
     echo "case: $live"
     printf '%s' "$live" > "$BATS_TEST_TMPDIR/nonobject.json"
@@ -142,19 +134,10 @@ assert_aborted_naming_overlay() {
   run --separate-stderr env PATH=/var/empty /bin/sh "$SCRIPT" </dev/null
   [ "$status" -ne 0 ]
   [ -z "$output" ]
-  assert_contains "$stderr" "jq"
+  assert_contains "$stderr" "jq is required"
 }
 
 # --- runtime-owned keys -----------------------------------------------------
-
-@test "a runtime-owned key (model) in the live file is passed through unchanged" {
-  printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/with-model.json"
-  with_model="$(cat "$BATS_TEST_TMPDIR/with-model.json")"
-
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/with-model.json"
-  [ "$status" -eq 0 ]
-  [ "$output" = "$with_model" ]
-}
 
 @test "a runtime-owned key survives when a managed value is reverted" {
   printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]" | .cleanupPeriodDays = 1' \
@@ -282,7 +265,7 @@ assert_aborted_naming_overlay() {
   done
 }
 
-@test "an overlay may set a committed value to null" {
+@test "an overlay may set a committed object to null" {
   # null is the one non-structured value allowed over a structured one; the key
   # is emitted with a null value (what Claude Code makes of that is up to it).
   out="$(run_with_overlay '{"voice": null}')"
@@ -337,23 +320,23 @@ assert_aborted_naming_overlay() {
   assert_aborted_naming_overlay
 }
 
-@test "a directory or dangling symlink at the overlay path aborts" {
+@test "overlay path: a directory or dangling symlink aborts, a symlink to a file is followed" {
+  echo "case: directory"
   export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/overlay-dir"
   mkdir "$CLAUDE_SETTINGS_LOCAL"
   run --separate-stderr sh "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
 
-  export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/overlay-link"
+  echo "case: dangling symlink"
+  export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/dangling-link"
   ln -s "$BATS_TEST_TMPDIR/nowhere.json" "$CLAUDE_SETTINGS_LOCAL"
   run --separate-stderr sh "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
-}
 
-@test "a symlink to a valid overlay is followed" {
+  echo "case: symlink to a valid overlay"
   printf '%s' '{"tui":"classic"}' > "$BATS_TEST_TMPDIR/target.json"
-  export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/overlay-link"
+  export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/valid-link"
   ln -s "$BATS_TEST_TMPDIR/target.json" "$CLAUDE_SETTINGS_LOCAL"
-
   run sh "$SCRIPT" </dev/null
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .tui)" = "classic" ]
