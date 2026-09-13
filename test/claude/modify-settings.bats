@@ -2,14 +2,18 @@
 #
 # Tests for the `modify_settings.json` chezmoi script.
 #
-# The script must be a byte-exact no-op when the live ~/.claude/settings.json
-# differs from the committed settings only by key order (so Claude Code's runtime
-# reordering doesn't cause perpetual `chezmoi diff` noise), must revert to the
-# committed settings when any managed value actually differs ("chezmoi wins"),
-# must carry runtime-owned keys (e.g. `model`, written by `/model`) through from
-# the live file, and must union (not replace) list values from the machine-local
-# overlay. A broken overlay must fail loudly, naming the overlay file, rather
-# than silently dropping settings.
+# Requirements the script must meet (each has at least one test below):
+#   1. When the live ~/.claude/settings.json differs from the committed settings
+#      only by key order and trailing newline, emit the live bytes unchanged, so
+#      Claude Code's runtime rewrites never cause `chezmoi diff` noise.
+#   2. When any managed value actually differs, emit the committed settings
+#      ("chezmoi wins").
+#   3. Carry runtime-owned keys (e.g. `model`, written by `/model`) through from
+#      the live file; strip every other undeclared key.
+#   4. Merge the machine-local overlay so that lists are unioned, objects recurse,
+#      and scalars replace; the overlay can only add to the committed lists.
+#   5. A broken overlay fails loudly, naming the overlay file, rather than
+#      silently dropping settings.
 #
 # Assertion style: bats runs under the system bash (3.2 on macOS), where a failing
 # `[[ ]]` does NOT trip errexit, so a `[[ ]]` that isn't a test's last command is
