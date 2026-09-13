@@ -20,8 +20,14 @@ choices of its own (e.g. `/model` writes `model`). So:
   - otherwise the merged desired settings are emitted (chezmoi wins).
 
 stdout is the file, so all diagnostics go to stderr. Requires only the Python
-standard library (3.9+).
+standard library; the inline script metadata below declares the floor, and the bats
+suite runs it through `uv run --script` so that declaration is what gets tested.
 """
+
+# /// script
+# requires-python = ">=3.9"
+# dependencies = []
+# ///
 
 from __future__ import annotations
 
