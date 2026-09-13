@@ -5,10 +5,11 @@ set -euo pipefail
 # whose only content was empty permission lists. That source was dropped and later replaced by a
 # `create_` stub with a `//` comment header, but `create_` never overwrites an existing file, so
 # hosts that got the old template still carry `{"permissions":{"allow":[],"deny":[],"ask":[]}}`.
-# Since the overlay merge unions lists, that stub is now a harmless no-op, but it lacks the
-# comment header that explains how to use the file; remove it when (and only when) the file is
-# exactly that stub, so the `create_` stub regenerates it in this same apply. A file with any
-# real content (machine-specific allow rules etc.) is left untouched.
+# Now that lists from the overlay are unioned into the committed ones rather than replacing
+# them, that stub no longer does any harm. It is still worth removing because it lacks the
+# comment header that explains how to use the file: delete it when (and only when) the file is
+# exactly that stub, and `create_` regenerates the commented version in this same apply. A file
+# with any real content (machine-specific allow rules etc.) is left untouched.
 #
 # `run_once_before` so the removal happens before chezmoi applies `create_settings.local.json`.
 # Re-run with `chezmoi state delete-bucket --bucket=scriptState` (note: that re-runs every
