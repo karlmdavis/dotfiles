@@ -25,12 +25,13 @@ setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
   SRC="$REPO/private_dot_claude/modify_settings.json.tmpl"
 
-  if ! command -v chezmoi >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-    skip "requires chezmoi and jq"
-  fi
+  # jq is used by the assertions below, not by the script.
+  for tool in chezmoi python3 jq; do
+    command -v "$tool" >/dev/null 2>&1 || skip "requires $tool"
+  done
 
-  # Render the templated modify_ script to a runnable shell script.
-  SCRIPT="$BATS_TEST_TMPDIR/modify_settings"
+  # Render the templated modify_ script (Python) to a runnable file.
+  SCRIPT="$BATS_TEST_TMPDIR/modify_settings.py"
   chezmoi execute-template < "$SRC" > "$SCRIPT"
 
   # Point the machine-local overlay at a nonexistent file so the tests never read
@@ -38,7 +39,7 @@ setup() {
   export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/no-such-overlay.json"
 
   # The committed ("desired") settings are what the script emits for empty stdin.
-  DESIRED="$(printf '' | sh "$SCRIPT")"
+  DESIRED="$(printf '' | python3 "$SCRIPT")"
 }
 
 # Write the given overlay text to a file and point the script at it.
@@ -50,7 +51,7 @@ use_overlay() {
 # Run the script with the given overlay and empty stdin; print the output.
 run_with_overlay() {
   use_overlay "$1"
-  sh "$SCRIPT" </dev/null
+  python3 "$SCRIPT" </dev/null
 }
 
 sorted() { printf '%s' "$1" | jq -S .; }
@@ -74,14 +75,14 @@ assert_aborted_naming_overlay() {
 # --- baseline ----------------------------------------------------------------
 
 @test "empty input yields valid committed settings JSON with no diagnostics" {
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   [ "$status" -eq 0 ]
   printf '%s' "$output" | jq -e . >/dev/null
   [ -z "$stderr" ]
 }
 
 @test "committed output ends with a trailing newline (matches Claude Code's writer)" {
-  sh "$SCRIPT" </dev/null > "$BATS_TEST_TMPDIR/out.json"
+  python3 "$SCRIPT" </dev/null > "$BATS_TEST_TMPDIR/out.json"
   [ "$(tail -c 1 "$BATS_TEST_TMPDIR/out.json" | od -An -c | tr -d ' ')" = '\n' ]
 }
 
@@ -92,7 +93,7 @@ assert_aborted_naming_overlay() {
   printf '%s' "$DESIRED" | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
   [ "$(cat "$BATS_TEST_TMPDIR/live.json")" != "$DESIRED" ]   # sanity: the order really did change
 
-  sh "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
+  python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
   cmp "$BATS_TEST_TMPDIR/live.json" "$BATS_TEST_TMPDIR/out.json"
 }
 
@@ -100,15 +101,15 @@ assert_aborted_naming_overlay() {
   # What chezmoi sees on a healthy machine: overlay contributions merged in, model
   # persisted by Claude Code, keys reordered, trailing newline. Must be a no-op.
   use_overlay '{"permissions":{"allow":["Bash(virsh list:*)"]},"env":{"FOO":"1"}}'
-  sh "$SCRIPT" </dev/null | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
-  sh "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
+  python3 "$SCRIPT" </dev/null | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
+  python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
   cmp "$BATS_TEST_TMPDIR/live.json" "$BATS_TEST_TMPDIR/out.json"
 }
 
 @test "a changed value is reverted to the committed settings" {
   printf '%s' "$DESIRED" | jq '.cleanupPeriodDays = 1' > "$BATS_TEST_TMPDIR/changed.json"
 
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/changed.json"
+  run python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/changed.json"
   [ "$status" -eq 0 ]
   [ "$(sorted "$output")" = "$(sorted "$DESIRED")" ]
   [ "$(printf '%s' "$output" | jq .cleanupPeriodDays)" = "$(printf '%s' "$DESIRED" | jq .cleanupPeriodDays)" ]
@@ -117,7 +118,7 @@ assert_aborted_naming_overlay() {
 @test "malformed input falls back to the committed settings" {
   printf 'not json' > "$BATS_TEST_TMPDIR/bad.json"
 
-  run --separate-stderr sh "$SCRIPT" < "$BATS_TEST_TMPDIR/bad.json"
+  run --separate-stderr python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/bad.json"
   [ "$status" -eq 0 ]
   [ "$(sorted "$output")" = "$(sorted "$DESIRED")" ]
   assert_contains "$stderr" "not a JSON object"   # the fallback is reported, not silent
@@ -127,18 +128,11 @@ assert_aborted_naming_overlay() {
   for live in '5' '"str"' 'true' '[]' 'null' '{} {}' '5 {}'; do
     echo "case: $live"
     printf '%s' "$live" > "$BATS_TEST_TMPDIR/nonobject.json"
-    run --separate-stderr sh "$SCRIPT" < "$BATS_TEST_TMPDIR/nonobject.json"
+    run --separate-stderr python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/nonobject.json"
     [ "$status" -eq 0 ]
     [ "$(sorted "$output")" = "$(sorted "$DESIRED")" ]
     assert_contains "$stderr" "not a JSON object"
   done
-}
-
-@test "missing jq aborts with a message that names jq" {
-  run --separate-stderr env PATH=/var/empty /bin/sh "$SCRIPT" </dev/null
-  [ "$status" -ne 0 ]
-  [ -z "$output" ]
-  assert_contains "$stderr" "jq is required"
 }
 
 # --- runtime-owned keys -----------------------------------------------------
@@ -147,14 +141,14 @@ assert_aborted_naming_overlay() {
   printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]" | .cleanupPeriodDays = 1' \
     > "$BATS_TEST_TMPDIR/model-and-change.json"
 
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/model-and-change.json"
+  run python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/model-and-change.json"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .model)" = "claude-fable-5-1[1m]" ]
   [ "$(printf '%s' "$output" | jq .cleanupPeriodDays)" = "$(printf '%s' "$DESIRED" | jq .cleanupPeriodDays)" ]
 }
 
 @test "a runtime-owned key is not invented when absent from the live file" {
-  run sh "$SCRIPT" </dev/null
+  run python3 "$SCRIPT" </dev/null
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq 'has("model")')" = "false" ]
 }
@@ -162,7 +156,7 @@ assert_aborted_naming_overlay() {
 @test "a key that is not runtime-owned is still stripped" {
   printf '%s' "$DESIRED" | jq '.theme = "dark"' > "$BATS_TEST_TMPDIR/with-theme.json"
 
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/with-theme.json"
+  run python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/with-theme.json"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq 'has("theme")')" = "false" ]
 }
@@ -172,7 +166,7 @@ assert_aborted_naming_overlay() {
   use_overlay '{"model":"overlay-model"}'
   printf '%s' "$DESIRED" | jq '.model = "live-model"' > "$BATS_TEST_TMPDIR/live.json"
 
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json"
+  run python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .model)" = "overlay-model" ]
 }
@@ -181,7 +175,7 @@ assert_aborted_naming_overlay() {
   use_overlay '{"permissions":{"allow":["Bash(virsh list:*)"]}}'
   printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]" | .theme = "dark"' > "$BATS_TEST_TMPDIR/live.json"
 
-  run sh "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json"
+  run python3 "$SCRIPT" < "$BATS_TEST_TMPDIR/live.json"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .model)" = "claude-fable-5-1[1m]" ]
   [ "$(printf '%s' "$output" | jq 'has("theme")')" = "false" ]
@@ -263,7 +257,7 @@ assert_aborted_naming_overlay() {
 '; do
     echo "case: [$text]"
     use_overlay "$text"
-    run sh "$SCRIPT" </dev/null
+    run python3 "$SCRIPT" </dev/null
     [ "$status" -eq 0 ]
     [ "$(sorted "$output")" = "$(sorted "$DESIRED")" ]
   done
@@ -281,7 +275,7 @@ assert_aborted_naming_overlay() {
 @test "a malformed overlay aborts and names the overlay file" {
   use_overlay '{"tui": "classic",}'
 
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
 }
 
@@ -289,7 +283,7 @@ assert_aborted_naming_overlay() {
   use_overlay '{"tui": "classic" // note
 }'
 
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
 }
 
@@ -297,7 +291,7 @@ assert_aborted_naming_overlay() {
   for text in 'null' '[]' '"str"' '5' '{"tui":"a"} {"tui":"b"}'; do
     echo "case: $text"
     use_overlay "$text"
-    run --separate-stderr sh "$SCRIPT" </dev/null
+    run --separate-stderr python3 "$SCRIPT" </dev/null
     assert_aborted_naming_overlay
   done
 }
@@ -306,7 +300,7 @@ assert_aborted_naming_overlay() {
   for text in '{"permissions": []}' '{"permissions": {"allow": "Bash(x)"}}' '{"voice": 5}'; do
     echo "case: $text"
     use_overlay "$text"
-    run --separate-stderr sh "$SCRIPT" </dev/null
+    run --separate-stderr python3 "$SCRIPT" </dev/null
     assert_aborted_naming_overlay
     # The message is the script's own, not jq's "error (at <stdin>:N)" pointing
     # at a line of the committed JSON.
@@ -319,7 +313,7 @@ assert_aborted_naming_overlay() {
   use_overlay '{"tui":"classic"}'
   chmod 000 "$CLAUDE_SETTINGS_LOCAL"
 
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   chmod 600 "$CLAUDE_SETTINGS_LOCAL"
   assert_aborted_naming_overlay
 }
@@ -328,20 +322,20 @@ assert_aborted_naming_overlay() {
   echo "case: directory"
   export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/overlay-dir"
   mkdir "$CLAUDE_SETTINGS_LOCAL"
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
 
   echo "case: dangling symlink"
   export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/dangling-link"
   ln -s "$BATS_TEST_TMPDIR/nowhere.json" "$CLAUDE_SETTINGS_LOCAL"
-  run --separate-stderr sh "$SCRIPT" </dev/null
+  run --separate-stderr python3 "$SCRIPT" </dev/null
   assert_aborted_naming_overlay
 
   echo "case: symlink to a valid overlay"
   printf '%s' '{"tui":"classic"}' > "$BATS_TEST_TMPDIR/target.json"
   export CLAUDE_SETTINGS_LOCAL="$BATS_TEST_TMPDIR/valid-link"
   ln -s "$BATS_TEST_TMPDIR/target.json" "$CLAUDE_SETTINGS_LOCAL"
-  run sh "$SCRIPT" </dev/null
+  run python3 "$SCRIPT" </dev/null
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .tui)" = "classic" ]
 }

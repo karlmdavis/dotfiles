@@ -199,8 +199,8 @@ This repository also manages Claude Code configuration for consistent setup acro
     Claude Code.
 - `~/.claude/settings.local.json` - Machine-specific overrides (minimal, for truly local settings).
     This is chezmoi's own overlay; Claude Code does not read a user-level `settings.local.json`.
-    It is merged into `settings.json` at apply time, and the overlay block in the script above is
-    the canonical statement of the merge rules (in short: objects recurse, lists union, scalars
+    It is merged into `settings.json` at apply time, and the `merge` function in the script above
+    is the canonical statement of the merge rules (in short: objects recurse, lists union, scalars
     replace, and a broken overlay aborts the apply rather than dropping settings).
 
 **Custom Slash Commands:**
@@ -281,7 +281,8 @@ mise run ci
 
 Two test idioms coexist:
 - **bats** (under `test/`) for the shell/template helpers — currently `test/claude/` (the
-    `modify_settings.json.tmpl` merge script).
+    `modify_settings.json.tmpl` merge script, a Python `modify_` script driven as a black box
+    through stdin, stdout, exit status, and its `CLAUDE_SETTINGS_LOCAL` env seam).
 - **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
     `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
     The root `mise run test` cascades into each via the mise monorepo.

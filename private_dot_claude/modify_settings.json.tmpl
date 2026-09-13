@@ -1,44 +1,50 @@
-#!/bin/sh
-# chezmoi modify_ script for ~/.claude/settings.json.
-#
-# chezmoi's contract for a modify_ script: on every `chezmoi apply`/`diff`/`status`
-# it runs this script with the CURRENT contents of the target file on stdin, and
-# whatever the script prints to stdout becomes the file's new contents (nothing is
-# written if the script exits non-zero). So "live" below is the file as it exists on
-# this machine right now, including whatever Claude Code last wrote to it.
-#
-# The base settings are version-controlled below. Machine-specific overrides live in
-# ~/.claude/settings.local.json (this repo's overlay, not a Claude Code file) and are
-# merged on top at apply time; the merge block below is the canonical description of
-# the rules. Claude Code rewrites settings.json at runtime: it reorders keys and
-# persists a few choices of its own (e.g. `/model` writes `model`). So:
-#   - runtime-owned top-level keys (RUNTIME_KEYS below) are carried through from the
-#     live file;
-#   - the comparison is semantic (via jq -S): if the live file equals our merged
-#     desired settings, emit the live bytes unchanged (byte-exact, so no diff);
-#   - otherwise emit the merged desired settings (chezmoi wins).
-# stdout is the file, so all diagnostics go to stderr.
-set -eu
+#!/usr/bin/env python3
+"""chezmoi modify_ script for ~/.claude/settings.json.
 
-# Every step below needs jq; check up front so a missing jq is reported as such
-# rather than as a misleading "not a JSON object" from a silenced jq call.
-if ! command -v jq >/dev/null 2>&1; then
-  echo "settings.json: jq is required (installed by system_packages_autoinstall); aborting" >&2
-  exit 1
-fi
+chezmoi's contract for a modify_ script: on every `chezmoi apply`/`diff`/`status` it
+runs this script with the CURRENT contents of the target file on stdin, and whatever
+the script prints to stdout becomes the file's new contents (nothing is written if
+the script exits non-zero). So "live" below is the file as it exists on this machine
+right now, including whatever Claude Code last wrote to it.
 
-# Exactly one JSON object on stdin. `jq -e 'type == "object"'` alone reflects only
-# the LAST value of a multi-document stream (`{} {}`), so slurp and count.
-is_one_object() { jq -s -e 'length == 1 and (.[0] | type == "object")' >/dev/null 2>&1; }
+The base settings are version-controlled in TEMPLATE below. Machine-specific
+overrides live in ~/.claude/settings.local.json (this repo's overlay, not a Claude
+Code file) and are merged on top at apply time; see `merge` for the rules.
 
-# Read stdin byte-exactly: $(...) would strip trailing newlines, and Claude Code
-# writes the file with one, so a stripped pass-through would differ by one byte
-# and show as modified forever.
-live="$(cat; printf x)"
-live="${live%x}"
-[ -n "$live" ] || live='{}'
+Claude Code rewrites settings.json at runtime: it reorders keys and persists a few
+choices of its own (e.g. `/model` writes `model`). So:
+  - runtime-owned top-level keys (RUNTIME_KEYS) are carried through from the live
+    file; template and overlay values still win where both define a key;
+  - if the live file is semantically equal to the merged desired settings, the live
+    bytes are emitted unchanged (byte-exact, so no diff);
+  - otherwise the merged desired settings are emitted (chezmoi wins).
 
-desired="$(cat <<'SETTINGS_JSON'
+stdout is the file, so all diagnostics go to stderr. Requires only the Python
+standard library (3.9+).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Any, Final
+
+# Top-level keys whose value is legitimately chosen inside Claude Code per machine
+# (`/model` saves `model`). Keep this list short: when Claude Code starts persisting
+# some other key, declare it in TEMPLATE (chezmoi wins) rather than adding it here,
+# unless it genuinely should vary per machine and be set from inside Claude Code.
+RUNTIME_KEYS: Final = ("model",)
+
+# CLAUDE_SETTINGS_LOCAL overrides the overlay path (test seam).
+DEFAULT_OVERLAY: Final = Path("{{ .chezmoi.homeDir }}/.claude/settings.local.json")
+
+# Only whole-line `//` comments are supported in the overlay (no trailing comments).
+COMMENT_LINE: Final = re.compile(r"^[ \t]*//.*$", re.MULTILINE)
+
+TEMPLATE: Final = r"""
 {
   "cleanupPeriodDays": 36525,
   "attribution": {
@@ -206,86 +212,113 @@ desired="$(cat <<'SETTINGS_JSON'
     ]
   }
 }
-SETTINGS_JSON
-)"
+"""
 
-# Merge machine-specific overrides from settings.local.json (if present). Rules:
-#   - only whole-line `//` comments are stripped (no trailing comments);
-#   - a file that is empty or only comments/whitespace is treated as `{}`;
-#   - objects merge recursively;
-#   - lists are unioned (overlay entries appended, no duplicates, order preserved), so a
-#     local allow/deny list can only ever add to the committed one;
-#   - a committed scalar, or a key the template doesn't have, takes any overlay value;
-#   - a committed object/list takes only an object/list of the same kind (merged as
-#     above) or `null`, which replaces it: the key is then emitted with a null value
-#     (whether Claude Code treats that as unset is up to its schema);
-#   - anything else (a path that isn't a readable regular file, malformed JSON, not
-#     exactly one JSON object, or a committed object/list meeting a non-null value of
-#     any other type) aborts the apply with an error naming this file, rather than
-#     silently dropping settings.
-# CLAUDE_SETTINGS_LOCAL overrides the path (test seam).
-LOCAL_FILE="${CLAUDE_SETTINGS_LOCAL:-{{ .chezmoi.homeDir }}/.claude/settings.local.json}"
-if [ -e "$LOCAL_FILE" ] || [ -L "$LOCAL_FILE" ]; then
-  if [ ! -f "$LOCAL_FILE" ] || [ ! -r "$LOCAL_FILE" ]; then
-    echo "settings.json: $LOCAL_FILE is not a readable regular file (directory, dangling symlink, or permissions); fix or delete it" >&2
-    exit 1
-  fi
-  # grep exits 1 when every line was a comment (fine: treated as {} below) and >1 on
-  # a read error (abort); a bare `|| true` would hide the latter.
-  local_json="$(grep -v '^[[:space:]]*//' "$LOCAL_FILE")" || [ $? -eq 1 ] || {
-    echo "settings.json: cannot read $LOCAL_FILE" >&2
-    exit 1
-  }
-  if [ -z "$(printf '%s' "$local_json" | tr -d '[:space:]')" ]; then
-    local_json='{}'
-  fi
-  if ! printf '%s' "$local_json" | is_one_object; then
-    echo "settings.json: $LOCAL_FILE is not exactly one JSON object (only whole-line // comments are allowed); fix or delete it" >&2
-    exit 1
-  fi
-  # halt_error prints the message verbatim; jq's error() would prefix it with a
-  # line number into the committed JSON, which is not where the problem is.
-  desired="$(printf '%s' "$desired" | jq --arg file "$LOCAL_FILE" --argjson local "$local_json" '
-    def overlay(b):
-      if type == "object" and (b | type) == "object" then
-        reduce (b | keys_unsorted[]) as $k (.; .[$k] = (.[$k] | overlay(b[$k])))
-      elif type == "array" and (b | type) == "array" then
-        reduce (. + b)[] as $x ([]; if index([$x]) then . else . + [$x] end)
-      elif (type == "object" or type == "array") and b != null then
-        "settings.json: \($file) tries to replace a committed \(type) with \(b | type) (only null may do that)\n" | halt_error(1)
-      else b end;
-    overlay($local)')"
-fi
 
-# Carry runtime-owned top-level keys through from the live file. These are the few
-# keys whose value is legitimately chosen inside Claude Code per machine (`/model`
-# saves `model`); stripping them would make every apply undo that choice and every
-# status show a diff. Template and overlay values still win where both define a key.
-# Keep this list short: when Claude Code starts persisting some other key, declare
-# it in the template above (chezmoi wins) rather than adding it here, unless it
-# genuinely should vary per machine and be set from inside Claude Code.
-RUNTIME_KEYS='["model"]'
-if printf '%s' "$live" | is_one_object; then
-  live_is_object=1
-  desired="$(printf '%s' "$live" | jq --argjson keys "$RUNTIME_KEYS" --argjson desired "$desired" \
-    'with_entries(select(.key as $k | $keys | index($k))) + $desired')"
-else
-  live_is_object=0
-  echo "settings.json: live file is not a JSON object; replacing it with the managed settings (runtime keys such as model are lost unless the overlay sets them)" >&2
-fi
+class OverlayError(Exception):
+    """The overlay file is unusable; the apply must abort rather than drop settings."""
 
-# Never emit anything but exactly one object: a bug above must abort, not blank
-# or corrupt the file.
-if ! printf '%s' "$desired" | is_one_object; then
-  echo "settings.json: refusing to write a non-object result (bug in the merge above)" >&2
-  exit 1
-fi
 
-# Compare order-insensitively (jq -S sorts object keys recursively). Emit the
-# managed settings with a trailing newline, as Claude Code's own writer does.
-desired_norm="$(printf '%s' "$desired" | jq -S .)"
-if [ "$live_is_object" -eq 1 ] && [ "$(printf '%s' "$live" | jq -S .)" = "$desired_norm" ]; then
-  printf '%s' "$live"
-else
-  printf '%s\n' "$desired"
-fi
+def json_type(value: Any) -> str:
+    """JSON type name of a parsed value, for error messages."""
+    return {dict: "object", list: "array", str: "string", bool: "boolean"}.get(
+        type(value), "null" if value is None else "number"
+    )
+
+
+def merge(committed: Any, overlay: Any, where: str) -> Any:
+    """Merge an overlay value onto a committed one.
+
+    Objects merge recursively. Lists are unioned: overlay entries are appended
+    without duplicates and in order, so a local allow/deny list can only ever add
+    to the committed one. A committed scalar, or a key the template doesn't have,
+    takes any overlay value. A committed object/list takes only the same kind, or
+    `null` (which replaces it; what Claude Code makes of a null key is up to it).
+    Anything else is a mistake in the overlay and aborts.
+    """
+    if isinstance(committed, dict) and isinstance(overlay, dict):
+        merged = dict(committed)
+        for key, value in overlay.items():
+            merged[key] = merge(merged.get(key), value, f"{where}.{key}")
+        return merged
+    if isinstance(committed, list) and isinstance(overlay, list):
+        union = list(committed)
+        union.extend(item for item in overlay if item not in union)
+        return union
+    if isinstance(committed, (dict, list)) and overlay is not None:
+        raise OverlayError(
+            f"{where} tries to replace a committed {json_type(committed)} with "
+            f"{json_type(overlay)} (only null may do that)"
+        )
+    return overlay
+
+
+def load_overlay(path: Path) -> dict[str, Any]:
+    """Read the overlay as one JSON object; absent, empty, or comment-only means {}."""
+    if not path.exists() and not path.is_symlink():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        # Directory, dangling symlink, permissions, or not UTF-8: all name the path.
+        raise OverlayError(f"{path}: cannot read as a UTF-8 text file ({exc})") from exc
+    text = COMMENT_LINE.sub("", text)
+    if not text.strip():
+        return {}
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise OverlayError(
+            f"{path}: not valid JSON ({exc}; line/column refer to the text with "
+            "whole-line // comments removed); fix or delete it"
+        ) from exc
+    if not isinstance(data, dict):
+        raise OverlayError(f"{path}: must be exactly one JSON object; fix or delete it")
+    return data
+
+
+def parse_live(raw: bytes) -> dict[str, Any] | None:
+    """Parse the live file; None if it is not exactly one JSON object."""
+    if not raw.strip():
+        return {}
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def main() -> int:
+    """Read the live file on stdin, print the file chezmoi should write."""
+    raw_live = sys.stdin.buffer.read()
+    live = parse_live(raw_live)
+    overlay_path = Path(os.environ.get("CLAUDE_SETTINGS_LOCAL") or DEFAULT_OVERLAY)
+
+    try:
+        overlay = load_overlay(overlay_path)
+        desired = merge(json.loads(TEMPLATE), overlay, str(overlay_path))
+    except OverlayError as exc:
+        print(f"settings.json: {exc}", file=sys.stderr)
+        return 1
+
+    if live is None:
+        print(
+            "settings.json: live file is not a JSON object; replacing it with the "
+            "managed settings (runtime keys such as model are lost unless the overlay "
+            "sets them)",
+            file=sys.stderr,
+        )
+    else:
+        runtime = {key: live[key] for key in RUNTIME_KEYS if key in live}
+        desired = {**runtime, **desired}
+        if live == desired:  # dict equality is key-order-insensitive
+            sys.stdout.buffer.write(raw_live)
+            return 0
+
+    # Trailing newline, as Claude Code's own writer emits.
+    sys.stdout.write(json.dumps(desired, indent=2, ensure_ascii=False) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
