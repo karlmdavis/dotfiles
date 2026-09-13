@@ -282,8 +282,8 @@ mise run ci
 Two test idioms coexist:
 - **bats** (under `test/`) for the shell/template helpers — currently `test/claude/` (the
     `modify_settings.json.tmpl` merge script, a Python `modify_` script driven as a black box
-    through stdin, stdout, exit status, and its `CLAUDE_SETTINGS_LOCAL` env seam, run via
-    `uv run --script` so its inline `requires-python` floor is what gets tested).
+    through stdin, stdout, exit status, and its `CLAUDE_SETTINGS_LOCAL` env seam, executed via
+    its own `uv run --script` shebang so tests and `chezmoi apply` share one entry point).
 - **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
     `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
     The root `mise run test` cascades into each via the mise monorepo.

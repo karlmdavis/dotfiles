@@ -30,9 +30,11 @@ setup() {
     command -v "$tool" >/dev/null 2>&1 || skip "requires $tool"
   done
 
-  # Render the templated modify_ script (Python) to a runnable file.
+  # Render the templated modify_ script (Python) to an executable file, so the
+  # tests go through its real shebang (`uv run --script`) exactly as chezmoi does.
   SCRIPT="$BATS_TEST_TMPDIR/modify_settings.py"
   chezmoi execute-template < "$SRC" > "$SCRIPT"
+  chmod +x "$SCRIPT"
 
   # Point the machine-local overlay at a nonexistent file so the tests never read
   # the host's real ~/.claude/settings.local.json.
@@ -42,11 +44,10 @@ setup() {
   DESIRED="$(printf '' | modify)"
 }
 
-# Run the script under test. `uv run --script` honours the script's inline metadata
-# (requires-python), so the declared floor is what gets exercised; --no-project keeps
-# uv from picking up any pyproject in the repo, matching the pytest idiom here.
+# Run the script under test via its own shebang. uv honours the script's inline
+# metadata (requires-python), so the declared floor is what gets exercised.
 modify() {
-  uv run --no-project --script "$SCRIPT" "$@"
+  "$SCRIPT" "$@"
 }
 
 # Write the given overlay text to a file and point the script at it.
