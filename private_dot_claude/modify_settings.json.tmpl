@@ -1,6 +1,12 @@
 #!/bin/sh
 # chezmoi modify_ script for ~/.claude/settings.json.
 #
+# chezmoi's contract for a modify_ script: on every `chezmoi apply`/`diff`/`status`
+# it runs this script with the CURRENT contents of the target file on stdin, and
+# whatever the script prints to stdout becomes the file's new contents (nothing is
+# written if the script exits non-zero). So "live" below is the file as it exists on
+# this machine right now, including whatever Claude Code last wrote to it.
+#
 # The base settings are version-controlled below. Machine-specific overrides live in
 # ~/.claude/settings.local.json (this repo's overlay, not a Claude Code file) and are
 # merged on top at apply time; the merge block below is the canonical description of
