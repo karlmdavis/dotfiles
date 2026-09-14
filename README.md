@@ -111,7 +111,7 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 #### Development Tools and Editors
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/overview):
-    [`~/.claude/settings.json` template](private_dot_claude/modify_settings.json.tmpl),
+    [`~/.claude/settings.json` generator script](private_dot_claude/modify_settings.json.tmpl),
     see also: [plugins / marketplaces / MCPs](private_dot_claude/plugins/).
 - [Helix](https://helix-editor.com/):
     [`~/.config/helix/`](dot_config/helix/).

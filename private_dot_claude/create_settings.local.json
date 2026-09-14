@@ -1,8 +1,14 @@
-// Machine-specific Claude Code settings (JSONC — line comments allowed).
-// Deep-merged into ~/.claude/settings.json by chezmoi at apply time.
-// See: ~/.local/share/chezmoi/private_dot_claude/modify_settings.json.tmpl
+// Machine-specific Claude Code settings.
+// Merged into ~/.claude/settings.json by chezmoi at apply time. This is chezmoi's own
+// overlay file; Claude Code itself does not read a user-level settings.local.json.
+// For the exact merge rules, see `merge()` in the script that generates settings.json:
+//   chezmoi source-path ~/.claude/settings.json
 //
-// Nested objects are merged recursively; arrays and scalars are replaced.
+// In short: only whole-line // comments like these are allowed (no trailing comments);
+// nested objects merge recursively; lists (e.g. permissions.allow) are unioned with the
+// committed list, so entries here can only add to it; scalars are replaced. A broken file
+// aborts `chezmoi apply` (and `diff`/`status`) with an error naming this file rather than
+// dropping settings.
 // After editing, run `chezmoi apply` to regenerate ~/.claude/settings.json.
 {
 }

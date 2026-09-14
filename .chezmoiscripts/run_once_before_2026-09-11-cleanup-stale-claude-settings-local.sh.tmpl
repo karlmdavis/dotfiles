@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# From 2025-11-07 to 2026-05-26 chezmoi managed ~/.claude/settings.local.json from a template
+# whose only content was empty permission lists. That source was dropped and later replaced by a
+# `create_` stub with a `//` comment header, but `create_` never overwrites an existing file, so
+# hosts that got the old template still carry `{"permissions":{"allow":[],"deny":[],"ask":[]}}`.
+# Now that lists from the overlay are unioned into the committed ones rather than replacing
+# them, that stub no longer does any harm. It is still worth removing because it lacks the
+# comment header that explains how to use the file: delete it when (and only when) the file is
+# exactly that stub, and `create_` regenerates the commented version in this same apply. A file
+# with any real content (machine-specific allow rules etc.) is left untouched.
+#
+# `run_once_before` so the removal happens before chezmoi applies `create_settings.local.json`.
+# Re-run with `chezmoi state delete-bucket --bucket=scriptState` (note: that re-runs every
+# `run_once_` script, not just this one).
+
+FILE="{{ .chezmoi.homeDir }}/.claude/settings.local.json"
+RERUN_HINT="re-run with: chezmoi state delete-bucket --bucket=scriptState (re-runs all run_once scripts)"
+
+if [[ -L "$FILE" ]]; then
+    # Removing a symlink would drop the link, not the stub, and `create_` would then put a
+    # regular file where the user's link was. Leave symlinks to the user.
+    echo "cleanup-stale-claude-settings-local: $FILE is a symlink; leaving it alone" >&2
+    exit 0
+fi
+
+[[ -f "$FILE" ]] || exit 0
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "cleanup-stale-claude-settings-local: jq not found; leaving $FILE alone ($RERUN_HINT)" >&2
+    exit 0
+fi
+
+# The file is compared after `jq -S -c` (sorted keys), so normalize the legacy literal the same
+# way rather than hand-ordering it.
+STUB="$(printf '%s' '{"permissions":{"allow":[],"deny":[],"ask":[]}}' | jq -S -c .)"
+
+# jq fails on the commented `create_` stub and on unreadable files; both are "not the legacy
+# stub", so leave them alone. Report the unreadable case rather than passing silently.
+if ! actual="$(jq -S -c . "$FILE" 2>/dev/null)"; then
+    if [[ ! -r "$FILE" ]]; then
+        echo "cleanup-stale-claude-settings-local: cannot read $FILE; leaving it alone ($RERUN_HINT)" >&2
+    fi
+    exit 0
+fi
+
+if [[ "$actual" == "$STUB" ]]; then
+    rm -f "$FILE"
+    echo "Removed legacy empty-permissions stub $FILE (chezmoi will regenerate the commented overlay)."
+fi
