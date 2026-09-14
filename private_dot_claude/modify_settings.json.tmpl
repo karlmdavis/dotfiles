@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --quiet --no-project --script
+#!/usr/bin/env -S uv run --quiet --no-project --no-config --script
 """chezmoi modify_ script for ~/.claude/settings.json.
 
 chezmoi's contract for a modify_ script: on every `chezmoi apply`/`diff`/`status` it
@@ -20,11 +20,15 @@ choices of its own (e.g. `/model` writes `model`). So:
   - otherwise the merged desired settings are emitted (chezmoi wins).
 
 stdout is the file, so all diagnostics go to stderr. Requires only the Python
-standard library. The shebang runs the script through `uv run --script`, which
-honours the inline metadata below (Python floor, no dependencies) and picks or
-fetches a matching interpreter; the bats suite executes the same shebang, so tests
-and production share one entry point. uv comes from the system package manifest,
-which chezmoi applies before this file.
+standard library. The shebang runs the script through `uv run --script`, which reads
+the inline metadata below and picks (or fetches) some interpreter satisfying the
+declared Python floor, usually the newest available, so the floor is a constraint
+rather than the version under test. `--no-project --no-config` keep uv from picking
+up a pyproject or uv.toml from whatever directory chezmoi happens to be run in. The
+bats suite executes this same shebang, so tests and production share one entry
+point. uv comes from the system package manifest, whose script chezmoi applies
+before this file only because `.chezmoiscripts/` sorts before `.claude/`; a rename
+of either would change that.
 """
 
 # /// script
@@ -225,7 +229,10 @@ TEMPLATE: Final = r"""
 
 
 class OverlayError(Exception):
-    """The overlay file is unusable; the apply must abort rather than drop settings."""
+    """The overlay file is unusable; the apply must abort rather than drop settings.
+
+    Messages describe the problem only; `main` prefixes the overlay path.
+    """
 
 
 def json_type(value: Any) -> str:
@@ -235,20 +242,22 @@ def json_type(value: Any) -> str:
     )
 
 
-def merge(committed: Any, overlay: Any, where: str) -> Any:
+def merge(committed: Any, overlay: Any, where: str = "") -> Any:
     """Merge an overlay value onto a committed one.
 
-    Objects merge recursively. Lists are unioned: overlay entries are appended
-    without duplicates and in order, so a local allow/deny list can only ever add
-    to the committed one. A committed scalar, or a key the template doesn't have,
-    takes any overlay value. A committed object/list takes only the same kind, or
-    `null` (which replaces it; what Claude Code makes of a null key is up to it).
-    Anything else is a mistake in the overlay and aborts.
+    Objects merge recursively. Lists are unioned: overlay entries are appended in
+    overlay order, skipping any already present, so a local allow/deny list can only
+    ever add to the committed one. A committed scalar, or a key the template doesn't
+    have, takes any overlay value. A committed object/list takes only the same kind,
+    or `null` (which replaces it; what Claude Code makes of a null key is up to it).
+    Anything else is a mistake in the overlay and aborts. `where` is the dotted key
+    path of `committed`, for that error message.
     """
     if isinstance(committed, dict) and isinstance(overlay, dict):
         merged = dict(committed)
         for key, value in overlay.items():
-            merged[key] = merge(merged.get(key), value, f"{where}.{key}")
+            child = f"{where}.{key}" if where else key
+            merged[key] = merge(merged.get(key), value, child)
         return merged
     if isinstance(committed, list) and isinstance(overlay, list):
         union = list(committed)
@@ -256,38 +265,42 @@ def merge(committed: Any, overlay: Any, where: str) -> Any:
         return union
     if isinstance(committed, (dict, list)) and overlay is not None:
         raise OverlayError(
-            f"{where} tries to replace a committed {json_type(committed)} with "
-            f"{json_type(overlay)} (only null may do that)"
+            f"at {where or '<root>'}: overlay tries to replace a committed "
+            f"{json_type(committed)} with {json_type(overlay)} (only null may do that)"
         )
     return overlay
 
 
 def load_overlay(path: Path) -> dict[str, Any]:
     """Read the overlay as one JSON object; absent, empty, or comment-only means {}."""
-    if not path.exists() and not path.is_symlink():
-        return {}
     try:
         text = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        if path.is_symlink():
+            raise OverlayError(f"dangling symlink ({exc})") from exc
+        return {}
     except (OSError, UnicodeDecodeError) as exc:
-        # Directory, dangling symlink, permissions, or not UTF-8: all name the path.
-        raise OverlayError(f"{path}: cannot read as a UTF-8 text file ({exc})") from exc
+        # Directory, permissions, not UTF-8, and anything else the OS objects to.
+        raise OverlayError(f"cannot read as a UTF-8 text file ({exc})") from exc
+    # Comment lines are blanked, not removed, so JSON error positions match the file.
     text = COMMENT_LINE.sub("", text)
     if not text.strip():
         return {}
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise OverlayError(
-            f"{path}: not valid JSON ({exc}; line/column refer to the text with "
-            "whole-line // comments removed); fix or delete it"
-        ) from exc
+        raise OverlayError(f"not valid JSON ({exc}); fix or delete it") from exc
     if not isinstance(data, dict):
-        raise OverlayError(f"{path}: must be exactly one JSON object; fix or delete it")
+        raise OverlayError("must be exactly one JSON object; fix or delete it")
     return data
 
 
 def parse_live(raw: bytes) -> dict[str, Any] | None:
-    """Parse the live file; None if it is not exactly one JSON object."""
+    """Parse the live file; None if it is not exactly one JSON object.
+
+    Empty stdin is chezmoi's signal that the target does not exist yet (first apply),
+    so it is an empty object rather than an error.
+    """
     if not raw.strip():
         return {}
     try:
@@ -305,9 +318,9 @@ def main() -> int:
 
     try:
         overlay = load_overlay(overlay_path)
-        desired = merge(json.loads(TEMPLATE), overlay, str(overlay_path))
+        desired = merge(json.loads(TEMPLATE), overlay)
     except OverlayError as exc:
-        print(f"settings.json: {exc}", file=sys.stderr)
+        print(f"settings.json: {overlay_path}: {exc}", file=sys.stderr)
         return 1
 
     if live is None:
@@ -324,8 +337,10 @@ def main() -> int:
             sys.stdout.buffer.write(raw_live)
             return 0
 
-    # Trailing newline, as Claude Code's own writer emits.
-    sys.stdout.write(json.dumps(desired, indent=2, ensure_ascii=False) + "\n")
+    # Trailing newline, as Claude Code's own writer emits. Written as UTF-8 bytes,
+    # like the pass-through path, so the result does not depend on the locale.
+    rendered = json.dumps(desired, indent=2, ensure_ascii=False) + "\n"
+    sys.stdout.buffer.write(rendered.encode("utf-8"))
     return 0
 
 

@@ -7,7 +7,8 @@
 // In short: only whole-line // comments like these are allowed (no trailing comments);
 // nested objects merge recursively; lists (e.g. permissions.allow) are unioned with the
 // committed list, so entries here can only add to it; scalars are replaced. A broken file
-// aborts `chezmoi apply` with an error naming this file rather than dropping settings.
+// aborts `chezmoi apply` (and `diff`/`status`) with an error naming this file rather than
+// dropping settings.
 // After editing, run `chezmoi apply` to regenerate ~/.claude/settings.json.
 {
 }

@@ -189,14 +189,11 @@ This repository also manages Claude Code configuration for consistent setup acro
     ("chezmoi wins"): keys the template or the local overlay declare are enforced, anything else
     is stripped, and it compares semantically so Claude Code's key reordering never shows as a diff.
     The one exception is `RUNTIME_KEYS` in that script (e.g. `model`): top-level keys whose value
-    is legitimately chosen inside Claude Code per machine (e.g. via `/model`) and carried through
-    from the live file rather than stripped.
+    is legitimately chosen inside Claude Code per machine and carried through from the live file.
     If `chezmoi status` shows this file as perpetually modified and `chezmoi diff` is only
-    reordering plus the removal of a key you did not add, Claude Code has begun persisting that
-    key.
-    The default response is to declare it in the template with the value you want everywhere.
-    Only add it to `RUNTIME_KEYS` if it genuinely should vary per machine and be set from inside
-    Claude Code.
+    reordering plus the removal of a key you did not add, Claude Code has begun persisting
+    that key; declare it in the template by default, and see the `RUNTIME_KEYS` comment in the
+    script for the narrow case where it belongs there instead.
 - `~/.claude/settings.local.json` - Machine-specific overrides (minimal, for truly local settings).
     This is chezmoi's own overlay; Claude Code does not read a user-level `settings.local.json`.
     It is merged into `settings.json` at apply time, and the `merge` function in the script above
@@ -280,10 +277,10 @@ mise run ci
 ### Testing Approach
 
 Two test idioms coexist:
-- **bats** (under `test/`) for the shell/template helpers — currently `test/claude/` (the
-    `modify_settings.json.tmpl` merge script, a Python `modify_` script driven as a black box
-    through stdin, stdout, exit status, and its `CLAUDE_SETTINGS_LOCAL` env seam, executed via
-    its own `uv run --script` shebang so tests and `chezmoi apply` share one entry point).
+- **bats** (under `test/`) for chezmoi-level black-box tests — currently `test/claude/`, which
+    drives the Python `modify_settings.json.tmpl` script through stdin, stdout, exit status, and
+    its `CLAUDE_SETTINGS_LOCAL` env seam, via the script's own `uv run --script` shebang so tests
+    and `chezmoi apply` share one entry point.
 - **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
     `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
     The root `mise run test` cascades into each via the mise monorepo.

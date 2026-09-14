@@ -4,8 +4,9 @@
 #
 # Requirements the script must meet (each has at least one test below):
 #   1. When the live ~/.claude/settings.json differs from the committed settings
-#      only by key order and trailing newline, emit the live bytes unchanged, so
-#      Claude Code's runtime rewrites never cause `chezmoi diff` noise.
+#      only in formatting (key order, indentation, trailing newline), emit the live
+#      bytes unchanged, so Claude Code's runtime rewrites never cause `chezmoi diff`
+#      noise.
 #   2. When any managed value actually differs, emit the committed settings
 #      ("chezmoi wins").
 #   3. Carry runtime-owned keys (e.g. `model`, written by `/model`) through from
@@ -15,9 +16,10 @@
 #   5. A broken overlay fails loudly, naming the overlay file, rather than
 #      silently dropping settings.
 #
-# Assertion style: bats runs under the system bash (3.2 on macOS), where a failing
-# `[[ ]]` does NOT trip errexit, so a `[[ ]]` that isn't a test's last command is
-# silently ignored. Use `[ ]` or the assert_* helpers below, never bare `[[ ]]`.
+# Assertion style: bats runs under whatever `bash` is first on PATH, on macOS usually
+# the system 3.2, where a failing `[[ ]]` does NOT trip errexit, so a `[[ ]]` that
+# isn't a test's last command is silently ignored. Use `[ ]` or the assert_* helpers
+# below, never bare `[[ ]]`.
 
 bats_require_minimum_version 1.5.0
 
@@ -25,9 +27,11 @@ setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
   SRC="$REPO/private_dot_claude/modify_settings.json.tmpl"
 
-  # jq is used by the assertions below, not by the script.
+  # jq is used by the assertions below, not by the script. All three tools are in the
+  # system package manifest, so a missing one is a broken machine: fail rather than
+  # skip, or the pre-commit hook would pass with zero assertions run.
   for tool in chezmoi uv jq; do
-    command -v "$tool" >/dev/null 2>&1 || skip "requires $tool"
+    command -v "$tool" >/dev/null 2>&1 || { echo "requires $tool" >&2; return 1; }
   done
 
   # Render the templated modify_ script (Python) to an executable file, so the
@@ -44,8 +48,9 @@ setup() {
   DESIRED="$(printf '' | modify)"
 }
 
-# Run the script under test via its own shebang. uv honours the script's inline
-# metadata (requires-python), so the declared floor is what gets exercised.
+# Run the script under test via its own shebang. uv picks some interpreter that
+# satisfies the script's inline requires-python, usually the newest available; the
+# floor itself is not what runs here.
 modify() {
   "$SCRIPT" "$@"
 }
@@ -98,7 +103,9 @@ assert_aborted_naming_overlay() {
   # What Claude Code hands back after a rewrite: keys sorted (a different byte
   # order than the committed file), `model` persisted, trailing newline. bats
   # `run` and $(...) both strip trailing newlines, so compare files instead.
-  printf '%s' "$DESIRED" | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
+  # 4-space indent on purpose: it differs from the script's own 2-space output, so
+  # a script that re-serialised instead of echoing the bytes would fail here.
+  printf '%s' "$DESIRED" | jq -S --indent 4 '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
   [ "$(cat "$BATS_TEST_TMPDIR/live.json")" != "$DESIRED" ]   # sanity: the order really did change
 
   modify < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
@@ -108,8 +115,9 @@ assert_aborted_naming_overlay() {
 @test "steady state with an overlay in effect is byte-exact" {
   # What chezmoi sees on a healthy machine: overlay contributions merged in, model
   # persisted by Claude Code, keys reordered, trailing newline. Must be a no-op.
+  # Compact form here, for the same reason as the 4-space indent above.
   use_overlay '{"permissions":{"allow":["Bash(virsh list:*)"]},"env":{"FOO":"1"}}'
-  modify </dev/null | jq -S '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
+  modify </dev/null | jq -S -c '.model = "claude-fable-5-1[1m]"' > "$BATS_TEST_TMPDIR/live.json"
   modify < "$BATS_TEST_TMPDIR/live.json" > "$BATS_TEST_TMPDIR/out.json"
   cmp "$BATS_TEST_TMPDIR/live.json" "$BATS_TEST_TMPDIR/out.json"
 }
@@ -310,9 +318,9 @@ assert_aborted_naming_overlay() {
     use_overlay "$text"
     run --separate-stderr modify </dev/null
     assert_aborted_naming_overlay
-    # The message is the script's own, not jq's "error (at <stdin>:N)" pointing
-    # at a line of the committed JSON.
-    case "$stderr" in *"(at <stdin>"*) false ;; esac
+    # The message says where in the overlay and what was wrong.
+    assert_contains "$stderr" "at "
+    assert_contains "$stderr" "only null may do that"
   done
 }
 
