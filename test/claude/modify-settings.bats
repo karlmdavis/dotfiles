@@ -170,11 +170,11 @@ assert_aborted_naming_overlay() {
 }
 
 @test "a key that is not runtime-owned is still stripped" {
-  printf '%s' "$DESIRED" | jq '.theme = "dark"' > "$BATS_TEST_TMPDIR/with-theme.json"
+  printf '%s' "$DESIRED" | jq '.editorMode = "vim"' > "$BATS_TEST_TMPDIR/with-editor-mode.json"
 
-  run modify < "$BATS_TEST_TMPDIR/with-theme.json"
+  run modify < "$BATS_TEST_TMPDIR/with-editor-mode.json"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s' "$output" | jq 'has("theme")')" = "false" ]
+  [ "$(printf '%s' "$output" | jq 'has("editorMode")')" = "false" ]
 }
 
 @test "a runtime-owned key declared in the overlay beats the live value" {
@@ -189,12 +189,12 @@ assert_aborted_naming_overlay() {
 
 @test "runtime key carry-through and overlay union compose" {
   use_overlay '{"permissions":{"allow":["Bash(virsh list:*)"]}}'
-  printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]" | .theme = "dark"' > "$BATS_TEST_TMPDIR/live.json"
+  printf '%s' "$DESIRED" | jq '.model = "claude-fable-5-1[1m]" | .editorMode = "vim"' > "$BATS_TEST_TMPDIR/live.json"
 
   run modify < "$BATS_TEST_TMPDIR/live.json"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r .model)" = "claude-fable-5-1[1m]" ]
-  [ "$(printf '%s' "$output" | jq 'has("theme")')" = "false" ]
+  [ "$(printf '%s' "$output" | jq 'has("editorMode")')" = "false" ]
   [ "$(printf '%s' "$output" | jq -c '.permissions.allow[-1]')" = '"Bash(virsh list:*)"' ]
 }
 

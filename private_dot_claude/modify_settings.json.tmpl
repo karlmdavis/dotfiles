@@ -62,10 +62,10 @@ TEMPLATE: Final = r"""
   "cleanupPeriodDays": 36525,
   "attribution": {
     "commit": "",
-    "pr": ""
+    "pr": "",
+    "sessionUrl": false
   },
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       {{- /* === Git Operations === */}}
       "Bash(git add:*)",
@@ -155,19 +155,16 @@ TEMPLATE: Final = r"""
       "WebFetch(domain:biomejs.dev)",
       "WebFetch(domain:bun.sh)",
 
-      {{- /* === Superpowers Skills === */}}
-      "Skill(superpowers:*)",
-
-      {{- /* === Slash Commands === */}}
-      "SlashCommand(/pr-quality-loop)",
-      "SlashCommand(/pr-merge)",
+      {{- /* === Custom slash commands (~/.claude/commands/, invoked via the Skill tool) === */}}
+      "Skill(pr-quality-loop)",
+      "Skill(pr-merge)",
+      "Skill(pr-check-qa)",
 
       {{- /* === MCP Tools === */}}
       "mcp__ide__getDiagnostics",
 
       {{- /* === Global Command Access === */}}
-      "Read(//{{ .chezmoi.homeDir }}/.claude/commands/**)",
-      "Read(//{{ .chezmoi.homeDir }}/.config/superpowers/skills/skills/collaboration/brainstorming/**)"
+      "Read(//{{ .chezmoi.homeDir }}/.claude/commands/**)"
     ],
     "deny": [
       "Read(./.env)",
@@ -194,13 +191,13 @@ TEMPLATE: Final = r"""
     "superpowers@superpowers-marketplace": true,
     "swift-lsp@claude-plugins-official": true
   },
-  "alwaysThinkingEnabled": true,
   "voice": {
-    "enabled": true,
-    "mode": "hold"
+    "enabled": true
   },
   "skipDangerousModePermissionPrompt": true,
   "tui": "fullscreen",
+  "theme": "dark-ansi",
+  "timeFormat": "24-hour",
   "statusLine": {
     "type": "command",
     "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
@@ -209,7 +206,6 @@ TEMPLATE: Final = r"""
   "remoteControlAtStartup": true,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
   "inputNeededNotifEnabled": true,
   "hooks": {
     "PreToolUse": [

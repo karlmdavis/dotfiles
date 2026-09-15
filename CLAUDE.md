@@ -194,6 +194,11 @@ This repository also manages Claude Code configuration for consistent setup acro
     reordering plus the removal of a key you did not add, Claude Code has begun persisting
     that key; declare it in the template by default, and see the `RUNTIME_KEYS` comment in the
     script for the narrow case where it belongs there instead.
+    Since Claude Code 2.1.119 `/config` choices, and since 2.1.251 `/effort` levels
+    (`modelSettings`), are written into this file, so a choice made inside Claude Code shows in
+    `chezmoi diff` and is reverted by `chezmoi apply` unless added to the template.
+    The template deliberately does not repeat Claude Code's defaults, so upstream default changes
+    flow through; only choices that differ from the default are declared.
 - `~/.claude/settings.local.json` - Machine-specific overrides (minimal, for truly local settings).
     This is chezmoi's own overlay; Claude Code does not read a user-level `settings.local.json`.
     It is merged into `settings.json` at apply time, and the `merge` function in the script above
