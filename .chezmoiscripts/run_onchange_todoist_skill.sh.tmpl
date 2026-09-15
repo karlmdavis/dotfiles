@@ -34,6 +34,9 @@ if ! command -v npx >/dev/null 2>&1; then
   if command -v volta >/dev/null 2>&1; then
     echo "todoist-cli skill: no node toolchain yet; installing one via volta ..."
     volta install node
+    # Volta puts node/npx shims under its own bin directory, which interactive shells get from the
+    # shell-env template but a non-interactive `chezmoi apply` (e.g. from Ansible) does not.
+    export PATH="${VOLTA_HOME:-$HOME/.volta}/bin:${PATH}"
   fi
 fi
 
