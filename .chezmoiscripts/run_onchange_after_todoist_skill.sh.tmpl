@@ -15,8 +15,10 @@
 # into this script below, so bumping it there changes this script's content hash, which is what makes
 # chezmoi re-run this script -- the alias and the skill move together, from a one-line edit.
 #
-# This is a run_onchange_ script, so chezmoi records its content hash after a successful (exit 0) run
-# and stays quiet in `chezmoi status` until the pin changes again. That recording is also why this
+# This is a run_onchange_after_ script: chezmoi runs it after every managed file is in place (the CLI
+# refuses to install the skill unless ~/.claude already exists, and that directory is chezmoi-managed),
+# and it records the script's content hash after a successful (exit 0) run, staying quiet in
+# `chezmoi status` until the pin changes again. That recording is also why this
 # script must not exit 0 without having done its job: a "skipped" run would be recorded just like a
 # successful one, and the stale skill would sit there unnoticed until the next version bump. Hence the
 # node bootstrap below rather than a skip, and a hard failure if even that is impossible.
@@ -27,9 +29,9 @@ set -euo pipefail
 PIN='{{ .tools.todoist_cli }}'
 VERSION="${PIN##*@}"
 
-# The CLI is fetched with npx, so node has to exist. The package manifest installs volta (and, being
-# named `system_packages_autoinstall`, sorts before this script, so it has already run), but volta
-# installs no toolchain by default -- a freshly-provisioned machine has volta and no node.
+# The CLI is fetched with npx, so node has to exist. The package manifest installs volta (its script
+# runs during the file-update pass, which precedes all run_after_ scripts), but volta installs no
+# toolchain by default -- a freshly-provisioned machine has volta and no node.
 if ! command -v npx >/dev/null 2>&1; then
   if command -v volta >/dev/null 2>&1; then
     echo "todoist-cli skill: no node toolchain yet; installing one via volta ..."
