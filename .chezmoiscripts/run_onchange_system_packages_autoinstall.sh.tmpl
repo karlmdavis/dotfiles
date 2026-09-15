@@ -6,7 +6,22 @@
 # `chezmoi apply` detects/applies changes to the manifest/data file.
 ##
 
+
+# Homebrew 6.0+ refuses to load formulae from a third-party tap until that tap has been explicitly
+# trusted (see <https://docs.brew.sh/Tap-Trust>), so `brew bundle` fails on e.g. `oven-sh/bun/bun`.
+# Older Homebrew has no `trust` subcommand, so only call it where it exists.
+trust_tap() {
+  if brew commands 2>/dev/null | grep -qx "trust"; then
+    brew trust "$1"
+  fi
+}
+
 {{ if eq .chezmoi.os "darwin" -}}
+# Trust the third-party taps before bundling.
+{{ range .packages.macos.homebrew.taps -}}
+trust_tap {{ . | quote }}
+{{ end -}}
+
 # Use `brew bundle ...` to install all of the taps, formulae, and casks at once.
 brew bundle --no-upgrade --file=/dev/stdin <<EOF
 {{ range .packages.macos.homebrew.taps -}}
@@ -21,8 +36,13 @@ cask {{ . | quote }}
 EOF
 
 {{ else if eq .chezmoi.osRelease.id "ubuntu" -}}
-# Install all of the APT packages at once.
-sudo apt-get install {{ range .packages.ubuntu.apt }}{{ . }}{{ end }}
+# Install all of the APT packages at once (space-separated, non-interactive).
+sudo apt-get install -y {{ join " " .packages.ubuntu.apt }}
+
+# Trust the third-party taps before bundling.
+{{ range .packages.ubuntu.homebrew.taps -}}
+trust_tap {{ . | quote }}
+{{ end -}}
 
 # Use `brew bundle ...` to install all of the taps, formulae, and casks at once.
 brew bundle --no-upgrade --file=/dev/stdin <<EOF
