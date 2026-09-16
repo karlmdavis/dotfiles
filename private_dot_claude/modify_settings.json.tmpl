@@ -213,8 +213,10 @@ TEMPLATE: Final = r"""
         "matcher": "Bash",
         "hooks": [
           {
+            {{- /* Exec form (`args` present): spawned directly, no `sh -c`, path passed verbatim. */}}
             "type": "command",
-            "command": "{{ .chezmoi.homeDir }}/.local/lib/check-mise-usage.sh"
+            "command": "{{ .chezmoi.homeDir }}/.local/lib/check-mise-usage.sh",
+            "args": []
           }
         ]
       }

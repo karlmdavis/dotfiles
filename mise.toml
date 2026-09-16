@@ -26,7 +26,8 @@ description = "Run shellcheck on managed bash scripts"
 run = """
 echo "Running shellcheck..."
 shellcheck \
-  .chezmoiscripts/run_onchange_install_rustup.sh
+  .chezmoiscripts/run_onchange_install_rustup.sh \
+  private_dot_local/lib/executable_check-mise-usage.sh
 
 echo "✓ Shellcheck passed!"
 """

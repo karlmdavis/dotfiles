@@ -6,15 +6,25 @@
 #   directory or any parent. The agent should use `mise exec -- uv ...` instead,
 #   so that mise-managed environment variables (like PYTHONPYCACHEPREFIX and
 #   UV_PROJECT_ENVIRONMENT) are applied per-project, keeping Python build
-#   artifacts (__pycache__/, .venv/) out of Obsidian-synced vault directories.
+#   artifacts (__pycache__/, .venv/) out of the project tree. That matters most
+#   for trees that are synced or backed up (an Obsidian vault, for example),
+#   but the hook fires in any project that has a mise.toml.
 #
 # How it's used:
 #   - Hermes shell hook (pre_tool_call): configured in config.yaml under `hooks:`.
 #     Hermes pipes a JSON payload on stdin with tool_name, tool_input.command, cwd.
-#   - Claude Code PreToolUse hook: configured in ~/.claude/settings.json under `hooks`.
+#   - Claude Code PreToolUse hook: configured in ~/.claude/settings.json under `hooks`
+#     (exec form, `"args": []`, so the path is spawned directly with no shell).
 #     Claude Code pipes the same JSON shape on stdin.
-#   - Both systems parse stdout JSON: {} = allow, {"decision":"block","reason":...} = block.
-#   - Exit code 2 is also set as a fallback for Claude Code's exit-code-based path.
+#   - Both systems parse stdout JSON: {} = allow; on block the script prints ONE object
+#     carrying both contracts (see the footer): top-level {"decision":"block","reason":...}
+#     for Hermes (and Claude Code's deprecated PreToolUse form), plus
+#     hookSpecificOutput.permissionDecision = "deny" for Claude Code's current form.
+#   - Exit code 2 is set on block as well. Claude Code reads the JSON on every exit
+#     code, and exit 2 is the one outcome JSON cannot override, so the block holds
+#     even if a future Claude Code stops honouring either JSON shape.
+#
+# Tested by test/claude/check-mise-usage.bats; linted by `mise run lint`.
 #
 # This script must be bulletproof — it runs on every terminal/bash tool call
 # across all projects. Always validate edits with Shellcheck (`shellcheck --shell sh`)
@@ -120,23 +130,34 @@ fi
 # --------------------------------------------------------------------------- #
 # Block: a mise.toml was found and the command uses bare `uv`.
 # --------------------------------------------------------------------------- #
-# Both Hermes and Claude Code parse stdout JSON to determine whether to block.
-# The {"decision": "block", "reason": "..."} shape is the Claude-Code-style
-# payload that Hermes translates internally into its canonical
-# {"action": "block", "message": "..."} shape. Using it here works for both.
-# Exit code 2 is also set as a fallback for Claude Code's exit-code-based path.
+# Both Hermes and Claude Code parse stdout JSON to determine whether to block, but
+# they read different keys, so one object carries both:
+#   - Top-level {"decision": "block", "reason": ...}: Hermes translates this into its
+#     canonical {"action": "block", "message": ...}. Claude Code accepted the same keys
+#     for PreToolUse until they were deprecated in favour of the shape below.
+#   - hookSpecificOutput {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+#     "permissionDecisionReason": ...}: Claude Code's current PreToolUse contract; the
+#     reason becomes the permission-denied message the model sees.
+# Exit code 2 is set as well: Claude Code blocks on exit 2 regardless of JSON, using
+# the JSON reason when it parses and stderr otherwise, so stderr also carries the reason.
 
 if command -v mise >/dev/null 2>&1; then
-  reason="This project uses mise (mise.toml found). Direct \`uv\` invocations bypass mise-managed environment variables, which can cause Python build artifacts (__pycache__/, .venv/) to be written into the project directory and synced via Obsidian Sync. Instead of running \`uv\` directly, use: mise exec -- uv sync, mise exec -- uv run pytest, mise exec -- uv run python scripts/<name>.py. Or activate mise for the current shell first: eval \"\$(mise activate bash)\""
+  reason="This project has a mise.toml, so run uv through mise instead of directly. Bare \`uv\` skips the mise-managed environment variables (such as PYTHONPYCACHEPREFIX and UV_PROJECT_ENVIRONMENT), so build artifacts like __pycache__/ and .venv/ can land inside the project tree, which matters most in directories that are synced or backed up (an Obsidian vault, for example). Use: mise exec -- uv sync, mise exec -- uv run pytest, mise exec -- uv run python scripts/<name>.py. Or activate mise for this shell first: eval \"\$(mise activate bash)\""
 else
-  reason="This project has a mise.toml file, but mise is not installed on this system. Direct \`uv\` invocations bypass mise-managed environment variables, which can cause Python build artifacts (__pycache__/, .venv/) to be written into the project directory and synced via Obsidian Sync. Install mise first: curl https://mise.run | sh (or: brew install mise). Then use mise to run uv: mise exec -- uv sync, mise exec -- uv run pytest"
+  reason="This project has a mise.toml, but mise is not installed here. Bare \`uv\` skips the mise-managed environment variables (such as PYTHONPYCACHEPREFIX and UV_PROJECT_ENVIRONMENT), so build artifacts like __pycache__/ and .venv/ can land inside the project tree, which matters most in directories that are synced or backed up (an Obsidian vault, for example). Install mise first: brew install mise (or curl https://mise.run | sh), then run: mise exec -- uv sync, mise exec -- uv run pytest"
 fi
 
-# Print block directive as JSON to stdout (parsed by both Hermes and Claude Code).
-# Use jq to ensure proper JSON escaping.
-# Also write the reason to stderr so Claude Code's exit-code-2 path feeds it back
-# to the model (Claude Code shows stderr to the model on exit 2).
-jq -c -n --arg reason "$reason" '{"decision": "block", "reason": $reason}'
+# Print the block directive as JSON to stdout (jq handles the escaping), then the
+# reason on stderr for the exit-code-2 fallback path.
+jq -c -n --arg reason "$reason" '{
+  "decision": "block",
+  "reason": $reason,
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": $reason
+  }
+}'
 printf '%s\n' "$reason" >&2
 
 exit 2
