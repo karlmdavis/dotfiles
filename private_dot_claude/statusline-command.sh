@@ -14,6 +14,25 @@ pr_number=$(echo "$input" | jq -r '.pr.number // empty')
 pr_state=$(echo "$input" | jq -r '.pr.review_state // empty')
 used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 session_name=$(echo "$input" | jq -r '.session_name // empty')
+# Absent when the model has no effort parameter; reflects live /effort changes.
+effort=$(echo "$input" | jq -r '.effort.level // empty')
+fast_mode=$(echo "$input" | jq -r '.fast_mode // false')
+# Absent until the first API response, and only on claude.ai Pro/Max subscriptions.
+five_hour_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+
+# --- Render "<label>:<pct>%" coloured by threshold, and reset the colour afterwards ---
+# Green below 70, yellow below 90, red from 90 up. Every segment in this script turns its
+# colour on and off itself (`\033[0m` is the reset), so nothing leaks into the next segment.
+colored_pct() {
+  label="$1"
+  pct="$2"
+  if   [ "$pct" -ge 90 ]; then color='\033[31m'   # red
+  elif [ "$pct" -ge 70 ]; then color='\033[33m'   # yellow
+  else                         color='\033[32m'   # green
+  fi
+  # %b so the escape sequence held in $color is interpreted, not printed literally.
+  printf '%b%s:%d%%\033[0m' "$color" "$label" "$pct"
+}
 
 # --- Shorten cwd (truncate to last 3 segments, like Starship truncation_length=3) ---
 if [ -n "$cwd" ]; then
@@ -59,17 +78,24 @@ fi
 # Session name
 [ -n "$session_name" ] && parts+=("$(printf '\033[35m%s\033[0m' "$session_name")")
 
-# Model
-[ -n "$model" ] && parts+=("$(printf '\033[36m%s\033[0m' "$model")")
+# Model, with the live reasoning effort when the model has one
+if [ -n "$model" ]; then
+  model_label="$model"
+  [ -n "$effort" ] && model_label="$model_label ($effort)"
+  parts+=("$(printf '\033[36m%s\033[0m' "$model_label")")
+fi
+
+# Fast mode badge
+[ "$fast_mode" = "true" ] && parts+=("$(printf '\033[33m⚡fast\033[0m')")
 
 # Context usage
 if [ -n "$used_pct" ]; then
-  used_int=$(printf '%.0f' "$used_pct")
-  if   [ "$used_int" -ge 90 ]; then color='\033[31m'   # red
-  elif [ "$used_int" -ge 70 ]; then color='\033[33m'   # yellow
-  else                               color='\033[32m'   # green
-  fi
-  parts+=("$(printf "${color}ctx:%d%%\033[0m" "$used_int")")
+  parts+=("$(colored_pct ctx "$(printf '%.0f' "$used_pct")")")
+fi
+
+# Subscription 5-hour window usage
+if [ -n "$five_hour_pct" ]; then
+  parts+=("$(colored_pct 5h "$(printf '%.0f' "$five_hour_pct")")")
 fi
 
 # --- Join with separators ---
