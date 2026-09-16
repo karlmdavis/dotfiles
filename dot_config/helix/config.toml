@@ -1,3 +1,8 @@
+# Draw with the terminal's 16 ANSI colours so Helix inherits the iTerm2 palette (Tokyo Night Storm in
+# dark mode) and follows light/dark mode, the same way Claude Code's `theme: "dark-ansi"` does.
+# See `private_Library/private_Application Support/iTerm2/README.md` in the dotfiles repo.
+theme = "base16_terminal"
+
 # Visually wraps all lines too long to fit the current editor without horizontal scrolling.
 [editor.soft-wrap]
 enable = true
