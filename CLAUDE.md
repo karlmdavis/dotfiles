@@ -211,9 +211,12 @@ This repository also manages Claude Code configuration for consistent setup acro
 
 **Custom Skills:**
 - `~/.claude/skills/using-zellij-docs/` - Ensures version-specific accuracy for Zellij shortcuts and config.
+- `~/.claude/skills/awaiting-pr-workflows/`, `getting-pr-artifacts/`, `getting-pr-review-comments/`,
+    `getting-pr-workflow-results/` - PR workflow helpers used by the slash commands above.
 
 **Plugin Configuration:**
-- `~/.claude/plugins/known_marketplaces.json` - Plugin marketplace definitions (superpowers).
+- `~/.claude/plugins/known_marketplaces.json` - Plugin marketplace definitions (Anthropic's official
+    plugin and agent-skills marketplaces).
 
 ### Configuration Hierarchy
 
@@ -244,7 +247,7 @@ The global `settings.json` includes a comprehensive allow list compiled from all
 - **GitHub CLI**: pr, run, workflow commands
 - **Dev tools**: Rust (cargo), Python (uv), Node (npm, bun), data tools (jq, yq, csv)
 - **Web domains**: Documentation sites, package registries
-- **Skills**: Superpowers skills (systematic-debugging, brainstorming, receiving-code-review, etc.)
+- **Skills**: `Skill(...)` rules for the custom slash commands in `~/.claude/commands/`
 - **Security**: Deny list for sensitive files (.env, credentials, AWS/SSH keys)
 
 This permissive global setup reduces permission prompts while allowing project-specific overrides.
