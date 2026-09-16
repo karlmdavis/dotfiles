@@ -14,6 +14,19 @@ pr_number=$(echo "$input" | jq -r '.pr.number // empty')
 pr_state=$(echo "$input" | jq -r '.pr.review_state // empty')
 used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 session_name=$(echo "$input" | jq -r '.session_name // empty')
+# Absent when the model has no effort parameter; reflects live /effort changes.
+effort=$(echo "$input" | jq -r '.effort.level // empty')
+fast_mode=$(echo "$input" | jq -r '.fast_mode // false')
+# Absent until the first API response, and only on claude.ai Pro/Max subscriptions.
+five_hour_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+
+# --- Colour a 0-100 percentage: green below 70, yellow below 90, red above ---
+pct_color() {
+  if   [ "$1" -ge 90 ]; then printf '\033[31m'
+  elif [ "$1" -ge 70 ]; then printf '\033[33m'
+  else                       printf '\033[32m'
+  fi
+}
 
 # --- Shorten cwd (truncate to last 3 segments, like Starship truncation_length=3) ---
 if [ -n "$cwd" ]; then
@@ -59,17 +72,26 @@ fi
 # Session name
 [ -n "$session_name" ] && parts+=("$(printf '\033[35m%s\033[0m' "$session_name")")
 
-# Model
-[ -n "$model" ] && parts+=("$(printf '\033[36m%s\033[0m' "$model")")
+# Model, with the live reasoning effort when the model has one
+if [ -n "$model" ]; then
+  model_label="$model"
+  [ -n "$effort" ] && model_label="$model_label ($effort)"
+  parts+=("$(printf '\033[36m%s\033[0m' "$model_label")")
+fi
+
+# Fast mode badge
+[ "$fast_mode" = "true" ] && parts+=("$(printf '\033[33m⚡fast\033[0m')")
 
 # Context usage
 if [ -n "$used_pct" ]; then
   used_int=$(printf '%.0f' "$used_pct")
-  if   [ "$used_int" -ge 90 ]; then color='\033[31m'   # red
-  elif [ "$used_int" -ge 70 ]; then color='\033[33m'   # yellow
-  else                               color='\033[32m'   # green
-  fi
-  parts+=("$(printf "${color}ctx:%d%%\033[0m" "$used_int")")
+  parts+=("$(printf '%sctx:%d%%\033[0m' "$(pct_color "$used_int")" "$used_int")")
+fi
+
+# Subscription 5-hour window usage
+if [ -n "$five_hour_pct" ]; then
+  five_hour_int=$(printf '%.0f' "$five_hour_pct")
+  parts+=("$(printf '%s5h:%d%%\033[0m' "$(pct_color "$five_hour_int")" "$five_hour_int")")
 fi
 
 # --- Join with separators ---
