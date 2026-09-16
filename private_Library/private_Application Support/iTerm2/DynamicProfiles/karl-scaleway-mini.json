@@ -4,6 +4,7 @@
     "Guid" : "84801F28-C1B9-4965-9D5B-A35107C9A0E1",
     "Dynamic Profile Parent Name" : "zellij",
     "Command" : "/opt/homebrew/bin/mosh --server=/opt/homebrew/bin/mosh-server karl@scaleway-mini.tail26736d.ts.net",
-    "Custom Command" : "Yes"
+    "Custom Command" : "Yes",
+    "Title Components" : 33
   }]
 }
