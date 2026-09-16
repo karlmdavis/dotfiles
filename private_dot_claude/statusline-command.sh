@@ -20,12 +20,18 @@ fast_mode=$(echo "$input" | jq -r '.fast_mode // false')
 # Absent until the first API response, and only on claude.ai Pro/Max subscriptions.
 five_hour_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
 
-# --- Colour a 0-100 percentage: green below 70, yellow below 90, red above ---
-pct_color() {
-  if   [ "$1" -ge 90 ]; then printf '\033[31m'
-  elif [ "$1" -ge 70 ]; then printf '\033[33m'
-  else                       printf '\033[32m'
+# --- Render "<label>:<pct>%" coloured by threshold, and reset the colour afterwards ---
+# Green below 70, yellow below 90, red from 90 up. Every segment in this script turns its
+# colour on and off itself (`\033[0m` is the reset), so nothing leaks into the next segment.
+colored_pct() {
+  label="$1"
+  pct="$2"
+  if   [ "$pct" -ge 90 ]; then color='\033[31m'   # red
+  elif [ "$pct" -ge 70 ]; then color='\033[33m'   # yellow
+  else                         color='\033[32m'   # green
   fi
+  # %b so the escape sequence held in $color is interpreted, not printed literally.
+  printf '%b%s:%d%%\033[0m' "$color" "$label" "$pct"
 }
 
 # --- Shorten cwd (truncate to last 3 segments, like Starship truncation_length=3) ---
@@ -84,14 +90,12 @@ fi
 
 # Context usage
 if [ -n "$used_pct" ]; then
-  used_int=$(printf '%.0f' "$used_pct")
-  parts+=("$(printf '%sctx:%d%%\033[0m' "$(pct_color "$used_int")" "$used_int")")
+  parts+=("$(colored_pct ctx "$(printf '%.0f' "$used_pct")")")
 fi
 
 # Subscription 5-hour window usage
 if [ -n "$five_hour_pct" ]; then
-  five_hour_int=$(printf '%.0f' "$five_hour_pct")
-  parts+=("$(printf '%s5h:%d%%\033[0m' "$(pct_color "$five_hour_int")" "$five_hour_int")")
+  parts+=("$(colored_pct 5h "$(printf '%.0f' "$five_hour_pct")")")
 fi
 
 # --- Join with separators ---
