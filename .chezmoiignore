@@ -49,6 +49,9 @@ Library/
 #   - on CMS (work) workstations, deploy none of the remote-host profiles, so the work machine
 #     can't reach personal systems.
 Library/Application Support/iTerm2/DynamicProfiles/karl-{{ .chezmoi.hostname }}.json
+# Repo-only docs for the iTerm2 tree (how palettes reach the profiles); never deployed into ~/Library.
+Library/Application Support/iTerm2/README.md
+Library/Application Support/iTerm2/CLAUDE.md
 {{- if .isCMS }}
 Library/Application Support/iTerm2/DynamicProfiles/karl-scaleway-mini.json
 Library/Application Support/iTerm2/DynamicProfiles/karl-eddings.json

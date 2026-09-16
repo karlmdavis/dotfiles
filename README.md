@@ -96,7 +96,8 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     [`~/.hammerspoon/`](dot_hammerspoon/).
 - [iTerm2](https://iterm2.com/) (macOS terminal):
     [`~/Library/Application Support/iTerm2/DynamicProfiles/`](private_Library/private_Application%20Support/iTerm2/DynamicProfiles/),
-    see also: [color schemes stash](private_Library/private_Application%20Support/iTerm2/color-schemes/).
+    see also: [palette docs](private_Library/private_Application%20Support/iTerm2/README.md) and the
+    [color schemes stash](private_Library/private_Application%20Support/iTerm2/color-schemes/).
 - [SwiftBar](https://swiftbar.app/) (macOS menu bar): AeroSpace workspace indicator at
     [`~/.config/swiftbar/plugins/`](dot_config/swiftbar/plugins/) (a thin shim over the
     [`aerospace-workspaces`](private_dot_local/lib/aerospace-workspaces/) package),
