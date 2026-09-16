@@ -20,7 +20,6 @@ result="$(printf '%s' "$current" | jq \
   # Required marketplaces and their upstream source repos.
   def required:
     {
-      "superpowers-marketplace": { "source": { "source": "github", "repo": "obra/superpowers-marketplace" } },
       "claude-plugins-official": { "source": { "source": "github", "repo": "anthropics/claude-plugins-official" } },
       "anthropic-agent-skills":  { "source": { "source": "github", "repo": "anthropics/skills" } }
     };
