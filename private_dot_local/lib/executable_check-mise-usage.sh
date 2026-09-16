@@ -6,7 +6,9 @@
 #   directory or any parent. The agent should use `mise exec -- uv ...` instead,
 #   so that mise-managed environment variables (like PYTHONPYCACHEPREFIX and
 #   UV_PROJECT_ENVIRONMENT) are applied per-project, keeping Python build
-#   artifacts (__pycache__/, .venv/) out of Obsidian-synced vault directories.
+#   artifacts (__pycache__/, .venv/) out of the project tree. That matters most
+#   for trees that are synced or backed up (an Obsidian vault, for example),
+#   but the hook fires in any project that has a mise.toml.
 #
 # How it's used:
 #   - Hermes shell hook (pre_tool_call): configured in config.yaml under `hooks:`.
@@ -140,9 +142,9 @@ fi
 # the JSON reason when it parses and stderr otherwise, so stderr also carries the reason.
 
 if command -v mise >/dev/null 2>&1; then
-  reason="This project uses mise (mise.toml found). Direct \`uv\` invocations bypass mise-managed environment variables, which can cause Python build artifacts (__pycache__/, .venv/) to be written into the project directory and synced via Obsidian Sync. Instead of running \`uv\` directly, use: mise exec -- uv sync, mise exec -- uv run pytest, mise exec -- uv run python scripts/<name>.py. Or activate mise for the current shell first: eval \"\$(mise activate bash)\""
+  reason="This project has a mise.toml, so run uv through mise instead of directly. Bare \`uv\` skips the mise-managed environment variables (such as PYTHONPYCACHEPREFIX and UV_PROJECT_ENVIRONMENT), so build artifacts like __pycache__/ and .venv/ can land inside the project tree, which matters most in directories that are synced or backed up (an Obsidian vault, for example). Use: mise exec -- uv sync, mise exec -- uv run pytest, mise exec -- uv run python scripts/<name>.py. Or activate mise for this shell first: eval \"\$(mise activate bash)\""
 else
-  reason="This project has a mise.toml file, but mise is not installed on this system. Direct \`uv\` invocations bypass mise-managed environment variables, which can cause Python build artifacts (__pycache__/, .venv/) to be written into the project directory and synced via Obsidian Sync. Install mise first: curl https://mise.run | sh (or: brew install mise). Then use mise to run uv: mise exec -- uv sync, mise exec -- uv run pytest"
+  reason="This project has a mise.toml, but mise is not installed here. Bare \`uv\` skips the mise-managed environment variables (such as PYTHONPYCACHEPREFIX and UV_PROJECT_ENVIRONMENT), so build artifacts like __pycache__/ and .venv/ can land inside the project tree, which matters most in directories that are synced or backed up (an Obsidian vault, for example). Install mise first: brew install mise (or curl https://mise.run | sh), then run: mise exec -- uv sync, mise exec -- uv run pytest"
 fi
 
 # Print the block directive as JSON to stdout (jq handles the escaping), then the
