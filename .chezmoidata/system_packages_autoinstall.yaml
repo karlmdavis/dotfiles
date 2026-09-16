@@ -32,6 +32,9 @@ packages:
         - jq
         # Desktop notifications with click action support.
         - terminal-notifier
+        # Spell checker behind Claude Code's prompt spellcheck (`spellcheck` in settings.json);
+        # this formula bundles the language dictionaries, including `en`.
+        - aspell
         # Polyglot tool version manager (asdf-style, Rust impl); shells activate it from rc files.
         - mise
         # Manage JS environments (Rust impl).
@@ -69,6 +72,10 @@ packages:
       - libnotify-bin
       # Resilient SSH replacement that survives suspend/wake and network changes (mosh.org).
       - mosh
+      # Spell checker behind Claude Code's prompt spellcheck (`spellcheck` in settings.json),
+      # plus its English dictionary (Debian ships them separately).
+      - aspell
+      - aspell-en
     homebrew:
       taps:
         # More modern alternative to esbuild (Zig impl).

@@ -198,6 +198,13 @@ TEMPLATE: Final = r"""
   "tui": "fullscreen",
   "theme": "dark-ansi",
   "timeFormat": "24-hour",
+  {{- /* Off by default. `language` is pinned because aspell otherwise takes it from the locale,
+         which is C/POSIX on the headless Ubuntu hosts. aspell itself comes from the package
+         manifest (Homebrew `aspell` bundles the dictionaries; apt needs `aspell-en` too). */}}
+  "spellcheck": {
+    "enabled": true,
+    "language": "en_US"
+  },
   "statusLine": {
     "type": "command",
     "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
