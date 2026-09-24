@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from aerospace_workspaces.swiftbar import ordered_ids, render, truncate
+import time
+
+from aerospace_workspaces import swiftbar
+from aerospace_workspaces.swiftbar import (
+    UNAVAILABLE_TITLE,
+    ordered_ids,
+    render,
+    render_unavailable,
+    truncate,
+)
 
 # Records used across the render tests (mirrors the former bats fixture).
 RECORDS = {
@@ -141,3 +150,43 @@ def test_empty_workspace_placeholder():
 def test_pipe_in_window_title_neutralized():
     out = render_default()
     assert "Box ¦ Login" in out and "Box | Login" not in out
+
+
+# --- failure handling: the plugin must never hang or crash SwiftBar ----------------------------
+
+
+def test_render_unavailable_shape():
+    out = render_unavailable('server | "down"').splitlines()
+    assert out[0] == UNAVAILABLE_TITLE
+    assert out[1] == "---"
+    assert "|" not in out[2].split(" | ")[0] and "color=" in out[2]  # reason sanitized, greyed
+    assert "refresh=true" in out[3]
+
+
+def test_main_prints_fallback_when_aerospace_hangs(hanging_aerospace, no_sleep_leftover, capsys):
+    started = time.monotonic()
+    swiftbar.main()
+    assert time.monotonic() - started < 2.0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == UNAVAILABLE_TITLE
+    assert "didn't answer within 0.2s" in out[2]
+
+
+def test_main_prints_fallback_when_aerospace_fails(failing_aerospace, capsys):
+    swiftbar.main()
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == UNAVAILABLE_TITLE
+    assert "query failed" in out[2]
+
+
+def test_main_prints_fallback_on_bad_json(echoing_aerospace, capsys):
+    # The echoing fake answers "--focused" fine but returns non-JSON for the --json queries.
+    swiftbar.main()
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == UNAVAILABLE_TITLE
+
+
+def test_main_prints_fallback_when_binary_missing(monkeypatch, capsys):
+    monkeypatch.setenv("AEROSPACE_BIN", "/nonexistent/aerospace")
+    swiftbar.main()
+    assert capsys.readouterr().out.splitlines()[0] == UNAVAILABLE_TITLE

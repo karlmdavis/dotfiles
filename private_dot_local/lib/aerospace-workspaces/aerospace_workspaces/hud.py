@@ -17,7 +17,7 @@ import subprocess
 import sys
 from urllib.parse import quote
 
-from aerospace_workspaces.workspaces import aerospace_bin, load_workspaces, workspaces_yaml
+from aerospace_workspaces.workspaces import load_workspaces, run_aerospace, workspaces_yaml
 
 
 def resolve_display(workspace_id: str, prefix: str, records: dict[str, dict[str, str]]) -> tuple[str, str]:
@@ -49,14 +49,13 @@ def build_osascript_body(display: str, hint: str) -> str:
 
 
 def _focused_workspace() -> str:
-    """The currently focused workspace id (empty string on any failure)."""
+    """The currently focused workspace id (empty string on any failure, including a timeout).
+
+    Bounded via `run_aerospace`: the server doesn't answer focus queries while the screen is
+    locked or Universal Control has the cursor, and the HUD must never hang on that.
+    """
     try:
-        return subprocess.run(
-            [aerospace_bin(), "list-workspaces", "--focused"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
+        return run_aerospace(["list-workspaces", "--focused"]).strip()
     except (subprocess.SubprocessError, OSError):
         return ""
 
