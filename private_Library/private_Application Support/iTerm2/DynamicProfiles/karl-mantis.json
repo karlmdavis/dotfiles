@@ -5,6 +5,6 @@
     "Dynamic Profile Parent Name" : "zellij",
     "Command" : "/opt/homebrew/bin/mosh --server=/opt/homebrew/bin/mosh-server karl@mantis.tail26736d.ts.net",
     "Custom Command" : "Yes",
-    "Title Components" : 33
+    "Title Components" : 64
   }]
 }
