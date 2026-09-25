@@ -190,3 +190,12 @@ def test_main_prints_fallback_when_binary_missing(monkeypatch, capsys):
     monkeypatch.setenv("AEROSPACE_BIN", "/nonexistent/aerospace")
     swiftbar.main()
     assert capsys.readouterr().out.splitlines()[0] == UNAVAILABLE_TITLE
+
+
+def test_main_prints_fallback_on_wrong_json_shape(null_json_aerospace, capsys):
+    # `null` parses fine but isn't a list of dicts; subscripting it raises TypeError, which must
+    # degrade to the fallback menu rather than escape main().
+    swiftbar.main()
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == UNAVAILABLE_TITLE
+    assert "query failed" in out[2]

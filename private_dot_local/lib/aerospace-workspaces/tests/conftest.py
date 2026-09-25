@@ -48,3 +48,12 @@ def no_sleep_leftover():
     """Assert the test left no `sleep 30` child behind (the timeout must kill the CLI)."""
     yield
     assert os.system("pgrep -f 'sleep 30' >/dev/null") != 0, "timeout left a hung child alive"
+
+
+@pytest.fixture()
+def null_json_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` that answers every query with `null`: valid JSON, wrong shape."""
+    path = _write_script(tmp_path / "aerospace", "echo null\n")
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path

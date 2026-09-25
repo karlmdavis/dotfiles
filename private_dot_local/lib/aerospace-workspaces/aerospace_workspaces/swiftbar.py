@@ -168,7 +168,7 @@ def main() -> None:
             )
         )
         return
-    except (subprocess.CalledProcessError, OSError, json.JSONDecodeError, KeyError) as exc:
+    except (subprocess.CalledProcessError, OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
         print(render_unavailable(f"AeroSpace query failed: {exc}"))
         return
     records, declared_order = load_workspaces(workspaces_yaml())
