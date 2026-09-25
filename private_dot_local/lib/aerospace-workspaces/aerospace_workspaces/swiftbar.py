@@ -132,7 +132,8 @@ def collect() -> tuple[str, list[str], dict[str, list[dict[str, object]]]]:
     """Query AeroSpace for the focused workspace, all workspace ids, and windows-by-workspace.
 
     Raises subprocess.TimeoutExpired / CalledProcessError / OSError / json.JSONDecodeError on
-    failure; `main()` turns those into the "unavailable" menu.
+    failure, and KeyError / TypeError when the JSON parses but has an unexpected shape; `main()`
+    turns all of those into the "unavailable" menu.
     """
     focused = run_aerospace(["list-workspaces", "--focused"]).strip()
 
