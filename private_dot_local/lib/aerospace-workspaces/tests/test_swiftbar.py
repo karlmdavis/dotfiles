@@ -177,6 +177,8 @@ def test_main_prints_fallback_when_aerospace_fails(failing_aerospace, capsys):
     out = capsys.readouterr().out.splitlines()
     assert out[0] == UNAVAILABLE_TITLE
     assert "query failed" in out[2]
+    # The CLI's stderr ("boom") is the useful part; the exit status alone explains nothing.
+    assert "boom" in out[2]
 
 
 def test_main_prints_fallback_on_bad_json(echoing_aerospace, capsys):

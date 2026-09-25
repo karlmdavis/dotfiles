@@ -168,7 +168,13 @@ def main() -> None:
             )
         )
         return
-    except (subprocess.CalledProcessError, OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+    except subprocess.CalledProcessError as exc:
+        # str(exc) only says "exit status N"; the CLI's own explanation is on stderr.
+        detail = (exc.stderr or "").strip().splitlines()
+        reason = detail[0] if detail else str(exc)
+        print(render_unavailable(f"AeroSpace query failed: {reason}"))
+        return
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
         print(render_unavailable(f"AeroSpace query failed: {exc}"))
         return
     records, declared_order = load_workspaces(workspaces_yaml())
