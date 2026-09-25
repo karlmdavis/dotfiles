@@ -1,8 +1,9 @@
 # iTerm2: profiles and colour palettes
 
 Two directories live here, and the link between them is invisible in the files themselves.
-This page explains how a palette gets into a profile, which palette is applied today, and how the
-  apps that run inside iTerm2 are expected to pick up its colours.
+This page explains how a palette gets into a profile, which palette is applied today, how the
+  apps that run inside iTerm2 are expected to pick up its colours, and how the remote-host profiles
+  title their windows.
 
 ## What is here
 
@@ -17,6 +18,31 @@ This page explains how a palette gets into a profile, which palette is applied t
 - `color-schemes/`: `.itermcolors` palette files (iTerm2 colour presets) fetched from
     <https://iterm2colorschemes.com/>.
     They are a stash for importing into iTerm2; nothing reads them at runtime.
+
+## Window and tab titles
+
+A profile's `Title Components` key is a bitmask (iTerm2's `iTermTitleComponents` enum, defined in
+  `sources/Settings/Profiles/ITAddressBookMgr.h` in the iTerm2 repo) that selects what iTerm2 shows in
+  the window and tab title.
+The name part of the title comes from exactly one component; iTerm2 checks the bits in a fixed
+  order and uses the first one set, so OR-ing two name bits together does not show both.
+The name components:
+
+| Bit | Value | Component              | Shows                                             |
+| --- | ----- | ---------------------- | ------------------------------------------------- |
+| 0   | 1     | Session Name           | The name the session sets (e.g. via escape codes) |
+| 5   | 32    | Profile Name           | The profile's `Name`, only                        |
+| 6   | 64    | Profile & Session Name | `<profile name>: <session name>`                  |
+
+The remote-host profiles set `"Title Components": 64`.
+Each is named `karl@<host>`, and the remote zellij keeps updating the session name, so the title
+  reads `karl@<host>: <whatever the remote set>`: the host is always visible and cannot be overwritten
+  from the remote side.
+`zellij.json` leaves the key unset, so local sessions keep iTerm2's default title.
+
+To change what a profile shows, pick the combination in Settings → Profiles → *(profile)* → General
+  → Title; iTerm2 writes the resulting integer into the deployed JSON, which you can then
+  `chezmoi re-add` the same way as a palette change.
 
 ## How a palette gets into a profile
 
