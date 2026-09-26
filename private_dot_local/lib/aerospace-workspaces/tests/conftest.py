@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import random
 import stat
 
 import pytest
@@ -15,11 +16,18 @@ def _write_script(path, body: str) -> str:
 
 
 @pytest.fixture()
-def hanging_aerospace(tmp_path, monkeypatch):
+def hang_marker():
+    """A sleep duration unique to this test, e.g. "30.482913", so `no_sleep_leftover` can pgrep
+    for exactly the child this test spawned and not any other `sleep 30` on the machine."""
+    return f"30.{random.randrange(10**6):06d}"
+
+
+@pytest.fixture()
+def hanging_aerospace(tmp_path, monkeypatch, hang_marker):
     """A fake `aerospace` that never answers (what the real server does while the screen is
     locked / Universal Control is active). `exec` so the timeout kill hits `sleep` itself and no
     grandchild survives. Timeout is shortened so the tests stay fast."""
-    path = _write_script(tmp_path / "aerospace", "exec sleep 30\n")
+    path = _write_script(tmp_path / "aerospace", f"exec sleep {hang_marker}\n")
     monkeypatch.setenv("AEROSPACE_BIN", path)
     monkeypatch.setenv("AEROSPACE_TIMEOUT", "0.2")
     return path
@@ -44,10 +52,10 @@ def failing_aerospace(tmp_path, monkeypatch):
 
 
 @pytest.fixture()
-def no_sleep_leftover():
-    """Assert the test left no `sleep 30` child behind (the timeout must kill the CLI)."""
+def no_sleep_leftover(hang_marker):
+    """Assert the test left no `sleep <marker>` child behind (the timeout must kill the CLI)."""
     yield
-    assert os.system("pgrep -f 'sleep 30' >/dev/null") != 0, "timeout left a hung child alive"
+    assert os.system(f"pgrep -f 'sleep {hang_marker}' >/dev/null") != 0, "timeout left a hung child alive"
 
 
 @pytest.fixture()
