@@ -190,3 +190,8 @@ def test_run_aerospace_times_out_and_kills_child(hanging_aerospace, no_sleep_lef
     with pytest.raises(subprocess.TimeoutExpired):
         run_aerospace(["list-workspaces", "--focused"])
     assert time.monotonic() - started < 2.0
+
+
+def test_run_aerospace_replaces_undecodable_bytes(invalid_utf8_aerospace):
+    # Decoding must never raise; the bad byte becomes the replacement character.
+    assert run_aerospace(["list-workspaces", "--focused"]) == "ws\ufffd\n"

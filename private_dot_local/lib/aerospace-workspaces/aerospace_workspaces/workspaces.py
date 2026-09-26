@@ -136,6 +136,9 @@ def run_aerospace(args: list[str]) -> str:
         [aerospace_bin(), *args],
         capture_output=True,
         text=True,
+        # Window titles are whatever the app set; an undecodable byte becomes U+FFFD rather than
+        # a UnicodeDecodeError (a ValueError, which no caller's degrade path expects).
+        errors="replace",
         check=True,
         timeout=aerospace_timeout(),
     )

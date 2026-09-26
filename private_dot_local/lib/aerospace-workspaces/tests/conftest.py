@@ -57,3 +57,12 @@ def null_json_aerospace(tmp_path, monkeypatch):
     monkeypatch.setenv("AEROSPACE_BIN", path)
     monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
     return path
+
+
+@pytest.fixture()
+def invalid_utf8_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` whose output contains a byte that is not valid UTF-8."""
+    path = _write_script(tmp_path / "aerospace", "printf 'ws\\377\\n'\n")
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path
