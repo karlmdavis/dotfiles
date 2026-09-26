@@ -11,11 +11,17 @@
 
 `render()` is pure (all inputs injected) so it's unit-testable without a live AeroSpace.
 
-Every `aerospace` call is bounded (see `run_aerospace`): the server silently stops answering focus
-queries while the screen is locked or Universal Control has the cursor, and an unbounded call would
-never return — SwiftBar then never re-runs the plugin, and the menu-bar item freezes on stale
-output until the stuck processes are killed by hand. On any failure `main()` prints a small
-"unavailable" menu instead, and the next 10s tick simply tries again.
+Every `aerospace` call made from this code is bounded (see `run_aerospace`): the server silently
+stops answering focus queries while the screen is locked or Universal Control has the cursor, and an
+unbounded call would never return — SwiftBar then never re-runs the plugin, and the menu-bar item
+freezes on stale output until the stuck processes are killed by hand. On any failure `main()`
+prints a small "unavailable" menu instead, and the next 10s tick simply tries again.
+
+The `bash=` click actions on each menu row are different: SwiftBar itself runs those
+(`aerospace workspace <id>` / `aerospace focus --window-id <id>`) when a row is clicked, after this
+code has exited, so they carry no timeout. A click while AeroSpace is wedged can leave one hung
+`aerospace` process behind, but it does not block the plugin, and the switch would not have
+happened anyway.
 """
 
 from __future__ import annotations
