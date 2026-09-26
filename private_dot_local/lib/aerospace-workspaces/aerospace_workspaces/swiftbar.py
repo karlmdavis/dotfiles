@@ -10,6 +10,18 @@
   - under each workspace, its open windows as an indented submenu, each focusing that exact window.
 
 `render()` is pure (all inputs injected) so it's unit-testable without a live AeroSpace.
+
+Every `aerospace` call made from this code is bounded (see `run_aerospace`): the server silently
+stops answering focus queries while the screen is locked or Universal Control has the cursor, and an
+unbounded call would never return — SwiftBar then never re-runs the plugin, and the menu-bar item
+freezes on stale output until the stuck processes are killed by hand. On any failure `main()`
+prints a small "unavailable" menu instead, and the next 10s tick simply tries again.
+
+The `bash=` click actions on each menu row are different: SwiftBar itself runs those
+(`aerospace workspace <id>` / `aerospace focus --window-id <id>`) when a row is clicked, after this
+code has exited, so they carry no timeout. A click while AeroSpace is wedged can leave one hung
+`aerospace` process behind, but it does not block the plugin, and the switch would not have
+happened anyway.
 """
 
 from __future__ import annotations
@@ -20,8 +32,10 @@ import subprocess
 from aerospace_workspaces.workspaces import (
     Record,
     aerospace_bin,
+    aerospace_timeout,
     label,
     load_workspaces,
+    run_aerospace,
     sanitize,
     workspaces_yaml,
 )
@@ -29,6 +43,9 @@ from aerospace_workspaces.workspaces import (
 # Friendly names longer than this are truncated (with an ellipsis) in the menu-bar title only;
 # the dropdown always shows the full name.
 TITLE_NAME_LIMIT = 30
+
+# Menu-bar title shown while AeroSpace can't be queried.
+UNAVAILABLE_TITLE = "⚠️ AeroSpace"
 
 
 def truncate(text: str, limit: int = TITLE_NAME_LIMIT) -> str:
@@ -97,25 +114,34 @@ def render(
     return "\n".join(lines)
 
 
-def _run_json(args: list[str]) -> object:
-    """Run `aerospace <args>` and parse stdout as JSON."""
-    result = subprocess.run(
-        [aerospace_bin(), *args],
-        capture_output=True,
-        text=True,
-        check=True,
+def render_unavailable(reason: str) -> str:
+    """Build the degraded menu shown when AeroSpace can't be queried (pure: no I/O).
+
+    A visible warning title, the reason (greyed), and a row that re-runs the plugin on click.
+    """
+    return "\n".join(
+        [
+            UNAVAILABLE_TITLE,
+            "---",
+            f"{sanitize(reason)} | color=#999999",
+            "Retry now | refresh=true",
+        ]
     )
-    return json.loads(result.stdout)
+
+
+def _run_json(args: list[str]) -> object:
+    """Run `aerospace <args>` (bounded) and parse stdout as JSON."""
+    return json.loads(run_aerospace(args))
 
 
 def collect() -> tuple[str, list[str], dict[str, list[dict[str, object]]]]:
-    """Query AeroSpace for the focused workspace, all workspace ids, and windows-by-workspace."""
-    focused = subprocess.run(
-        [aerospace_bin(), "list-workspaces", "--focused"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    """Query AeroSpace for the focused workspace, all workspace ids, and windows-by-workspace.
+
+    Raises subprocess.TimeoutExpired / CalledProcessError / OSError / json.JSONDecodeError on
+    failure, and KeyError / TypeError when the JSON parses but has an unexpected shape; `main()`
+    turns all of those into the "unavailable" menu.
+    """
+    focused = run_aerospace(["list-workspaces", "--focused"]).strip()
 
     workspaces = _run_json(["list-workspaces", "--all", "--json"])
     ids = [str(entry["workspace"]) for entry in workspaces]  # type: ignore[index]
@@ -139,6 +165,24 @@ def collect() -> tuple[str, list[str], dict[str, list[dict[str, object]]]]:
 
 
 def main() -> None:
-    focused, ids, windows_by_ws = collect()
+    try:
+        focused, ids, windows_by_ws = collect()
+    except subprocess.TimeoutExpired:
+        print(
+            render_unavailable(
+                f"AeroSpace didn't answer within {aerospace_timeout():g}s "
+                "(screen locked or Universal Control active?)"
+            )
+        )
+        return
+    except subprocess.CalledProcessError as exc:
+        # str(exc) only says "exit status N"; the CLI's own explanation is on stderr.
+        detail = (exc.stderr or "").strip().splitlines()
+        reason = detail[0] if detail else str(exc)
+        print(render_unavailable(f"AeroSpace query failed: {reason}"))
+        return
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        print(render_unavailable(f"AeroSpace query failed: {exc}"))
+        return
     records, declared_order = load_workspaces(workspaces_yaml())
     print(render(focused, ids, windows_by_ws, records, declared_order))

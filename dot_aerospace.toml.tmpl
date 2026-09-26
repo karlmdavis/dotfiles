@@ -1,6 +1,9 @@
 config-version = 2
 
-after-startup-command = []
+# Push a SwiftBar refresh once the server is up, so the menu-bar workspace indicator stops
+# showing "unavailable" at login as soon as AeroSpace can answer, instead of waiting for the
+# plugin's next 10s tick. Same push as exec-on-workspace-change below.
+after-startup-command = ['exec-and-forget open -g "swiftbar://refreshallplugins"']
 start-at-login = true
 
 enable-normalization-flatten-containers = true

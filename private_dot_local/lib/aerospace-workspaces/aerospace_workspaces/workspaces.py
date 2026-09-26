@@ -7,12 +7,14 @@ rather than being duplicated in each entry-point script.
 Two environment seams double as runtime overrides and test seams:
   - $AEROSPACE_BIN — the `aerospace` binary path (SwiftBar's launchd PATH omits Homebrew).
   - $AEROSPACE_WORKSPACES_YAML — the names file location.
-Both are read at call time (not import time) so tests can set them per-case.
+  - $AEROSPACE_TIMEOUT — seconds to wait for an `aerospace` CLI call (default 3).
+All are read at call time (not import time) so tests can set them per-case.
 """
 
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -102,3 +104,42 @@ def label(workspace_id: str, records: dict[str, Record]) -> str:
     text = f"{workspace_id}: {name}" if name else workspace_id
     icon = record.get("icon")
     return f"{sanitize(icon)} {text}" if icon else text
+
+
+# Seconds to wait for the `aerospace` CLI before giving up. Bounded because the AeroSpace server
+# stops answering *focus* queries (list-workspaces --focused etc.) whenever the frontmost "app" is
+# one it can't reach over accessibility — loginwindow while the screen is locked, or
+# com.apple.universalcontrol while the cursor is on another device. Its socket accepts the
+# connection but never replies, so an unbounded call blocks forever and wedges the caller.
+DEFAULT_TIMEOUT = 3.0
+
+
+def aerospace_timeout() -> float:
+    """Seconds to wait for an `aerospace` call. $AEROSPACE_TIMEOUT overrides (default 3)."""
+    raw = os.environ.get("AEROSPACE_TIMEOUT")
+    if raw is None:
+        return DEFAULT_TIMEOUT
+    try:
+        return float(raw)
+    except ValueError:
+        return DEFAULT_TIMEOUT
+
+
+def run_aerospace(args: list[str]) -> str:
+    """Run `aerospace <args>` and return its stdout, waiting at most `aerospace_timeout()` seconds.
+
+    Raises subprocess.TimeoutExpired when the server doesn't answer in time (the child is killed
+    first, so no `aerospace` process is left behind), subprocess.CalledProcessError on a non-zero
+    exit, and OSError if the binary can't be launched. Callers decide how to degrade.
+    """
+    result = subprocess.run(
+        [aerospace_bin(), *args],
+        capture_output=True,
+        text=True,
+        # Window titles are whatever the app set; an undecodable byte becomes U+FFFD rather than
+        # a UnicodeDecodeError (a ValueError, which no caller's degrade path expects).
+        errors="replace",
+        check=True,
+        timeout=aerospace_timeout(),
+    )
+    return result.stdout
