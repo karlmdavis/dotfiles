@@ -127,9 +127,50 @@ hs.hotkey.bind({"ctrl", "alt", "cmd"}, "1", function() switchResolution("screens
 -- empty `passthrough` mode (see dot_aerospace.toml.tmpl) unregisters every binding, letting the
 -- chord reach Screen Sharing and, from there, the remote Mac's AeroSpace — which runs this same
 -- config, so no separate local/remote keybindings are needed.
+--
+-- Every `aerospace` call here is bounded. The AeroSpace server accepts a CLI connection but never
+-- replies while the frontmost app is one it can't reach over accessibility (Universal Control
+-- holding the cursor, a locked screen), so an unbounded `hs.task` would leave one `aerospace`
+-- process behind per call, forever. Same root cause and same 3 s bound as
+-- ~/.local/lib/aerospace-workspaces (aerospace_workspaces.workspaces, DEFAULT_TIMEOUT); the
+-- closest upstream reports are nikitabobko/AeroSpace discussions #2084 and #2095.
 local AEROSPACE = "/opt/homebrew/bin/aerospace"
+local AEROSPACE_TIMEOUT = 3
 local REMOTE_APPS = { ["com.apple.ScreenSharing"] = true }
 local passthrough = false
+
+-- In-flight kill timers, keyed by task. Global so the timers survive garbage collection until
+-- they fire or the task finishes (an unreferenced hs.timer is collected before it runs).
+boundedTasks = {}
+
+-- Run `path args...` in the background and kill it if it is still running after
+-- AEROSPACE_TIMEOUT seconds. Global so it can be exercised from `hs -c`.
+function runBounded(path, args)
+    local task
+    task = hs.task.new(path, function()
+        local timer = boundedTasks[task]
+        if timer then
+            timer:stop()
+            boundedTasks[task] = nil
+        end
+    end, args)
+    task:start()
+    boundedTasks[task] = hs.timer.doAfter(AEROSPACE_TIMEOUT, function()
+        boundedTasks[task] = nil
+        if task:isRunning() then
+            task:terminate()
+            print(string.format(
+                "%s %s did not answer within %ds; killed",
+                path, table.concat(args, " "), AEROSPACE_TIMEOUT
+            ))
+        end
+    end)
+    return task
+end
+
+local function runAerospace(args)
+    return runBounded(AEROSPACE, args)
+end
 
 local function isRemoteApp(app)
     return app ~= nil and REMOTE_APPS[app:bundleID()] == true
@@ -138,7 +179,7 @@ end
 local function setPassthrough(enable, announce)
     if enable == passthrough then return end
     passthrough = enable
-    hs.task.new(AEROSPACE, nil, { "mode", enable and "passthrough" or "main" }):start()
+    runAerospace({ "mode", enable and "passthrough" or "main" })
     if announce then
         hs.alert.show(enable and "⌨️ → remote" or "⌨️ → local", alertStyle, nil, 0.8)
     end
