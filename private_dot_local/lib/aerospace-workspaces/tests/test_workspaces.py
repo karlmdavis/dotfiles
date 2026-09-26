@@ -190,10 +190,3 @@ def test_run_aerospace_times_out_and_kills_child(hanging_aerospace, no_sleep_lef
     with pytest.raises(subprocess.TimeoutExpired):
         run_aerospace(["list-workspaces", "--focused"])
     assert time.monotonic() - started < 2.0
-
-
-def test_run_aerospace_explicit_timeout_wins_over_env(hanging_aerospace, no_sleep_leftover):
-    started = time.monotonic()
-    with pytest.raises(subprocess.TimeoutExpired):
-        run_aerospace(["list-workspaces", "--focused"], timeout=0.05)
-    assert time.monotonic() - started < 1.0

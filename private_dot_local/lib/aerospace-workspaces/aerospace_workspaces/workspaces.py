@@ -125,8 +125,8 @@ def aerospace_timeout() -> float:
         return DEFAULT_TIMEOUT
 
 
-def run_aerospace(args: list[str], timeout: float | None = None) -> str:
-    """Run `aerospace <args>` and return its stdout, waiting at most `timeout` seconds.
+def run_aerospace(args: list[str]) -> str:
+    """Run `aerospace <args>` and return its stdout, waiting at most `aerospace_timeout()` seconds.
 
     Raises subprocess.TimeoutExpired when the server doesn't answer in time (the child is killed
     first, so no `aerospace` process is left behind), subprocess.CalledProcessError on a non-zero
@@ -137,6 +137,6 @@ def run_aerospace(args: list[str], timeout: float | None = None) -> str:
         capture_output=True,
         text=True,
         check=True,
-        timeout=aerospace_timeout() if timeout is None else timeout,
+        timeout=aerospace_timeout(),
     )
     return result.stdout
