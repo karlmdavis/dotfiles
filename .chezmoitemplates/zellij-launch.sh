@@ -41,8 +41,8 @@ esac
 # Zed integrated terminal.
 [ -n "${ZED_TERM:-}" ] && return
 
-# VS Code / Cursor / Zed by terminal-program name.
-case "${TERM_PROGRAM:-}" in vscode|cursor|zed) return ;; esac
+# VS Code / Cursor / Zed / Claude desktop by terminal-program name.
+case "${TERM_PROGRAM:-}" in vscode|cursor|zed|claude-desktop) return ;; esac
 
 # JetBrains IDEs (IntelliJ, etc.).
 [ "${TERMINAL_EMULATOR:-}" = "JetBrains-JediTerm" ] && return
@@ -52,5 +52,9 @@ case "${TERM_PROGRAM:-}" in vscode|cursor|zed) return ;; esac
 # Launch
 ##
 
-# Hand the terminal to the zellij welcome chooser (when zellij is installed).
-command -v zellij >/dev/null 2>&1 && exec zellij -l welcome
+# Hand the terminal to the zellij welcome chooser (when zellij is installed), preferring the
+# zellij-welcome wrapper, which also garbage-collects sessions abandoned at the chooser.
+if command -v zellij >/dev/null 2>&1; then
+  [ -x "$HOME/.local/bin/zellij-welcome" ] && exec "$HOME/.local/bin/zellij-welcome"
+  exec zellij -l welcome
+fi
