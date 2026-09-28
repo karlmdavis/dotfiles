@@ -1,0 +1,55 @@
+name "triangular-horse"
+tabs {
+    tab {
+        position 0
+        name "Tab #1"
+        active false
+        panes_to_hide 0
+        is_fullscreen_active false
+        is_sync_panes_active false
+        are_floating_panes_visible false
+        viewport_rows 46
+        viewport_columns 58
+        display_area_columns 58
+        display_area_rows 46
+        is_swap_layout_dirty false
+        selectable_tiled_panes_count 1
+        selectable_floating_panes_count 0
+    }
+}
+panes {
+    pane {
+        id 0
+        is_plugin true
+        is_focused true
+        is_fullscreen false
+        is_floating false
+        is_suppressed false
+        title "welcome-screen"
+        exited false
+        is_held false
+        pane_x 0
+        pane_content_x 0
+        pane_y 0
+        pane_content_y 0
+        pane_rows 46
+        pane_content_rows 46
+        pane_columns 58
+        pane_content_columns 58
+        plugin_url "welcome-screen"
+        is_selectable true
+        tab_position 0
+    }
+}
+connected_clients 0
+web_clients_allowed false
+web_client_count 0
+available_layouts {
+    default source="built-in"
+    classic source="built-in"
+    compact source="built-in"
+    disable-status-bar source="built-in"
+    strider source="built-in"
+}
+tab_history {
+}

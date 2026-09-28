@@ -554,6 +554,29 @@ def test_metadata_that_makes_no_sense_is_no_reason_at_all(text):
     assert collector.metadata_keep_reason(text) is None
 
 
+@pytest.mark.parametrize("version", ["0.43.1", "0.44.3"])
+def test_metadata_as_zellij_itself_writes_it(version):
+    """Files that zellij wrote, each for a session abandoned at the welcome screen.
+
+    The files made up by `write_metadata` show only that the collector reads the layout it
+    expects. These show that zellij writes that layout: with a change made where a session in
+    use would differ, each file has to become a reason to keep its session.
+    """
+    fixture = Path(__file__).parent / "fixtures" / f"welcome-session-zellij-{version}.kdl"
+    abandoned = fixture.read_text(encoding="utf-8")
+    assert collector.metadata_keep_reason(abandoned) is None
+
+    def changed(old, new):
+        assert abandoned.count(old) >= 1
+        return collector.metadata_keep_reason(abandoned.replace(old, new, 1))
+
+    assert changed("connected_clients 0", "connected_clients 1") == "client attached"
+    assert changed("        is_plugin true", "        is_plugin false") == "has a terminal pane"
+    assert changed('        name "Tab #1"', '        name "scratch"') == "has a renamed tab"
+    a_tab = abandoned[abandoned.index("    tab {") : abandoned.index("    }\n") + len("    }\n")]
+    assert changed(a_tab, a_tab + a_tab) == "has more than one tab"
+
+
 def test_sessions_in_use_by_their_metadata_cost_no_queries(zellij, tmp_path, capsys):
     write_metadata("dotfiles", clients=1, panes=((False, None),), tabs=("claude-settings",))
     write_metadata("outstanding-cowbell", clients=1)
