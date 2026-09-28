@@ -319,6 +319,17 @@ def test_young_and_exited_sessions_are_never_queried(zellij):
     assert zellij.queried() == {"dotfiles", "brave-petunia", "outstanding-cowbell", "stale one"}
 
 
+def test_session_with_a_client_gets_only_the_clients_query(zellij):
+    gc.main([])
+    actions = {name: [call[3] for call in zellij.calls if call[:2] == ["--session", name]]
+               for name in ("dotfiles", "outstanding-cowbell", "brave-petunia")}
+    assert actions == {
+        "dotfiles": ["list-clients"],
+        "outstanding-cowbell": ["list-clients"],
+        "brave-petunia": ["list-clients", "list-panes", "list-tabs"],
+    }
+
+
 def test_min_age_override_widens_the_net(zellij, capsys, monkeypatch):
     monkeypatch.setenv("ZELLIJ_GC_MIN_AGE_HOURS", "0")
     gc.main(["--dry-run"])

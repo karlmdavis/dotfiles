@@ -160,6 +160,9 @@ def inspect(zellij: str, session: Session, *, min_age_seconds: float) -> bool:
         output = run_zellij(zellij, ["--session", session.name, "action", *action])
         if output is None:
             return False
+        # A session in use is settled by the first query; skip the other two.
+        if action == ["list-clients"] and count_clients(output) != 0:
+            return False
         outputs.append(output)
     return is_abandoned(session, *outputs, min_age_seconds=min_age_seconds)
 
