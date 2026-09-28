@@ -129,10 +129,6 @@ def test_unattended_welcome_screen_is_abandoned():
     assert abandoned()
 
 
-def test_name_plays_no_part():
-    assert abandoned(session=Session("my-project", 5 * HOUR))
-
-
 @pytest.mark.parametrize(
     "session",
     [
@@ -163,7 +159,7 @@ def test_kept_when_a_client_is_attached_or_clients_are_unreadable(clients):
         json.dumps([{"is_plugin": True, "plugin_url": "file:/x/not-welcome-screen.wasm"}]),
         "[]",
         "not json",
-        "{}",
+        "null",
         '["welcome-screen"]',
         json.dumps([{"is_plugin": True, "plugin_url": "zellij:link"}]),
         json.dumps([{"plugin_url": "welcome-screen"}]),
@@ -206,6 +202,8 @@ def test_min_age_from_env(monkeypatch, value, expected):
 
 # --- End to end, against a fake zellij ------------------------------------------------------
 
+# Two sessions are abandoned: `brave-petunia`, named as zellij generates names, and `stale one`,
+# which no generator would produce. Both must go: the signature decides, not the name.
 LISTING = textwrap.dedent(
     """\
     dotfiles [Created 3months 25days 20h 37m 19s ago]
@@ -464,16 +462,18 @@ def test_disable_switch_does_not_stop_a_preview(zellij, capsys, monkeypatch):
     assert captured.err.startswith("zellij-gc: ZELLIJ_GC_DISABLE is set")
 
 
-def test_zellij_without_the_pane_and_tab_queries_deletes_nothing(zellij, capsys):
-    """A zellij lacking the list-panes/list-tabs actions fails them, so every session is kept."""
-    replies = {name: {"list-clients": reply["list-clients"]} for name, reply in REPLIES.items()}
+@pytest.mark.parametrize("missing", ["list-clients", "list-panes", "list-tabs"])
+def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, missing):
+    """As on a zellij too old to have the action: whichever query fails, nothing is deleted."""
+    replies = {name: {action: text for action, text in reply.items() if action != missing}
+               for name, reply in REPLIES.items()}
     zellij.configure(replies=replies)
     assert gc.main([]) == 0
     assert gc.main(["--dry-run"]) == 0
     assert zellij.deletions == []
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "zellij-gc: kept 'brave-petunia': list-panes failed (exit 2)" in captured.err
+    assert f"zellij-gc: kept 'brave-petunia': {missing} failed (exit 2)" in captured.err
 
 
 def test_query_that_hangs_is_a_failure(zellij):
@@ -592,3 +592,8 @@ def test_shim_runs_the_package_and_passes_its_arguments_and_status(zellij, monke
     rejected = subprocess.run([str(shim), "--dryrun"], capture_output=True, check=False)
     assert rejected.returncode == 2
     assert zellij.deletions == []
+
+    # argparse exits by itself, so only a status that main() returns shows the shim passing it on.
+    monkeypatch.setenv("ZELLIJ_GC_MIN_AGE_HOURS", "24h")
+    refused = subprocess.run([str(shim), "--dry-run"], capture_output=True, check=False)
+    assert refused.returncode == 1
