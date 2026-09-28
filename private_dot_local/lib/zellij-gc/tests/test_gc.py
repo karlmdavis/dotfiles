@@ -360,12 +360,13 @@ def test_a_run_with_nothing_to_delete_still_leaves_a_line(zellij, tmp_path):
 
 def test_log_is_rotated_once_past_its_size_cap(zellij, tmp_path, monkeypatch):
     monkeypatch.setattr(gc, "LOG_MAX_BYTES", 200)
+    zellij.configure(listing=None)  # The cheapest run: one zellij call and one log line (~90 bytes).
     directory = tmp_path / "state" / "zellij-gc"
-    for _ in range(12):
+    for _ in range(8):  # Enough to rotate twice, so the second rotation replaces gc.log.1.
         assert gc.main([]) == 0
     assert sorted(path.name for path in directory.iterdir()) == ["gc.log", "gc.log.1"]
-    # Each file stops growing within one run's worth of lines of the cap.
-    assert all(path.stat().st_size < 200 + 400 for path in directory.iterdir())
+    # Each file stops growing within one line of the cap.
+    assert all(path.stat().st_size < 200 + 100 for path in directory.iterdir())
 
 
 def test_a_crash_is_logged_with_its_traceback(zellij, tmp_path, monkeypatch):
@@ -446,9 +447,9 @@ def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, m
 
 
 def test_query_that_hangs_is_a_failure(zellij):
-    zellij.configure(sleep=3)
-    result = gc.run_zellij(str(zellij.path), ["list-sessions"], timeout=1)
-    assert result == gc.Result(None, "timed out after 1s")
+    zellij.configure(sleep=1)
+    result = gc.run_zellij(str(zellij.path), ["list-sessions"], timeout=0.3)
+    assert result == gc.Result(None, "timed out after 0.3s")
 
 
 def test_undecodable_output_does_not_stop_the_run(zellij, capsys, monkeypatch, tmp_path):

@@ -146,7 +146,7 @@ class Result:
     failure: str = ""
 
 
-def run_zellij(zellij: str, args: list[str], *, timeout: int = QUERY_TIMEOUT_SECONDS) -> Result:
+def run_zellij(zellij: str, args: list[str], *, timeout: float = QUERY_TIMEOUT_SECONDS) -> Result:
     """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures."""
     try:
         result = subprocess.run(
