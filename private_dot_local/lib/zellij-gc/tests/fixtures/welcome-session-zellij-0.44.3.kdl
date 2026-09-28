@@ -1,0 +1,87 @@
+name "brave-petunia"
+tabs {
+    tab {
+        position 0
+        name "Tab #1"
+        active false
+        panes_to_hide 0
+        is_fullscreen_active false
+        is_sync_panes_active false
+        are_floating_panes_visible false
+        viewport_rows 68
+        viewport_columns 251
+        display_area_columns 251
+        display_area_rows 68
+        is_swap_layout_dirty false
+        selectable_tiled_panes_count 1
+        selectable_floating_panes_count 0
+        tab_id 0
+    }
+}
+panes {
+    pane {
+        id 1
+        is_plugin true
+        is_focused true
+        is_fullscreen false
+        is_floating false
+        is_suppressed false
+        title "Session Manager"
+        exited false
+        is_held false
+        pane_x 0
+        pane_content_x 0
+        pane_y 0
+        pane_content_y 0
+        pane_rows 68
+        pane_content_rows 68
+        pane_columns 251
+        pane_content_columns 251
+        plugin_url "welcome-screen"
+        is_selectable true
+        tab_position 0
+    }
+    pane {
+        id 0
+        is_plugin true
+        is_focused false
+        is_fullscreen false
+        is_floating false
+        is_suppressed true
+        title "(.) - zellij:link"
+        exited false
+        is_held false
+        pane_x 20
+        pane_content_x 21
+        pane_y 6
+        pane_content_y 7
+        pane_rows 12
+        pane_content_rows 10
+        pane_columns 40
+        pane_content_columns 38
+        plugin_url "zellij:link"
+        is_selectable true
+        tab_position 0
+    }
+}
+connected_clients 0
+web_clients_allowed false
+web_client_count 0
+available_layouts {
+    default source="built-in"
+    classic source="built-in"
+    compact source="built-in"
+    disable-status-bar source="built-in"
+    strider source="built-in"
+}
+tab_history {
+}
+pane_history {
+    client {
+        id 1
+        history {
+            pane_id type="plugin" 1
+        }
+    }
+}
+creation_time 10208920

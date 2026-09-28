@@ -1,0 +1,31 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+"""zellij-gc — delete zellij sessions abandoned at the welcome screen (thin launcher shim).
+
+Run by ~/.local/bin/zellij-welcome before it opens the chooser, or by hand:
+  zellij-gc [--dry-run]
+
+The real logic lives in the zellij_gc package at ~/.local/lib/zellij-gc (an embedded mini-project,
+so its code and pytest tests live together). The shebang runs this through `uv` (found on PATH),
+which supplies Python >= 3.11; there are no third-party dependencies.
+"""
+
+import os
+import sys
+from pathlib import Path
+
+# This is a standalone script, not an installed package, so the package dir is added to sys.path
+# explicitly. $ZELLIJ_GC_LIB_DIR overrides it (the seam for running the source package instead of
+# the applied copy).
+sys.path.insert(
+    0,
+    os.environ.get("ZELLIJ_GC_LIB_DIR") or str(Path.home() / ".local/lib/zellij-gc"),
+)
+
+from zellij_gc.collector import main
+
+if __name__ == "__main__":
+    sys.exit(main())

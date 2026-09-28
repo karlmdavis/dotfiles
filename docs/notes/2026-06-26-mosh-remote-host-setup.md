@@ -67,8 +67,9 @@ Prefer this over exposing UDP 60000–61000 on a public IP / cloud security grou
 
 The iTerm2 profiles run their `Command` directly in iTerm's GUI launch environment, whose PATH is
   just `/usr/bin:/bin:/usr/sbin:/sbin`. So use the **absolute binary path** `/opt/homebrew/bin/mosh`
-  (a bare `mosh` yields "No such file or directory" — the `zellij` parent profile uses an absolute
-  path for the same reason).
+  (a bare `mosh` yields "No such file or directory" — the `zellij` parent profile sidesteps the same
+  problem by running `~/.local/bin/zellij-welcome` through `/bin/sh`, and that wrapper locates
+  Homebrew's bin dir itself).
 
 So each profile's command looks like `/opt/homebrew/bin/mosh <host>` (plus
   `--server=/opt/homebrew/bin/mosh-server` when the *target* is a macOS host reached via regular

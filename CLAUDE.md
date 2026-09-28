@@ -71,6 +71,8 @@ The repository uses a sophisticated template hierarchy:
 - `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
 - `.chezmoitemplates/shell-aliases.sh` - Canonical shell-wide aliases, included by BOTH the login and rc files
 - `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
+- `private_dot_local/bin/executable_zellij-welcome` - Wrapper the launcher execs: runs the
+    abandoned-session collector, then opens the chooser
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
   - PATH management for Homebrew, Cargo, Volta, pipx, and the generic bin dirs (kept in sync with `shell-env.sh`)
   - Starship prompt setup (with lite/full variants based on font support)
@@ -157,14 +159,31 @@ Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on 
 Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome`
   on any OS via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser
   whose panes run nushell.
+The exec goes through `~/.local/bin/zellij-welcome` (source:
+  `private_dot_local/bin/executable_zellij-welcome`), which the iTerm2 `zellij` profile also runs
+  directly, so every route into the chooser shares one entry point.
+Both callers probe it first with `zellij-welcome --check` and fall back to plain `zellij -l welcome`,
+  because a failed `exec` ends a zsh or macOS bash login shell and would lock out every login.
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
     scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes
     (VS Code/Cursor/Zed/JetBrains/Xcode) are never disturbed.
 - IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`).
+- The Claude desktop app's shell skipped by name (`TERM_PROGRAM=claude-desktop`).
 - `NO_ZELLIJ=1` environment variable opt-out.
 - Recursion prevention (checks `$ZELLIJ` variable).
 - Fallback to the normal shell if zellij missing.
+
+Inbound interactive SSH deliberately gets the chooser too, so a manual `ssh` from inside a local
+  Zellij pane nests.
+To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij), or set `NO_ZELLIJ=1`
+  in the remote shell's environment; ssh does not forward it from the local side.
+
+**Abandoned Zellij session GC:**
+Before opening the chooser, `zellij-welcome` runs `~/.local/bin/zellij-gc`, which deletes the sessions
+  that were abandoned at it.
+Its rules, records, and controls are in
+  [`private_dot_local/lib/zellij-gc/CLAUDE.md`](./private_dot_local/lib/zellij-gc/CLAUDE.md).
 
 ## Development Toolchain
 
@@ -267,7 +286,8 @@ Commands support bash command interpolation with `!`backticks`` for dynamic cont
 This repository uses mise for task automation and testing.
 
 **Key tasks:**
-- `:lint` - Run shellcheck on managed bash scripts
+- `:lint` - Run shellcheck on managed shell scripts, plus `ruff` and `mypy` on the Python
+    mini-projects whose `lint` task the root task calls (configured in each one's `pyproject.toml`)
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
@@ -285,10 +305,12 @@ mise run ci
 ### Testing Approach
 
 Two test idioms coexist:
-- **bats** (under `test/`) for chezmoi-level black-box tests — currently `test/claude/`, which
-    drives the Python `modify_settings.json.tmpl` script through stdin, stdout, exit status, and
-    its `CLAUDE_SETTINGS_LOCAL` env seam, via the script's own `uv run --script` shebang so tests
-    and `chezmoi apply` share one entry point.
+- **bats** (under `test/`) for chezmoi-level black-box tests.
+    `test/claude/` drives the Python `modify_settings.json.tmpl` script through stdin, stdout, exit
+    status, and its `CLAUDE_SETTINGS_LOCAL` env seam, via the script's own `uv run --script` shebang
+    so tests and `chezmoi apply` share one entry point.
+    `test/zellij/` runs the `zellij-welcome` wrapper in a throwaway `HOME` against stand-in `zellij`
+    and `zellij-gc` executables.
 - **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
     `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
     The root `mise run test` cascades into each via the mise monorepo.
