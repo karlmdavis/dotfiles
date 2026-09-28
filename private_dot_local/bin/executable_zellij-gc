@@ -15,16 +15,17 @@ which supplies Python >= 3.11; there are no third-party dependencies.
 
 import os
 import sys
+from pathlib import Path
 
 # This is a standalone script, not an installed package, so the package dir is added to sys.path
 # explicitly. $ZELLIJ_GC_LIB_DIR overrides it (the seam for running the source package instead of
 # the applied copy).
 sys.path.insert(
     0,
-    os.environ.get("ZELLIJ_GC_LIB_DIR", os.path.expanduser("~/.local/lib/zellij-gc")),
+    os.environ.get("ZELLIJ_GC_LIB_DIR") or str(Path.home() / ".local/lib/zellij-gc"),
 )
 
-from zellij_gc.gc import main
+from zellij_gc.collector import main
 
 if __name__ == "__main__":
     sys.exit(main())

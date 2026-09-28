@@ -1,37 +1,43 @@
 """zellij-gc core: session parsing, abandonment classification, and deletion.
 
 Parsing and classification are pure functions, unit-tested directly. Everything that touches the
-environment, the zellij CLI, or the filesystem sits in the I/O layer below them, which is tested end
-to end against a fake `zellij`.
+environment, the zellij CLI, or the filesystem sits in the I/O layer below them, which is tested
+end to end against a fake `zellij`.
 
 A session is abandoned when it never got past the welcome screen and nobody is looking at it: it is
 running, older than the minimum age, and has no clients, no terminal panes, the welcome-screen
 plugin, and a single default tab. Such a session holds no user state, so its name plays no part.
 Every doubt (a failed, timed-out, or unparseable query) resolves to "keep the session".
 
-A background run must never write to the terminal, so it reports to a size-capped log instead. Every
-run that gets the lock leaves one line there, which is what tells "nothing to do" apart from "broken".
+A background run must never write to the terminal, so it reports to a size-capped log instead.
+Every run that gets the lock leaves one line there, which is what tells "nothing to do" apart from
+"broken".
 """
 
 from __future__ import annotations
 
 import argparse
-import datetime
+import contextlib
 import fcntl
 import json
+import logging
+import logging.handlers
 import os
 import re
 import shlex
 import subprocess
 import sys
-import traceback
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 DEFAULT_MIN_AGE_HOURS = 1.0
 QUERY_TIMEOUT_SECONDS = 5
 DELETE_TIMEOUT_SECONDS = 15
-# gc.log is rotated to a single gc.log.1 past this size, capping the pair at about twice it.
+# gc.log is rotated to a single gc.log.1 before it would pass this size.
 LOG_MAX_BYTES = 256 * 1024
 
 WELCOME_PLUGIN_URL = "welcome-screen"
@@ -49,13 +55,16 @@ UNIT_SECONDS = {
     "s": 1,
     "m": 60,
     "h": 3600,
-    "day": 86400, "days": 86400,
-    "month": 2630016, "months": 2630016,
-    "year": 31557600, "years": 31557600,
+    "day": 86400,
+    "days": 86400,
+    "month": 2630016,
+    "months": 2630016,
+    "year": 31557600,
+    "years": 31557600,
 }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Session:
     """One line of `zellij list-sessions`. `age_seconds` is None when the age didn't parse."""
 
@@ -63,6 +72,14 @@ class Session:
     age_seconds: int | None
     exited: bool = False
     current: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Result:
+    """Outcome of one zellij call: `stdout` on success, else None with `failure` saying why."""
+
+    stdout: str | None
+    failure: str = ""
 
 
 def parse_age(text: str) -> int | None:
@@ -80,7 +97,7 @@ def parse_age(text: str) -> int | None:
 
 
 def parse_sessions(text: str) -> list[Session]:
-    """Sessions from `zellij list-sessions --no-formatting`; lines of any other shape are dropped."""
+    """Sessions from `zellij list-sessions --no-formatting`; other lines are dropped."""
     sessions = []
     for line in text.splitlines():
         match = SESSION_LINE.match(line.rstrip())
@@ -99,7 +116,7 @@ def parse_sessions(text: str) -> list[Session]:
 
 
 def count_clients(text: str) -> int | None:
-    """Client rows in `zellij action list-clients` output; None if the header isn't the known one."""
+    """Client rows in `zellij action list-clients` output; None if the header is unfamiliar."""
     lines = [line for line in text.splitlines() if line.strip()]
     if not lines or not lines[0].startswith("CLIENT_ID"):
         return None
@@ -136,14 +153,6 @@ def is_abandoned(
     if not any(pane.get("plugin_url") == WELCOME_PLUGIN_URL for pane in panes):
         return False
     return len(tabs) == 1 and tabs[0].get("name") == DEFAULT_TAB_NAME
-
-
-@dataclass(frozen=True)
-class Result:
-    """Outcome of one zellij call: `stdout` on success, else None with `failure` saying why."""
-
-    stdout: str | None
-    failure: str = ""
 
 
 def run_zellij(zellij: str, args: list[str], *, timeout: float = QUERY_TIMEOUT_SECONDS) -> Result:
@@ -216,40 +225,48 @@ def min_age_seconds_from_env() -> float | None:
 
 def xdg_dir(variable: str, fallback: str) -> Path:
     """`$<variable>/zellij-gc`, defaulting to `~/<fallback>/zellij-gc`."""
-    base = os.environ.get(variable) or os.path.join(os.path.expanduser("~"), fallback)
-    return Path(base) / "zellij-gc"
+    base = os.environ.get(variable)
+    return (Path(base) if base else Path.home() / fallback) / "zellij-gc"
 
 
-def log(message: str) -> None:
-    """Append a timestamped line to the size-capped GC log; logging failures are never fatal.
+@contextlib.contextmanager
+def run_log() -> Iterator[logging.Logger]:
+    """The size-capped GC log, open for one run; a log that can't be opened swallows its lines.
 
-    Only ever called while holding the collector lock, so rotation cannot race another writer.
+    Only ever used while holding the collector lock, so rotation cannot race another writer.
     """
+    logger = logging.getLogger("zellij-gc")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    handler: logging.Handler
     try:
         directory = xdg_dir("XDG_STATE_HOME", ".local/state")
         directory.mkdir(parents=True, exist_ok=True)
-        path = directory / "gc.log"
-        if path.exists() and path.stat().st_size > LOG_MAX_BYTES:
-            os.replace(path, directory / "gc.log.1")
-        stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-        with open(path, "a", encoding="utf-8") as handle:
-            handle.write(f"{stamp} {message}\n")
+        handler = logging.handlers.RotatingFileHandler(
+            directory / "gc.log", maxBytes=LOG_MAX_BYTES, backupCount=1, encoding="utf-8"
+        )
     except OSError:
-        pass
+        handler = logging.NullHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s", "%Y-%m-%dT%H:%M:%S%z"))
+    logger.addHandler(handler)
+    try:
+        yield logger
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
 
 
 def report_to_stderr(message: str) -> None:
+    """Print a message for the person running a dry run."""
     print(f"zellij-gc: {message}", file=sys.stderr)
 
 
-def collect(zellij: str, *, dry_run: bool) -> int:
+def collect(zellij: str, *, dry_run: bool, report: Callable[[str], None]) -> int:
     """Delete (or, for a dry run, print) every abandoned session. Returns the process exit status.
 
-    A dry run prints the deletions on stdout and its reasoning on stderr, and logs nothing. A real
-    run prints nothing, and logs one line per deletion plus one for the run.
+    A dry run prints the deletions on stdout and reports its reasoning. A real run prints
+    nothing, and reports one line per deletion plus one for the run.
     """
-    report = report_to_stderr if dry_run else log
-
     min_age_seconds = min_age_seconds_from_env()
     if min_age_seconds is None:
         report(
@@ -283,13 +300,15 @@ def collect(zellij: str, *, dry_run: bool) -> int:
         # session is deleted straight after its own inspection, so the window is a few subprocess
         # calls long, and what would be lost is a welcome screen holding no work.
         #
-        # --force kills the server first, and deleting (not just killing) leaves nothing to resurrect.
+        # --force kills the server first, and deleting (not just killing) leaves nothing to
+        # resurrect.
         result = run_zellij(zellij, command, timeout=DELETE_TIMEOUT_SECONDS)
+        age = f"age {session.age_seconds}s"
         if result.stdout is None:
-            log(f"FAILED to delete {session.name!r} (age {session.age_seconds}s): {result.failure}")
+            report(f"FAILED to delete {session.name!r} ({age}): {result.failure}")
             failed += 1
         else:
-            log(f"deleted {session.name!r} (age {session.age_seconds}s)")
+            report(f"deleted {session.name!r} ({age})")
             deleted += 1
     report(
         f"run: {len(sessions)} listed, {kept} kept, "
@@ -300,7 +319,7 @@ def collect(zellij: str, *, dry_run: bool) -> int:
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    """Parse the command line; anything unrecognised exits with status 2 before zellij is touched."""
+    """Parse the command line; anything unrecognised exits with status 2, zellij untouched."""
     parser = argparse.ArgumentParser(
         prog="zellij-gc",
         description="Delete zellij sessions abandoned at the welcome screen.",
@@ -316,6 +335,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the collector; returns the process exit status."""
     dry_run = parse_args(argv).dry_run
     zellij = os.environ.get("ZELLIJ_GC_ZELLIJ") or "zellij"
     disabled = bool(os.environ.get("ZELLIJ_GC_DISABLE"))
@@ -323,20 +343,20 @@ def main(argv: list[str] | None = None) -> int:
         # A preview deletes nothing, so the switch that stops real runs doesn't stop it.
         if disabled:
             report_to_stderr("ZELLIJ_GC_DISABLE is set, so a real run would do nothing")
-        return collect(zellij, dry_run=True)
+        return collect(zellij, dry_run=True, report=report_to_stderr)
     if disabled:
         return 0
 
     # One collector at a time: several terminals opening at once must not race on deletions.
     # Failures here go to stderr, which zellij-welcome keeps, since the log needs the lock.
     directory = xdg_dir("XDG_CACHE_HOME", ".cache")
-    try:
-        directory.mkdir(parents=True, exist_ok=True)
-        lock = open(directory / "lock", "w", encoding="utf-8")
-    except OSError as error:
-        report_to_stderr(f"cannot open the lock in {directory}: {error}")
-        return 1
-    with lock:
+    with contextlib.ExitStack() as stack:
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            lock = stack.enter_context((directory / "lock").open("w", encoding="utf-8"))
+        except OSError as error:
+            report_to_stderr(f"cannot open the lock in {directory}: {error}")
+            return 1
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -344,8 +364,9 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as error:
             report_to_stderr(f"cannot lock {lock.name}: {error}")
             return 1
+        logger = stack.enter_context(run_log())
         try:
-            return collect(zellij, dry_run=False)
+            return collect(zellij, dry_run=False, report=logger.info)
         except Exception:  # Recorded, not hidden: a background run has nowhere else to report.
-            log(f"run: crashed\n{traceback.format_exc().rstrip()}")
+            logger.exception("run: crashed")
             return 1

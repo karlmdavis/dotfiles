@@ -6,6 +6,49 @@ requires-python = ">=3.11"
 # No runtime dependencies: stdlib only; all session queries shell out to the zellij CLI.
 dependencies = []
 
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# The shim has no .py extension, so it is named here to be linted with the package.
+extend-include = ["../../bin/executable_zellij-gc"]
+
+[tool.ruff.lint]
+select = [
+  "A",    # no shadowing of builtins
+  "B",    # likely bugs
+  "C4",   # comprehensions
+  "D",    # docstrings
+  "DTZ",  # timezone-aware datetimes
+  "E",    # pycodestyle errors
+  "F",    # pyflakes
+  "FURB", # modern idioms
+  "I",    # import order
+  "N",    # naming
+  "PERF", # performance
+  "PL",   # pylint
+  "PTH",  # pathlib over os.path
+  "RUF",  # ruff's own
+  "SIM",  # simplifications
+  "UP",   # newer syntax
+  "W",    # pycodestyle warnings
+]
+ignore = [
+  "D203",    # conflicts with D211 (no blank line before a class docstring)
+  "D213",    # conflicts with D212 (summary on the first docstring line)
+  "D401",    # docstrings here say what a function returns, not what it is told to do
+  "PLR0911", # a chain of early exits, each a reason to keep a session, reads better than one test
+  "PLR2004", # small literal numbers are clearer inline than as named constants here
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test names say what they check; fixtures and helpers don't each need a docstring.
+"tests/*" = ["D"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["zellij_gc"]
+
 [tool.pytest.ini_options]
 # Run pytest from this directory; the package imports as `zellij_gc`.
 pythonpath = ["."]

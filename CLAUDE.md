@@ -305,7 +305,8 @@ Commands support bash command interpolation with `!`backticks`` for dynamic cont
 This repository uses mise for task automation and testing.
 
 **Key tasks:**
-- `:lint` - Run shellcheck on managed shell scripts
+- `:lint` - Run shellcheck on managed shell scripts, plus `ruff` and `mypy` on the Python
+    mini-projects that define a `lint` task (configured in each one's `pyproject.toml`)
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
