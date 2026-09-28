@@ -33,6 +33,14 @@ WORKING_PANES = json.dumps(
         {"id": 18, "is_plugin": False, "plugin_url": None, "title": "~/.local/share/chezmoi"},
     ]
 )
+# A shell opened beside the chooser: the welcome plugin is still there, but so is a terminal.
+WELCOME_PLUS_TERMINAL_PANES = json.dumps(
+    [
+        {"id": 0, "is_plugin": True, "plugin_url": "zellij:link", "terminal_command": None},
+        {"id": 1, "is_plugin": True, "plugin_url": "welcome-screen", "terminal_command": None},
+        {"id": 0, "is_plugin": False, "plugin_url": None, "title": "~/work"},
+    ]
+)
 DEFAULT_TABS = json.dumps([{"position": 0, "name": "Tab #1", "tab_id": 0}])
 
 STALE = Session(name="brave-petunia", age_seconds=5 * HOUR)
@@ -148,6 +156,8 @@ def test_kept_when_a_client_is_attached_or_clients_are_unreadable(clients):
     "panes",
     [
         WORKING_PANES,
+        WELCOME_PLUS_TERMINAL_PANES,
+        json.dumps([{"is_plugin": True, "plugin_url": "file:/x/not-welcome-screen.wasm"}]),
         "[]",
         "not json",
         "{}",
@@ -199,6 +209,7 @@ LISTING = textwrap.dedent(
     brave-petunia [Created 3months 25days 20h 9m 36s ago]
     outstanding-cowbell [Created 2days 20h 7m 13s ago]
     stale one [Created 5h 1m ago]
+    shell-beside-chooser [Created 6h ago]
     didactic-river [Created 23m 51s ago]
     verdant-yak [Created 4months 3days 2h 20m 16s ago] (EXITED - attach to resurrect)
     """
@@ -214,6 +225,8 @@ REPLIES = {
                             "list-tabs": DEFAULT_TABS},
     "stale one": {"list-clients": NO_CLIENTS, "list-panes": WELCOME_PANES,
                   "list-tabs": DEFAULT_TABS},
+    "shell-beside-chooser": {"list-clients": NO_CLIENTS, "list-panes": WELCOME_PLUS_TERMINAL_PANES,
+                             "list-tabs": DEFAULT_TABS},
     "didactic-river": {"list-clients": NO_CLIENTS, "list-panes": WELCOME_PANES,
                        "list-tabs": DEFAULT_TABS},
 }
@@ -338,7 +351,8 @@ def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path)
 
 def test_young_and_exited_sessions_are_never_queried(zellij):
     gc.main([])
-    assert zellij.queried() == {"dotfiles", "brave-petunia", "outstanding-cowbell", "stale one"}
+    assert zellij.queried() == {"dotfiles", "brave-petunia", "outstanding-cowbell", "stale one",
+                                "shell-beside-chooser"}
 
 
 def test_session_with_a_client_gets_only_the_clients_query(zellij):
