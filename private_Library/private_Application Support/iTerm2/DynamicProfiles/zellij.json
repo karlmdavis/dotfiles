@@ -14,7 +14,7 @@
     "Character Encoding" : 4,
     "Close Sessions On End" : true,
     "Columns" : 80,
-    "Command" : "\/bin\/sh -c 'exec \"$HOME\/.local\/bin\/zellij-welcome\"'",
+    "Command" : "\/bin\/sh -c 'w=\"$HOME\/.local\/bin\/zellij-welcome\"; \"$w\" --check && exec \"$w\"; exec \/opt\/homebrew\/bin\/zellij -l welcome'",
     "Custom Command" : "Yes",
     "Custom Directory" : "No",
     "Description" : "Default",

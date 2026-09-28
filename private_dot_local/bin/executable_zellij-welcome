@@ -9,6 +9,9 @@
 # abandoned at the welcome screen (disable with ZELLIJ_GC_DISABLE=1).
 ##
 
+# `--check` only proves that this script can start; callers probe with it before they exec.
+[ "${1:-}" = --check ] && exit 0
+
 # Homebrew's bin dir, found at runtime (macOS, then Linux) so this stays a plain, lintable script
 # rather than a chezmoi template.
 brew_bin=""

@@ -54,7 +54,11 @@ case "${TERM_PROGRAM:-}" in vscode|cursor|zed|claude-desktop) return ;; esac
 
 # Hand the terminal to the zellij welcome chooser (when zellij is installed), preferring the
 # zellij-welcome wrapper, which also garbage-collects sessions abandoned at the chooser.
+#
+# The wrapper is probed before the exec: a failed exec ends a zsh or macOS bash login shell, so a
+# wrapper that exists but cannot start would otherwise lock out every login. Plain zellij is the
+# fallback whenever the probe fails.
 if command -v zellij >/dev/null 2>&1; then
-  [ -x "$HOME/.local/bin/zellij-welcome" ] && exec "$HOME/.local/bin/zellij-welcome"
+  "$HOME/.local/bin/zellij-welcome" --check >/dev/null 2>&1 && exec "$HOME/.local/bin/zellij-welcome"
   exec zellij -l welcome
 fi
