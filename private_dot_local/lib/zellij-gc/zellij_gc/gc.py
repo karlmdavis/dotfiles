@@ -17,6 +17,7 @@ import fcntl
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -205,7 +206,8 @@ def collect(zellij: str, *, dry_run: bool) -> int:
             continue
         command = ["delete-session", "--force", session.name]
         if dry_run:
-            print(" ".join(["zellij", *command]))
+            # Shell-quoted, so a name with spaces or parens can be pasted back into a shell.
+            print(shlex.join(["zellij", *command]))
             continue
         # --force kills the server first, and deleting (not just killing) leaves nothing to resurrect.
         if run_zellij(zellij, command, timeout=DELETE_TIMEOUT_SECONDS) is None:

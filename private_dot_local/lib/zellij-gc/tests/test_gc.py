@@ -295,7 +295,7 @@ def test_dry_run_prints_the_deletions_without_running_them(zellij, capsys, tmp_p
     assert gc.main(["--dry-run"]) == 0
     assert capsys.readouterr().out.splitlines() == [
         "zellij delete-session --force brave-petunia",
-        "zellij delete-session --force stale one",
+        "zellij delete-session --force 'stale one'",
     ]
     assert zellij.deletions == []
     assert gc_log(tmp_path) == ""
