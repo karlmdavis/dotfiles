@@ -180,21 +180,10 @@ To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij)
   in the remote shell's environment; ssh does not forward it from the local side.
 
 **Abandoned Zellij session GC:**
-Closing a terminal at the welcome chooser leaves its session running until the machine restarts, so
-  `zellij-welcome` runs `~/.local/bin/zellij-gc` (a thin shim over the `zellij_gc` Python package at
-  `private_dot_local/lib/zellij-gc/`) on every launch, before it opens the chooser.
-- It deletes only sessions that are running, have no clients and no terminal panes, show nothing
-    but the welcome screen, and are older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
-    A session's name plays no part, and EXITED (resurrectable) sessions are never touched.
-- Every doubt keeps the session, and nothing is deleted that cannot be put on record.
-- A usual launch shows nothing.
-    One with sessions to look into names each on the terminal as it goes, and Ctrl-C skips the rest.
-- What it did is recorded under `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`):
-    `gc.log` for every run, and `last-failure.log` for the most recent run that failed.
-- Preview with `zellij-gc --dry-run`, which also says why each other session would be kept.
-- Disable real runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
-
-How it decides, and why it is built as it is, is set out in the package's `collector.py`.
+Before opening the chooser, `zellij-welcome` runs `~/.local/bin/zellij-gc`, which deletes the sessions
+  that were abandoned at it.
+Its rules, records, and controls are in
+  [`private_dot_local/lib/zellij-gc/CLAUDE.md`](./private_dot_local/lib/zellij-gc/CLAUDE.md).
 
 ## Development Toolchain
 

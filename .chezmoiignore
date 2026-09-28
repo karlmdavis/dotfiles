@@ -19,6 +19,7 @@ test/
 .local/lib/cmd-notify/mise.toml
 .local/lib/cmd-notify/pyproject.toml
 .local/lib/cmd-notify/tests
+.local/lib/zellij-gc/CLAUDE.md
 .local/lib/zellij-gc/mise.toml
 .local/lib/zellij-gc/pyproject.toml
 .local/lib/zellij-gc/tests
