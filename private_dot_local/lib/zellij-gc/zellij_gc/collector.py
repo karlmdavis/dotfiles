@@ -9,13 +9,13 @@ running, older than the minimum age, and has no clients, no terminal panes, the 
 plugin, and a single default tab. Such a session holds no user state, so its name plays no part.
 Every doubt (a failed, timed-out, or unparseable query) resolves to "keep the session".
 
-A real run happens while a terminal waits for its chooser, so it is built to be quick and bounded.
-Every zellij command probes every session on the machine before it does anything else, so commands
-are what cost time, and the run avoids them: it first reads the metadata file that each zellij
-server keeps about itself, and sessions which that shows to be in use are kept without a single
-query. The file is only ever a reason to keep a session. One that looks abandoned, or has no
-readable file, is put to zellij itself, and nothing is deleted on the file's word. The run also
-has a time budget, and Ctrl-C ends it.
+A real run happens while a terminal waits for its chooser, so it is built to be quick. Every
+zellij command probes every session on the machine before it does anything else, so commands are
+what cost time, and the run avoids them: it first reads the metadata file that each zellij server
+keeps about itself, and sessions which that shows to be in use are kept without a single query.
+The file is only ever a reason to keep a session. One that looks abandoned, or has no readable
+file, is put to zellij itself, and nothing is deleted on the file's word. That is the slow part, so
+the run names each such session on the terminal as it comes to it, and Ctrl-C ends the run.
 
 What a run did goes to a size-capped log, since zellij clears the screen straight afterwards.
 Every run that gets the lock leaves at least one line there, which is what tells "nothing to do"
@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import fcntl
+import functools
 import glob
 import json
 import logging
@@ -40,15 +41,13 @@ import signal
 import subprocess
 import sys
 import tempfile
-import threading
-import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 DEFAULT_MIN_AGE_HOURS = 1.0
 # A healthy zellij answers in well under a second, and a session that doesn't answer is waited
@@ -56,10 +55,6 @@ DEFAULT_MIN_AGE_HOURS = 1.0
 QUERY_TIMEOUT_SECONDS = 2
 # How long a deletion is waited for. One that takes longer is left to finish, never killed.
 DELETE_WAIT_SECONDS = 15
-# A real run starts nothing new after this long, leaving the rest for the next launch.
-BUDGET_SECONDS = 10
-# A real run that is still going after this long says so on the terminal.
-NOTICE_AFTER_SECONDS = 1
 # The conventional exit status for "ended by Ctrl-C".
 EXIT_INTERRUPTED = 130
 # gc.log is rotated to a single gc.log.1 before it would pass this size.
@@ -244,39 +239,9 @@ class RunFailedError(Exception):
     """The run cannot go on, and has already reported why."""
 
 
-class Budget:
-    """The time a run may still spend; unlimited unless given a number of seconds."""
-
-    def __init__(self, seconds: float | None = None) -> None:
-        """Start the clock."""
-        self._deadline = None if seconds is None else time.monotonic() + seconds
-
-    def remaining(self) -> float:
-        """Seconds left; zero or less means out of time."""
-        if self._deadline is None:
-            return float("inf")
-        return self._deadline - time.monotonic()
-
-
-UNLIMITED = Budget()
-
-
-def run_zellij(
-    zellij: str,
-    args: list[str],
-    *,
-    timeout: float | None = None,
-    budget: Budget = UNLIMITED,
-) -> Result:
-    """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures.
-
-    It is waited for `timeout` seconds, or QUERY_TIMEOUT_SECONDS if none is given, and in either
-    case no longer than the budget has left.
-    """
-    remaining = budget.remaining()
-    if remaining <= 0:
-        return Result(None, "out of time", answered=False)
-    timeout = min(QUERY_TIMEOUT_SECONDS if timeout is None else timeout, remaining)
+def run_zellij(zellij: str, args: list[str]) -> Result:
+    """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures."""
+    timeout = QUERY_TIMEOUT_SECONDS
     try:
         result = subprocess.run(
             [zellij, *args],
@@ -290,7 +255,7 @@ def run_zellij(
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return Result(None, f"timed out after {timeout:.1f}s", answered=False)
+        return Result(None, f"timed out after {timeout}s", answered=False)
     except (OSError, subprocess.SubprocessError) as error:
         return Result(None, f"could not run: {error}", answered=False)
     if result.returncode != 0:
@@ -302,9 +267,16 @@ def run_zellij(
 
 # A chain of early exits, each naming one reason, reads better than one expression.
 def keep_reason(  # noqa: PLR0911
-    zellij: str, session: Session, *, min_age_seconds: float, budget: Budget = UNLIMITED
+    zellij: str,
+    session: Session,
+    *,
+    min_age_seconds: float,
+    before_asking: Callable[[], None] = lambda: None,
 ) -> Kept | None:
-    """Why a session is kept, or None if it is abandoned; any failed query means it is kept."""
+    """Why a session is kept, or None if it is abandoned; any failed query means it is kept.
+
+    `before_asking` is called if the session has to be put to zellij, which is the slow part.
+    """
     # Cheap checks first, so sessions that can't qualify are never queried.
     if session.exited:
         return Kept("exited")
@@ -318,10 +290,11 @@ def keep_reason(  # noqa: PLR0911
     metadata = read_metadata(session.name)
     if metadata is not None and (reason := metadata_keep_reason(metadata)):
         return Kept(f"{reason}, by its metadata file")
+    before_asking()
     outputs = []
     for action in (["list-clients"], ["list-panes", "--json", "--all"], ["list-tabs", "--json"]):
         query = ["--session", session.name, "action", *action]
-        result = run_zellij(zellij, query, budget=budget)
+        result = run_zellij(zellij, query)
         if result.stdout is None:
             return Kept(f"{action[0]} failed ({result.failure})", undecided=True)
         # A session in use is settled by the first query; skip the other two.
@@ -435,9 +408,32 @@ def run_log() -> Iterator[LogReporter]:
         handler.close()
 
 
-def notify_slow_run() -> None:
-    """Tell whoever is waiting for their chooser what the wait is for."""
-    print("zellij-gc: clearing out abandoned sessions (Ctrl-C to skip)...", flush=True)
+class Progress:
+    """What a real run shows whoever is waiting for their chooser: each session it asks about.
+
+    A run with nobody to ask about shows nothing, and that is the usual run. zellij clears the
+    screen when it starts, so this is for reading while it happens; the log is the record.
+    """
+
+    def __init__(self, *, shown: bool) -> None:
+        """Show progress, or for a dry run (which has output of its own) do not."""
+        self._shown = shown
+        self._begun = False
+        self._asking = False
+
+    def asking(self, name: str) -> None:
+        """Say that zellij is about to be asked about a session."""
+        if self._shown:
+            if not self._begun:
+                print("zellij-gc: clearing out abandoned sessions (Ctrl-C to skip)")
+            print(f"  {name}: ", end="", flush=True)
+            self._begun = self._asking = True
+
+    def outcome(self, text: str) -> None:
+        """Say what became of the session, if it is one that zellij was asked about."""
+        if self._asking:
+            print(text, flush=True)
+            self._asking = False
 
 
 @dataclass(slots=True)
@@ -480,8 +476,8 @@ def signals_held() -> Iterator[None]:
     """Hold back Ctrl-C, hangup, and termination until the block is done, then let them in.
 
     With handlers, not a signal mask: a mask covers only the thread that sets it, and a signal sent
-    to the process would be taken by any other thread, the slow-run notice's timer among them.
-    Python runs handlers in the main thread whichever thread the signal reached.
+    to the process is taken by any thread that lets it in. Python runs handlers in the main thread
+    whichever thread the signal reached.
     """
     arrived: list[int] = []
     held = (signal.SIGINT, signal.SIGHUP, signal.SIGTERM)
@@ -504,7 +500,7 @@ def delete(zellij: str, session: Session) -> Result:
     `zellij delete-session --force` tells the server to quit and then removes the session's saved
     state, as two separate steps. Stopped between them, it leaves a session that has exited but
     can be resurrected, which nothing here would ever clear up. So, once started, it is never
-    killed: not by the run's time budget, not by a timeout, and not by a signal. Call this with
+    killed: not by a timeout, and not by a signal. Call this with
     signals held, so that this process stays to see it through; the command itself gets a session
     of its own, out of reach of whatever the terminal sends. If it outlasts the wait it is left
     running, and its output goes to a file, not a pipe, so that it can finish after this process
@@ -537,8 +533,8 @@ def delete(zellij: str, session: Session) -> Result:
     return Result(text)
 
 
-def delete_on_record(zellij: str, session: Session, tally: Tally, reporter: Reporter) -> None:
-    """Delete one abandoned session, reporting it before and after, unless the log is broken."""
+def delete_on_record(zellij: str, session: Session, tally: Tally, reporter: Reporter) -> str:
+    """Delete one abandoned session, reporting it before and after. Returns what became of it."""
     name = session.name
     age = f"age {session.age_seconds}s"
     # Signals are held until the deletion is over and on record. It is announced first, which
@@ -547,43 +543,20 @@ def delete_on_record(zellij: str, session: Session, tally: Tally, reporter: Repo
     with signals_held():
         reporter.note(f"deleting {name!r} ({age})")
         if reporter.broken:
-            return
+            return "not deleted, as the log cannot be written"
         result = delete(zellij, session)
         if result.stdout is None:
             reporter.problem(f"FAILED to delete {name!r} ({age}): {result.failure}")
             tally.failed += 1
-        else:
-            reporter.note(f"deleted {name!r} ({age})")
-            tally.deleted += 1
+            return f"could not be deleted ({result.failure})"
+        reporter.note(f"deleted {name!r} ({age})")
+        tally.deleted += 1
+        return "deleted"
 
 
-def collect(zellij: str, *, dry_run: bool, reporter: Reporter) -> int:
-    """Delete (or, for a dry run, print) every abandoned session. Returns the process exit status.
-
-    A dry run prints the deletions on stdout and reports its reasoning. A real run reports two
-    lines per deletion plus one for the run, and prints only if it turns out to be slow.
-    """
-    # A dry run is a diagnostic, so it takes as long as it takes.
-    budget = UNLIMITED if dry_run else Budget(BUDGET_SECONDS)
-    notice = threading.Timer(NOTICE_AFTER_SECONDS, notify_slow_run)
-    notice.daemon = True
-    if not dry_run:
-        notice.start()
-    tally = Tally()
-    try:
-        return collect_within(zellij, tally, dry_run=dry_run, reporter=reporter, budget=budget)
-    except KeyboardInterrupt:
-        reporter.note(f"run: interrupted after {tally.summary(dry_run=dry_run)}")
-        return EXIT_INTERRUPTED
-    finally:
-        notice.cancel()
-
-
-def list_sessions(
-    zellij: str, tally: Tally, *, reporter: Reporter, budget: Budget
-) -> list[Session]:
+def list_sessions(zellij: str, tally: Tally, reporter: Reporter) -> list[Session]:
     """The sessions zellij lists, counted into the tally. Raises RunFailedError if it cannot say."""
-    listing = run_zellij(zellij, ["list-sessions", "--no-formatting"], budget=budget)
+    listing = run_zellij(zellij, ["list-sessions", "--no-formatting"])
     if listing.stdout is None:
         # zellij exits non-zero when there are no sessions at all, which is no failure.
         if listing.answered and NO_SESSIONS in listing.failure:
@@ -600,10 +573,22 @@ def list_sessions(
     return sessions
 
 
-def collect_within(
-    zellij: str, tally: Tally, *, dry_run: bool, reporter: Reporter, budget: Budget
-) -> int:
-    """Do the work of `collect`, inside its time budget, keeping the tally as it goes."""
+def collect(zellij: str, *, dry_run: bool, reporter: Reporter) -> int:
+    """Delete (or, for a dry run, print) every abandoned session. Returns the process exit status.
+
+    A dry run prints the deletions on stdout and reports its reasoning. A real run reports two
+    lines per deletion plus one for the run, and shows its progress on stdout.
+    """
+    tally = Tally()
+    try:
+        return collect_into(tally, zellij, dry_run=dry_run, reporter=reporter)
+    except KeyboardInterrupt:
+        reporter.note(f"run: interrupted after {tally.summary(dry_run=dry_run)}")
+        return EXIT_INTERRUPTED
+
+
+def collect_into(tally: Tally, zellij: str, *, dry_run: bool, reporter: Reporter) -> int:
+    """Do the work of `collect`, keeping the tally as it goes."""
     min_age_seconds = min_age_seconds_from_env()
     if min_age_seconds is None:
         reporter.problem(
@@ -612,15 +597,21 @@ def collect_within(
         )
         return 1
     try:
-        sessions = list_sessions(zellij, tally, reporter=reporter, budget=budget)
+        sessions = list_sessions(zellij, tally, reporter)
     except RunFailedError:
         return 1
 
     # One session at a time, oldest first, as zellij lists them. Every zellij command makes every
     # server on the machine answer a probe, so running several at once mostly makes them contend.
+    progress = Progress(shown=not dry_run)
     for session in sessions:
         name = session.name
-        kept = keep_reason(zellij, session, min_age_seconds=min_age_seconds, budget=budget)
+        kept = keep_reason(
+            zellij,
+            session,
+            min_age_seconds=min_age_seconds,
+            before_asking=functools.partial(progress.asking, name),
+        )
         if kept is not None:
             if kept.undecided:
                 tally.undecided += 1
@@ -629,12 +620,13 @@ def collect_within(
                 tally.kept += 1
             if dry_run:
                 reporter.note(f"kept {name!r}: {kept.reason}")
+            progress.outcome(f"kept ({kept.reason})")
         elif dry_run:
             # Shell-quoted, so a name with spaces or parens can be pasted back into a shell.
             print(shlex.join([zellij, "delete-session", "--force", name]))
             tally.deleted += 1
         else:
-            delete_on_record(zellij, session, tally, reporter)
+            progress.outcome(delete_on_record(zellij, session, tally, reporter))
             if reporter.broken:
                 break
     reporter.note(f"run: {tally.summary(dry_run=dry_run)}")

@@ -185,18 +185,19 @@ Closing a terminal at the welcome chooser leaves its session running until the m
   `private_dot_local/lib/zellij-gc/`) on every launch, before it opens the chooser.
 It runs to completion first so that the chooser does not normally list a session which is about to
   disappear.
-Since a terminal is waiting, the run is built to be quick and bounded.
+Since a terminal is waiting, the run is built to be quick.
 Every `zellij` command first probes every session on the machine, so commands are what cost time.
 The run therefore starts from the metadata file that each zellij server keeps about itself
   (`session_info/<session>/session-metadata.kdl` in zellij's cache directory), and keeps the sessions
   which that shows to be in use without querying them.
 That file is an internal detail of zellij, so it is only ever a reason to keep a session:
   one that looks abandoned, or has no readable file, is put to `zellij` itself.
-The whole run gives up after 10 seconds and leaves the rest for the next launch, and Ctrl-C skips it.
-A run still going after 1 second says so on the terminal.
-A deletion that has begun is the one thing never cut short, by the time limit, by Ctrl-C, or by the
-  terminal closing: `zellij delete-session` stops the server and removes its saved state as two
-  steps, and stopping between them would leave an exited session that nothing clears up.
+Putting a session to `zellij` is the slow part, so the run names each such session on the terminal
+  as it comes to it, with what became of it, and Ctrl-C skips the rest of the run.
+A run with no such session, which is the usual one, shows nothing.
+A deletion that has begun is the one thing never cut short, by Ctrl-C or by the terminal closing:
+  `zellij delete-session` stops the server and removes its saved state as two steps, and stopping
+  between them would leave an exited session that nothing clears up.
 It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
   match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
   a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).

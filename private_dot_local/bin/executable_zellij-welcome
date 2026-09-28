@@ -25,15 +25,15 @@ done
 
 # Collect abandoned sessions before the chooser lists them, so that it does not normally show a
 # session which then disappears. (It still can: a launch that finds another collector running
-# does not wait for it, and a run that was out of time, or skipped, leaves sessions for a later
-# launch to delete.) The collector bounds its own run time, and says so on the terminal if it is
-# slow. That bound covers the collection, not the time `uv` takes to start the shim, so `uv` is
-# told not to go and download a Python: without one it fails at once, and on the record.
+# does not wait for it, and a run that was skipped leaves sessions for a later launch to delete.)
+# The collector shows on the terminal what it is doing whenever that takes time. That does not
+# cover the time `uv` takes to start the shim, so `uv` is told not to go and download a Python:
+# without one it fails at once, and on the record.
 #
 # Homebrew's bin goes on PATH for this child only: the shim's shebang needs `uv`, and the
 # collector runs a bare `zellij`. The chooser itself inherits the caller's environment unchanged.
 #
-# The collector's stdout (that notice) goes to the terminal; its stderr is captured, and for a
+# The collector's stdout (that progress) goes to the terminal; its stderr is captured, and for a
 # failed run is kept in last-failure.log, since zellij is about to clear the screen and the
 # collector's own log cannot record a failure to start. That is one file, written whole and
 # renamed into place, so concurrent launches cannot corrupt it and it does not accumulate.
