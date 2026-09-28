@@ -190,8 +190,8 @@ def test_kept_unless_there_is_a_single_default_tab(tabs):
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [(None, HOUR), ("", HOUR), ("junk", HOUR), ("-2", HOUR), ("nan", HOUR), ("inf", HOUR),
-     ("0", 0), ("0.5", HOUR / 2), ("24", 24 * HOUR)],
+    [(None, HOUR), ("", HOUR), ("  ", HOUR), ("0", 0), ("0.5", HOUR / 2), (" 24 ", 24 * HOUR),
+     ("junk", None), ("24h", None), ("1d", None), ("-2", None), ("nan", None), ("inf", None)],
 )
 def test_min_age_from_env(monkeypatch, value, expected):
     if value is None:
@@ -371,6 +371,20 @@ def test_min_age_override_widens_the_net(zellij, capsys, monkeypatch):
     gc.main(["--dry-run"])
     expected = f"{zellij.quoted} delete-session --force didactic-river"
     assert expected in capsys.readouterr().out.splitlines()
+
+
+def test_invalid_min_age_deletes_nothing_and_says_so(zellij, capsys, monkeypatch, tmp_path):
+    """`24h` asks for longer retention; falling back to the 1h default would shorten it."""
+    monkeypatch.setenv("ZELLIJ_GC_MIN_AGE_HOURS", "24h")
+    assert gc.main([]) == 1
+    assert zellij.calls == []
+    assert "invalid ZELLIJ_GC_MIN_AGE_HOURS='24h'" in gc_log(tmp_path)
+
+    assert gc.main(["--dry-run"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "invalid ZELLIJ_GC_MIN_AGE_HOURS='24h'" in captured.err
+    assert zellij.calls == []
 
 
 def test_disable_switch_does_nothing(zellij, monkeypatch):

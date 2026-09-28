@@ -171,14 +171,21 @@ def inspect(zellij: str, session: Session, *, min_age_seconds: float) -> bool:
     return is_abandoned(session, *outputs, min_age_seconds=min_age_seconds)
 
 
-def min_age_seconds_from_env() -> float:
-    """The age threshold in seconds, from $ZELLIJ_GC_MIN_AGE_HOURS (bad values → the default)."""
+def min_age_seconds_from_env() -> float | None:
+    """The age threshold in seconds, from $ZELLIJ_GC_MIN_AGE_HOURS; None if it is set but invalid.
+
+    Unset or empty means the default. An invalid value is not replaced by the default, which could
+    be shorter than the retention the owner meant to ask for; the caller deletes nothing instead.
+    """
+    raw = os.environ.get("ZELLIJ_GC_MIN_AGE_HOURS", "").strip()
+    if not raw:
+        return DEFAULT_MIN_AGE_HOURS * 3600
     try:
-        hours = float(os.environ.get("ZELLIJ_GC_MIN_AGE_HOURS", ""))
+        hours = float(raw)
     except ValueError:
-        hours = DEFAULT_MIN_AGE_HOURS
+        return None
     if not 0 <= hours < float("inf"):
-        hours = DEFAULT_MIN_AGE_HOURS
+        return None
     return hours * 3600
 
 
@@ -202,11 +209,21 @@ def log(message: str) -> None:
 
 def collect(zellij: str, *, dry_run: bool) -> int:
     """Delete (or, for a dry run, print) every abandoned session. Returns the process exit status."""
+    min_age_seconds = min_age_seconds_from_env()
+    if min_age_seconds is None:
+        message = (
+            f"invalid ZELLIJ_GC_MIN_AGE_HOURS={os.environ.get('ZELLIJ_GC_MIN_AGE_HOURS')!r} "
+            "(want a number of hours, 0 or more); nothing deleted"
+        )
+        if dry_run:
+            print(f"zellij-gc: {message}", file=sys.stderr)
+        else:
+            log(message)
+        return 1
     listing = run_zellij(zellij, ["list-sessions", "--no-formatting"])
     if listing is None:
         # Also the "no sessions at all" case, which zellij reports with a non-zero exit.
         return 0
-    min_age_seconds = min_age_seconds_from_env()
     status = 0
     for session in parse_sessions(listing):
         if not inspect(zellij, session, min_age_seconds=min_age_seconds):
