@@ -42,15 +42,18 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Iterator
 
 DEFAULT_MIN_AGE_HOURS = 1.0
-QUERY_TIMEOUT_SECONDS = 5
+# A healthy zellij answers in well under a second, and a session that doesn't answer is waited
+# for again on every launch until someone deals with it, so the wait is kept short.
+QUERY_TIMEOUT_SECONDS = 2
 # How long a deletion is waited for. One that takes longer is left to finish, never killed.
 DELETE_WAIT_SECONDS = 15
 # A real run starts nothing new after this long, leaving the rest for the next launch.
@@ -63,6 +66,8 @@ EXIT_INTERRUPTED = 130
 LOG_MAX_BYTES = 256 * 1024
 
 METADATA_FILE = "session-metadata.kdl"
+# What zellij says, with a non-zero exit, when there are no sessions at all.
+NO_SESSIONS = "No active zellij sessions"
 WELCOME_PLUGIN_URL = "welcome-screen"
 DEFAULT_TAB_NAME = "Tab #1"
 
@@ -103,6 +108,17 @@ class Result:
 
     stdout: str | None
     failure: str = ""
+    # Whether zellij ran and answered, whatever its answer: False for a timeout or a failure to
+    # start it, neither of which says anything about the sessions.
+    answered: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class Kept:
+    """Why a session is kept. `undecided` when that is for want of an answer about it."""
+
+    reason: str
+    undecided: bool = False
 
 
 def parse_age(text: str) -> int | None:
@@ -224,6 +240,10 @@ def read_metadata(name: str) -> str | None:
         return None
 
 
+class RunFailedError(Exception):
+    """The run cannot go on, and has already reported why."""
+
+
 class Budget:
     """The time a run may still spend; unlimited unless given a number of seconds."""
 
@@ -251,7 +271,7 @@ def run_zellij(
     """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures."""
     remaining = budget.remaining()
     if remaining <= 0:
-        return Result(None, "out of time")
+        return Result(None, "out of time", answered=False)
     timeout = min(timeout, remaining)
     try:
         result = subprocess.run(
@@ -266,9 +286,9 @@ def run_zellij(
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return Result(None, f"timed out after {timeout:.1f}s")
+        return Result(None, f"timed out after {timeout:.1f}s", answered=False)
     except (OSError, subprocess.SubprocessError) as error:
-        return Result(None, f"could not run: {error}")
+        return Result(None, f"could not run: {error}", answered=False)
     if result.returncode != 0:
         # zellij reports some errors on stdout, so take the first line of whichever has one.
         detail = (result.stderr.strip() or result.stdout.strip()).partition("\n")[0][:200]
@@ -279,33 +299,33 @@ def run_zellij(
 # A chain of early exits, each naming one reason, reads better than one expression.
 def keep_reason(  # noqa: PLR0911
     zellij: str, session: Session, *, min_age_seconds: float, budget: Budget = UNLIMITED
-) -> str | None:
+) -> Kept | None:
     """Why a session is kept, or None if it is abandoned; any failed query means it is kept."""
     # Cheap checks first, so sessions that can't qualify are never queried.
     if session.exited:
-        return "exited"
+        return Kept("exited")
     if session.current:
-        return "current session"
+        return Kept("current session")
     if session.age_seconds is None:
-        return "age unreadable"
+        return Kept("age unreadable", undecided=True)
     if session.age_seconds < min_age_seconds:
-        return "younger than the minimum age"
+        return Kept("younger than the minimum age")
     # Then the session's own metadata file, which costs no zellij command at all.
     metadata = read_metadata(session.name)
     if metadata is not None and (reason := metadata_keep_reason(metadata)):
-        return f"{reason}, by its metadata file"
+        return Kept(f"{reason}, by its metadata file")
     outputs = []
     for action in (["list-clients"], ["list-panes", "--json", "--all"], ["list-tabs", "--json"]):
         query = ["--session", session.name, "action", *action]
         result = run_zellij(zellij, query, budget=budget)
         if result.stdout is None:
-            return f"{action[0]} failed ({result.failure})"
+            return Kept(f"{action[0]} failed ({result.failure})", undecided=True)
         # A session in use is settled by the first query; skip the other two.
         if action == ["list-clients"] and count_clients(result.stdout):
-            return "client attached"
+            return Kept("client attached")
         outputs.append(result.stdout)
     if not is_abandoned(session, *outputs, min_age_seconds=min_age_seconds):
-        return "not a bare welcome screen"
+        return Kept("not a bare welcome screen")
     return None
 
 
@@ -333,36 +353,82 @@ def xdg_dir(variable: str, fallback: str) -> Path:
     return (Path(base) if base else Path.home() / fallback) / "zellij-gc"
 
 
+class Reporter:
+    """Where a run says what it did. This one is for a dry run: everything goes to stderr."""
+
+    @property
+    def broken(self) -> bool:
+        """Whether what is reported can no longer be recorded."""
+        return False
+
+    def note(self, message: str) -> None:
+        """Report something that happened."""
+        print(f"zellij-gc: {message}", file=sys.stderr)
+
+    def problem(self, message: str) -> None:
+        """Report something that went wrong."""
+        self.note(message)
+
+
+class RecordingHandler(logging.handlers.RotatingFileHandler):
+    """The GC log, which remembers a failure to write to it instead of printing a traceback."""
+
+    failure: BaseException | None = None
+
+    def handleError(self, record: logging.LogRecord) -> None:  # noqa: N802 (the base class's name)
+        """Remember why the record could not be written."""
+        del record
+        self.failure = sys.exception()
+
+
+class LogReporter(Reporter):
+    """For a real run: everything goes to the GC log, and problems go to stderr as well.
+
+    zellij-welcome keeps the stderr of a run that fails, so a problem reported here is what
+    `last-failure.log` will say.
+    """
+
+    def __init__(self, logger: logging.Logger, handler: RecordingHandler) -> None:
+        """Report through a logger whose one handler is the GC log."""
+        self._logger = logger
+        self._handler = handler
+
+    @property
+    def broken(self) -> bool:
+        """Whether a line could not be written to the log."""
+        return self._handler.failure is not None
+
+    def note(self, message: str) -> None:
+        """Log something that happened."""
+        self._logger.info(message)
+
+    def problem(self, message: str) -> None:
+        """Log something that went wrong, and say so on stderr."""
+        self._logger.error(message)
+        print(f"zellij-gc: {message}", file=sys.stderr)
+
+
 @contextlib.contextmanager
-def run_log() -> Iterator[logging.Logger]:
-    """The size-capped GC log, open for one run; a log that can't be opened swallows its lines.
+def run_log() -> Iterator[LogReporter]:
+    """The size-capped GC log, open for one run. Raises OSError if it cannot be opened.
 
     Only ever used while holding the collector lock, so rotation cannot race another writer.
     """
+    directory = xdg_dir("XDG_STATE_HOME", ".local/state")
+    directory.mkdir(parents=True, exist_ok=True)
+    handler = RecordingHandler(
+        directory / "gc.log", maxBytes=LOG_MAX_BYTES, backupCount=1, encoding="utf-8"
+    )
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s", "%Y-%m-%dT%H:%M:%S%z"))
     logger = logging.getLogger("zellij-gc")
     logger.setLevel(logging.INFO)
     logger.propagate = False
-    handler: logging.Handler
-    try:
-        directory = xdg_dir("XDG_STATE_HOME", ".local/state")
-        directory.mkdir(parents=True, exist_ok=True)
-        handler = logging.handlers.RotatingFileHandler(
-            directory / "gc.log", maxBytes=LOG_MAX_BYTES, backupCount=1, encoding="utf-8"
-        )
-    except OSError:
-        handler = logging.NullHandler()
-    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s", "%Y-%m-%dT%H:%M:%S%z"))
     logger.addHandler(handler)
     try:
-        yield logger
+        yield LogReporter(logger, handler)
     finally:
         logger.removeHandler(handler)
         handler.close()
-
-
-def report_to_stderr(message: str) -> None:
-    """Print a message for the person running a dry run."""
-    print(f"zellij-gc: {message}", file=sys.stderr)
 
 
 def notify_slow_run() -> None:
@@ -375,18 +441,34 @@ class Tally:
     """What a run has done so far, kept as it goes so that an interrupted run can still say."""
 
     listed: int = 0
-    unparsed: int = 0
     kept: int = 0
+    undecided: int = 0
     deleted: int = 0
     failed: int = 0
+    unparsed: int = 0
+    first_undecided: str = ""
+    first_unparsed: str = ""
 
     def summary(self, *, dry_run: bool) -> str:
-        """The run's one-line report."""
-        return (
-            f"{self.listed} listed, {self.kept} kept, "
+        """The run's one-line report.
+
+        Sessions kept for want of an answer are counted apart from those kept for a reason, with
+        an example, since a collector that can never decide is a broken one.
+        """
+        counts = (
+            f"{self.listed} listed, {self.kept} kept, {self.undecided} undecided, "
             f"{self.deleted} {'to delete' if dry_run else 'deleted'}, "
             f"{self.failed} failed to delete, {self.unparsed} unparsed lines"
         )
+        examples = [
+            f"first {what}: {example}"
+            for what, example in (
+                ("undecided", self.first_undecided),
+                ("unparsed line", self.first_unparsed),
+            )
+            if example
+        ]
+        return "; ".join([counts, *examples])
 
 
 @contextlib.contextmanager
@@ -451,11 +533,31 @@ def delete(zellij: str, session: Session) -> Result:
     return Result(text)
 
 
-def collect(zellij: str, *, dry_run: bool, report: Callable[[str], None]) -> int:
+def delete_on_record(zellij: str, session: Session, tally: Tally, reporter: Reporter) -> None:
+    """Delete one abandoned session, reporting it before and after, unless the log is broken."""
+    name = session.name
+    age = f"age {session.age_seconds}s"
+    # Signals are held until the deletion is over and on record. It is announced first, which
+    # leaves a trace of one that this process does not live to see the end of, and shows that the
+    # log can be written before anything is deleted.
+    with signals_held():
+        reporter.note(f"deleting {name!r} ({age})")
+        if reporter.broken:
+            return
+        result = delete(zellij, session)
+        if result.stdout is None:
+            reporter.problem(f"FAILED to delete {name!r} ({age}): {result.failure}")
+            tally.failed += 1
+        else:
+            reporter.note(f"deleted {name!r} ({age})")
+            tally.deleted += 1
+
+
+def collect(zellij: str, *, dry_run: bool, reporter: Reporter) -> int:
     """Delete (or, for a dry run, print) every abandoned session. Returns the process exit status.
 
-    A dry run prints the deletions on stdout and reports its reasoning. A real run reports one
-    line per deletion plus one for the run, and prints only if it turns out to be slow.
+    A dry run prints the deletions on stdout and reports its reasoning. A real run reports two
+    lines per deletion plus one for the run, and prints only if it turns out to be slow.
     """
     # A dry run is a diagnostic, so it takes as long as it takes.
     budget = UNLIMITED if dry_run else Budget(BUDGET_SECONDS)
@@ -465,61 +567,77 @@ def collect(zellij: str, *, dry_run: bool, report: Callable[[str], None]) -> int
         notice.start()
     tally = Tally()
     try:
-        return collect_within(zellij, tally, dry_run=dry_run, report=report, budget=budget)
+        return collect_within(zellij, tally, dry_run=dry_run, reporter=reporter, budget=budget)
     except KeyboardInterrupt:
-        report(f"run: interrupted after {tally.summary(dry_run=dry_run)}")
+        reporter.note(f"run: interrupted after {tally.summary(dry_run=dry_run)}")
         return EXIT_INTERRUPTED
     finally:
         notice.cancel()
 
 
+def list_sessions(
+    zellij: str, tally: Tally, *, reporter: Reporter, budget: Budget
+) -> list[Session]:
+    """The sessions zellij lists, counted into the tally. Raises RunFailedError if it cannot say."""
+    listing = run_zellij(zellij, ["list-sessions", "--no-formatting"], budget=budget)
+    if listing.stdout is None:
+        # zellij exits non-zero when there are no sessions at all, which is no failure.
+        if listing.answered and NO_SESSIONS in listing.failure:
+            return []
+        reporter.problem(f"run: could not list the sessions ({listing.failure})")
+        raise RunFailedError
+    sessions = parse_sessions(listing.stdout)
+    lines = [line for line in listing.stdout.splitlines() if line.strip()]
+    tally.listed = len(sessions)
+    tally.unparsed = len(lines) - len(sessions)
+    tally.first_unparsed = next(
+        (repr(line[:200]) for line in lines if not SESSION_LINE.match(line.rstrip())), ""
+    )
+    return sessions
+
+
 def collect_within(
-    zellij: str, tally: Tally, *, dry_run: bool, report: Callable[[str], None], budget: Budget
+    zellij: str, tally: Tally, *, dry_run: bool, reporter: Reporter, budget: Budget
 ) -> int:
     """Do the work of `collect`, inside its time budget, keeping the tally as it goes."""
     min_age_seconds = min_age_seconds_from_env()
     if min_age_seconds is None:
-        report(
+        reporter.problem(
             f"invalid ZELLIJ_GC_MIN_AGE_HOURS={os.environ.get('ZELLIJ_GC_MIN_AGE_HOURS')!r} "
             "(want a number of hours, 0 or more); nothing deleted"
         )
         return 1
-    listing = run_zellij(zellij, ["list-sessions", "--no-formatting"], budget=budget)
-    if listing.stdout is None:
-        # Not an error in itself: zellij also exits non-zero when there are no sessions at all.
-        report(f"run: no sessions listed ({listing.failure})")
-        return 0
-
-    sessions = parse_sessions(listing.stdout)
-    tally.listed = len(sessions)
-    tally.unparsed = sum(1 for line in listing.stdout.splitlines() if line.strip()) - len(sessions)
+    try:
+        sessions = list_sessions(zellij, tally, reporter=reporter, budget=budget)
+    except RunFailedError:
+        return 1
 
     # One session at a time, oldest first, as zellij lists them. Every zellij command makes every
     # server on the machine answer a probe, so running several at once mostly makes them contend.
     for session in sessions:
         name = session.name
-        age = f"age {session.age_seconds}s"
-        reason = keep_reason(zellij, session, min_age_seconds=min_age_seconds, budget=budget)
-        if reason is not None:
-            tally.kept += 1
+        kept = keep_reason(zellij, session, min_age_seconds=min_age_seconds, budget=budget)
+        if kept is not None:
+            if kept.undecided:
+                tally.undecided += 1
+                tally.first_undecided = tally.first_undecided or f"{name!r}, {kept.reason}"
+            else:
+                tally.kept += 1
             if dry_run:
-                report(f"kept {name!r}: {reason}")
+                reporter.note(f"kept {name!r}: {kept.reason}")
         elif dry_run:
             # Shell-quoted, so a name with spaces or parens can be pasted back into a shell.
             print(shlex.join([zellij, "delete-session", "--force", name]))
             tally.deleted += 1
         else:
-            # Reported as each one happens, and before any signal that arrived meanwhile is let
-            # in, so that the log holds it whatever comes next.
-            with signals_held():
-                result = delete(zellij, session)
-                if result.stdout is None:
-                    report(f"FAILED to delete {name!r} ({age}): {result.failure}")
-                    tally.failed += 1
-                else:
-                    report(f"deleted {name!r} ({age})")
-                    tally.deleted += 1
-    report(f"run: {tally.summary(dry_run=dry_run)}")
+            delete_on_record(zellij, session, tally, reporter)
+            if reporter.broken:
+                break
+    reporter.note(f"run: {tally.summary(dry_run=dry_run)}")
+    if reporter.broken:
+        # Being unable to record a deletion is a doubt like any other, so it stops them.
+        print("zellij-gc: the log cannot be written, so no more was deleted", file=sys.stderr)
+        return 1
     return 1 if tally.failed else 0
 
 
@@ -539,8 +657,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-# Each way a run can end without collecting (disabled, lock unusable, lock busy, crashed) is its
-# own early return.
+# Each way a run can end without collecting (disabled, lock unusable, lock busy, log unusable,
+# crashed) is its own early return.
 def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     """Run the collector; returns the process exit status."""
     dry_run = parse_args(argv).dry_run
@@ -549,32 +667,38 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     if dry_run:
         # A preview deletes nothing, so the switch that stops real runs doesn't stop it.
         if disabled:
-            report_to_stderr("ZELLIJ_GC_DISABLE is set, so a real run would do nothing")
-        return collect(zellij, dry_run=True, report=report_to_stderr)
+            Reporter().note("ZELLIJ_GC_DISABLE is set, so a real run would do nothing")
+        return collect(zellij, dry_run=True, reporter=Reporter())
     if disabled:
         return 0
 
     # One collector at a time: several terminals opening at once must not race on deletions, and
-    # none of them waits for another's run. Failures here go to stderr, which zellij-welcome
-    # keeps, since the log needs the lock.
+    # none of them waits for another's run. A failure to take the lock, or to open the log, goes
+    # to stderr alone: the log may only be written while holding the lock. zellij-welcome keeps
+    # the stderr of a run that fails.
     directory = xdg_dir("XDG_CACHE_HOME", ".cache")
     with contextlib.ExitStack() as stack:
         try:
             directory.mkdir(parents=True, exist_ok=True)
             lock = stack.enter_context((directory / "lock").open("w", encoding="utf-8"))
         except OSError as error:
-            report_to_stderr(f"cannot open the lock in {directory}: {error}")
+            Reporter().problem(f"cannot open the lock in {directory}: {error}")
             return 1
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return 0  # Another collector is running, and it will do the work.
         except OSError as error:
-            report_to_stderr(f"cannot lock {lock.name}: {error}")
+            Reporter().problem(f"cannot lock {lock.name}: {error}")
             return 1
-        logger = stack.enter_context(run_log())
         try:
-            return collect(zellij, dry_run=False, report=logger.info)
+            reporter = stack.enter_context(run_log())
+        except OSError as error:
+            # Nothing is deleted that cannot be put on record.
+            Reporter().problem(f"cannot open the log, so nothing was deleted: {error}")
+            return 1
+        try:
+            return collect(zellij, dry_run=False, reporter=reporter)
         except Exception:  # Recorded, not hidden: the screen is about to be cleared by zellij.
-            logger.exception("run: crashed")
+            reporter.problem(f"run: crashed\n{traceback.format_exc().rstrip()}")
             return 1

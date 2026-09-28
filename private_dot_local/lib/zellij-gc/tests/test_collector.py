@@ -403,6 +403,16 @@ def zellij(tmp_path, monkeypatch):
     signal.signal(signal.SIGINT, on_interrupt)
 
 
+def summary(listed, kept, deleted=0, *, dry_run=False, **others):
+    """A run's one-line report, as far as its counts; `others` default to none."""
+    counts = {"undecided": 0, "failed": 0, "unparsed": 0} | others
+    return (
+        f"{listed} listed, {kept} kept, {counts['undecided']} undecided, "
+        f"{deleted} {'to delete' if dry_run else 'deleted'}, "
+        f"{counts['failed']} failed to delete, {counts['unparsed']} unparsed lines"
+    )
+
+
 def gc_log(tmp_path):
     """The GC log's lines, without their timestamps."""
     path = tmp_path / "state" / "zellij-gc" / "gc.log"
@@ -426,7 +436,7 @@ def test_dry_run_prints_the_deletions_and_its_reasons_and_deletes_nothing(zellij
         "zellij-gc: kept 'shell-beside-chooser': not a bare welcome screen",
         "zellij-gc: kept 'didactic-river': younger than the minimum age",
         "zellij-gc: kept 'verdant-yak': exited",
-        "zellij-gc: run: 7 listed, 5 kept, 2 to delete, 0 failed to delete, 0 unparsed lines",
+        f"zellij-gc: run: {summary(7, 5, 2, dry_run=True)}",
     ]
 
 
@@ -456,9 +466,11 @@ def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path)
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == ("", "")
     assert gc_log(tmp_path) == [
+        f"deleting 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
         f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
+        f"deleting 'stale one' (age {parse_age('5h 1m')}s)",
         f"deleted 'stale one' (age {parse_age('5h 1m')}s)",
-        "run: 7 listed, 5 kept, 2 deleted, 0 failed to delete, 0 unparsed lines",
+        f"run: {summary(7, 5, 2)}",
     ]
 
 
@@ -471,13 +483,16 @@ def test_a_slow_run_says_so_on_the_terminal(zellij, capsys, monkeypatch):
     assert captured.err == ""
 
 
-def test_a_run_out_of_time_keeps_what_it_has_not_reached(zellij, tmp_path, monkeypatch):
+def test_a_listing_that_outlasts_the_run_is_a_failure(zellij, tmp_path, monkeypatch, capsys):
     """The listing takes longer than the whole budget, so no session is inspected or deleted."""
     monkeypatch.setattr(collector, "BUDGET_SECONDS", 0.2)
     zellij.configure(sleep={"list-sessions": 0.5})
-    assert collector.main([]) == 0
+    assert collector.main([]) == 1
     assert zellij.queried() == set()
-    assert gc_log(tmp_path) == ["run: no sessions listed (timed out after 0.2s)"]
+    assert gc_log(tmp_path) == ["run: could not list the sessions (timed out after 0.2s)"]
+    assert capsys.readouterr().err == (
+        "zellij-gc: run: could not list the sessions (timed out after 0.2s)\n"
+    )
 
 
 def test_a_run_out_of_time_part_way_deletes_nothing_more(zellij, tmp_path, monkeypatch):
@@ -489,9 +504,12 @@ def test_a_run_out_of_time_part_way_deletes_nothing_more(zellij, tmp_path, monke
     assert zellij.deletions == []
     # The sessions after it are not even asked about.
     assert zellij.queried() == {"dotfiles", "brave-petunia"}
-    assert gc_log(tmp_path) == [
-        "run: 7 listed, 7 kept, 0 deleted, 0 failed to delete, 0 unparsed lines"
-    ]
+    # Those it could not decide about are told apart from those it had a reason to keep.
+    [line] = gc_log(tmp_path)
+    assert line.startswith(
+        f"run: {summary(7, 3, undecided=4)}; "
+        "first undecided: 'brave-petunia', list-tabs failed (timed out after "
+    )
 
 
 def test_ctrl_c_ends_the_run_and_what_was_already_deleted_is_on_record(zellij, tmp_path):
@@ -501,8 +519,9 @@ def test_ctrl_c_ends_the_run_and_what_was_already_deleted_is_on_record(zellij, t
     assert collector.main([]) == 130
     assert zellij.deletions == [["delete-session", "--force", "brave-petunia"]]
     assert gc_log(tmp_path) == [
+        f"deleting 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
         f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
-        "run: interrupted after 7 listed, 2 kept, 1 deleted, 0 failed to delete, 0 unparsed lines",
+        f"run: interrupted after {summary(7, 2, 1)}",
     ]
 
 
@@ -519,8 +538,9 @@ def test_a_deletion_under_way_is_not_cut_short_by_ctrl_c(zellij, tmp_path):
     ]
     assert zellij.deletions == [["delete-session", "--force", "brave-petunia"]]
     assert gc_log(tmp_path) == [
+        f"deleting 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
         f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
-        "run: interrupted after 7 listed, 1 kept, 1 deleted, 0 failed to delete, 0 unparsed lines",
+        f"run: interrupted after {summary(7, 1, 1)}",
     ]
 
 
@@ -528,10 +548,11 @@ def test_a_deletion_that_outlasts_the_wait_is_left_to_finish(zellij, tmp_path, m
     monkeypatch.setattr(collector, "DELETE_WAIT_SECONDS", 0.2)
     zellij.configure(listing="brave-petunia [Created 5h ago]\n", sleep={"delete-session": 0.5})
     assert collector.main([]) == 1
-    assert gc_log(tmp_path)[0] == (
+    assert gc_log(tmp_path)[:2] == [
+        "deleting 'brave-petunia' (age 18000s)",
         "FAILED to delete 'brave-petunia' (age 18000s): still running after 0.2s, "
-        "and left to finish"
-    )
+        "and left to finish",
+    ]
     assert zellij.finished_deletions == []
     deadline = time.monotonic() + 5
     while not zellij.finished_deletions and time.monotonic() < deadline:
@@ -568,9 +589,7 @@ def test_sessions_in_use_by_their_metadata_cost_no_queries(zellij, tmp_path):
     assert collector.main([]) == 0
     assert zellij.queried() == {"brave-petunia", "stale one"}
     assert len(zellij.deletions) == 2
-    assert gc_log(tmp_path)[-1] == (
-        "run: 7 listed, 5 kept, 2 deleted, 0 failed to delete, 0 unparsed lines"
-    )
+    assert gc_log(tmp_path)[-1] == f"run: {summary(7, 5, 2)}"
 
 
 def test_dry_run_says_when_the_metadata_decided(zellij, capsys):
@@ -610,23 +629,36 @@ def test_a_run_with_nothing_to_delete_still_leaves_a_line(zellij, tmp_path):
     zellij.configure(listing="dotfiles [Created 5h ago]\nnot a session line\n")
     assert collector.main([]) == 0
     assert gc_log(tmp_path) == [
-        "run: 1 listed, 1 kept, 0 deleted, 0 failed to delete, 1 unparsed lines",
+        f"run: {summary(1, 1, unparsed=1)}; first unparsed line: 'not a session line'",
     ]
 
 
-def test_log_is_rotated_once_past_its_size_cap(zellij, tmp_path, monkeypatch):
-    monkeypatch.setattr(collector, "LOG_MAX_BYTES", 200)
-    # The cheapest run: one zellij call and one log line (~90 bytes).
+def test_log_is_rotated_before_it_passes_its_size_cap(zellij, tmp_path, monkeypatch):
+    monkeypatch.setattr(collector, "LOG_MAX_BYTES", 300)
+    # The cheapest run: one zellij call and one log line (a little over 100 bytes).
     zellij.configure(listing=None)
     directory = tmp_path / "state" / "zellij-gc"
-    for _ in range(8):  # Enough to rotate twice, so the second rotation replaces gc.log.1.
+    for _ in range(6):  # Enough to rotate at least twice, so that gc.log.1 gets replaced.
         assert collector.main([]) == 0
     assert sorted(path.name for path in directory.iterdir()) == ["gc.log", "gc.log.1"]
-    # Each file stops growing within one line of the cap.
-    assert all(path.stat().st_size < 200 + 100 for path in directory.iterdir())
+    # Neither file ever exceeds the cap.
+    assert all(0 < path.stat().st_size <= 300 for path in directory.iterdir())
 
 
-def test_a_crash_is_logged_with_its_traceback(zellij, tmp_path, monkeypatch):
+def test_a_log_that_stops_taking_lines_stops_the_deletions(zellij, tmp_path, monkeypatch, capsys):
+    """Here the log cannot be rotated. What cannot be put on record is not deleted."""
+    monkeypatch.setattr(collector, "LOG_MAX_BYTES", 10)
+    directory = tmp_path / "state" / "zellij-gc"
+    (directory / "gc.log.1" / "in-the-way").mkdir(parents=True)
+    (directory / "gc.log").write_text("a line from an earlier run\n", encoding="utf-8")
+    assert collector.main([]) == 1
+    assert zellij.deletions == []
+    assert capsys.readouterr().err == (
+        "zellij-gc: the log cannot be written, so no more was deleted\n"
+    )
+
+
+def test_a_crash_is_reported_with_its_traceback(zellij, tmp_path, monkeypatch, capsys):
     def explode(text):
         raise RuntimeError("boom")
 
@@ -635,6 +667,10 @@ def test_a_crash_is_logged_with_its_traceback(zellij, tmp_path, monkeypatch):
     log = gc_log(tmp_path)
     assert log[0] == "run: crashed"
     assert log[-1] == "boom"
+    # On stderr as well, which is what zellij-welcome keeps of a run that failed.
+    reported = capsys.readouterr().err.splitlines()
+    assert reported[0] == "zellij-gc: run: crashed"
+    assert reported[-1] == "RuntimeError: boom"
 
 
 def test_queries_and_their_flags(zellij):
@@ -676,6 +712,7 @@ def test_invalid_min_age_deletes_nothing_and_says_so(zellij, capsys, monkeypatch
     assert zellij.calls == []
     [line] = gc_log(tmp_path)
     assert line.startswith("invalid ZELLIJ_GC_MIN_AGE_HOURS='24h'")
+    assert capsys.readouterr().err == f"zellij-gc: {line}\n"
 
     assert collector.main(["--dry-run"]) == 1
     captured = capsys.readouterr()
@@ -700,7 +737,7 @@ def test_disable_switch_does_not_stop_a_preview(zellij, capsys, monkeypatch):
 
 
 @pytest.mark.parametrize("missing", ["list-clients", "list-panes", "list-tabs"])
-def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, missing):
+def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, tmp_path, missing):
     """As on a zellij too old to have the action: whichever query fails, nothing is deleted."""
     replies = {
         name: {action: text for action, text in reply.items() if action != missing}
@@ -713,12 +750,16 @@ def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, m
     captured = capsys.readouterr()
     assert captured.out == ""
     assert f"zellij-gc: kept 'brave-petunia': {missing} failed (exit 2)" in captured.err
+    # The real run's log shows that it could not decide, and gives an example of why.
+    [line] = gc_log(tmp_path)
+    assert " 0 undecided" not in line
+    assert line.endswith(f"{missing} failed (exit 2)")
 
 
 def test_query_that_hangs_is_a_failure(zellij):
     zellij.configure(sleep=1)
     result = collector.run_zellij(str(zellij.path), ["list-sessions"], timeout=0.3)
-    assert result == collector.Result(None, "timed out after 0.3s")
+    assert result == collector.Result(None, "timed out after 0.3s", answered=False)
 
 
 def test_undecodable_output_does_not_stop_the_run(zellij, capsys, monkeypatch, tmp_path):
@@ -745,33 +786,52 @@ def test_undecodable_output_does_not_stop_the_run(zellij, capsys, monkeypatch, t
     ]
 
 
-def test_failed_listing_deletes_nothing_and_is_logged(zellij, tmp_path):
+def test_no_sessions_at_all_is_no_failure(zellij, tmp_path, capsys):
+    """zellij reports it with a non-zero exit, which must not be taken for one."""
     zellij.configure(listing=None)
     assert collector.main([]) == 0
     assert zellij.calls == [["list-sessions", "--no-formatting"]]
-    assert gc_log(tmp_path) == [
-        "run: no sessions listed (exit 1: No active zellij sessions found.)",
-    ]
+    assert gc_log(tmp_path) == [f"run: {summary(0, 0)}"]
+    assert capsys.readouterr().err == ""
 
 
-def test_missing_zellij_binary_deletes_nothing_and_is_logged(zellij, monkeypatch, tmp_path):
+def test_a_listing_that_fails_is_a_failure(zellij, tmp_path, capsys):
+    """Any other non-zero exit is zellij failing, not zellij finding nothing."""
+    (zellij.directory / "zellij").write_text(
+        "#!/bin/sh\necho 'thread main panicked' >&2\nexit 101\n", encoding="utf-8"
+    )
+    assert collector.main([]) == 1
+    line = "run: could not list the sessions (exit 101: thread main panicked)"
+    assert gc_log(tmp_path) == [line]
+    assert capsys.readouterr().err == f"zellij-gc: {line}\n"
+
+
+def test_missing_zellij_binary_is_a_failure(zellij, monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("ZELLIJ_GC_ZELLIJ", str(tmp_path / "no-such-zellij"))
-    assert collector.main([]) == 0
+    assert collector.main([]) == 1
     [line] = gc_log(tmp_path)
-    assert line.startswith("run: no sessions listed (could not run: ")
+    assert line.startswith("run: could not list the sessions (could not run: ")
+    assert capsys.readouterr().err == f"zellij-gc: {line}\n"
 
 
-def test_failed_deletion_is_logged_with_its_cause_and_the_run_goes_on(zellij, tmp_path):
+def test_failed_deletion_is_reported_with_its_cause_and_the_run_goes_on(zellij, tmp_path, capsys):
     zellij.configure(delete_status=2)
     assert collector.main([]) == 1
     assert len(zellij.deletions) == 2
-    assert gc_log(tmp_path) == [
+    failures = [
         f"FAILED to delete 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s): "
         'exit 2: Session: "brave-petunia" not found.',
         f"FAILED to delete 'stale one' (age {parse_age('5h 1m')}s): "
         'exit 2: Session: "stale one" not found.',
-        "run: 7 listed, 5 kept, 0 deleted, 2 failed to delete, 0 unparsed lines",
     ]
+    assert gc_log(tmp_path) == [
+        f"deleting 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
+        failures[0],
+        f"deleting 'stale one' (age {parse_age('5h 1m')}s)",
+        failures[1],
+        f"run: {summary(7, 5, failed=2)}",
+    ]
+    assert capsys.readouterr().err.splitlines() == [f"zellij-gc: {line}" for line in failures]
 
 
 def test_second_collector_backs_off_while_the_lock_is_held(zellij, tmp_path, capsys):
@@ -794,12 +854,16 @@ def test_unusable_cache_dir_is_reported_and_deletes_nothing(zellij, tmp_path, mo
     assert capsys.readouterr().err.startswith("zellij-gc: cannot open the lock in ")
 
 
-def test_unusable_state_dir_does_not_stop_the_run(zellij, tmp_path, monkeypatch):
+def test_a_log_that_cannot_be_opened_stops_the_run(zellij, tmp_path, monkeypatch, capsys):
+    """What cannot be put on record is not deleted."""
     blocker = tmp_path / "a-file"
     blocker.write_text("", encoding="utf-8")
     monkeypatch.setenv("XDG_STATE_HOME", str(blocker))
-    assert collector.main([]) == 0
-    assert len(zellij.deletions) == 2
+    assert collector.main([]) == 1
+    assert zellij.calls == []
+    assert capsys.readouterr().err.startswith(
+        "zellij-gc: cannot open the log, so nothing was deleted: "
+    )
 
 
 def test_log_falls_back_to_home_when_xdg_is_unset(zellij, tmp_path, monkeypatch):
