@@ -36,7 +36,6 @@ ignore = [
   "D203",    # conflicts with D211 (no blank line before a class docstring)
   "D213",    # conflicts with D212 (summary on the first docstring line)
   "D401",    # docstrings here say what a function returns, not what it is told to do
-  "PLR0911", # a chain of early exits, each a reason to keep a session, reads better than one test
   "PLR2004", # small literal numbers are clearer inline than as named constants here
 ]
 

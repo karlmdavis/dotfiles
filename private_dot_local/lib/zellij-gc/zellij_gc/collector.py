@@ -135,7 +135,8 @@ def count_clients(text: str) -> int | None:
     return len(lines) - 1
 
 
-def is_abandoned(
+# A chain of early exits, each a reason to keep the session, reads better than one expression.
+def is_abandoned(  # noqa: PLR0911
     session: Session,
     clients_text: str,
     panes_json: str,
@@ -226,7 +227,8 @@ def run_zellij(
     return Result(result.stdout)
 
 
-def keep_reason(
+# A chain of early exits, each naming one reason, reads better than one expression.
+def keep_reason(  # noqa: PLR0911
     zellij: str, session: Session, *, min_age_seconds: float, budget: Budget = UNLIMITED
 ) -> str | None:
     """Why a session is kept, or None if it is abandoned; any failed query means it is kept."""
@@ -438,7 +440,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
+# Each way a run can end before, or without, collecting has its own exit status.
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     """Run the collector; returns the process exit status."""
     dry_run = parse_args(argv).dry_run
     zellij = os.environ.get("ZELLIJ_GC_ZELLIJ") or "zellij"
