@@ -1,0 +1,32 @@
+#!/bin/sh
+
+##
+# zellij-welcome — open the zellij 'welcome' session chooser, tidying up behind it.
+#
+# The single entry point for every terminal that lands in zellij: the login-shell launcher
+# (.chezmoitemplates/zellij-launch.sh) and the iTerm2 `zellij` profile, which runs this directly
+# with a minimal PATH. Each launch also starts zellij-gc in the background, which deletes sessions
+# abandoned at the welcome screen (disable with ZELLIJ_GC_DISABLE=1).
+##
+
+{{ $brew := "/home/linuxbrew/.linuxbrew" -}}
+{{ if eq .chezmoi.os "darwin" -}}
+{{ $brew = "/opt/homebrew" -}}
+{{ end -}}
+brew_bin="{{ $brew }}/bin"
+
+# Collect abandoned sessions, detached so the chooser never waits on it. Homebrew's bin goes on
+# PATH for this child only (the shim needs `uv`); zellij itself inherits the caller's environment.
+if [ -x "$HOME/.local/bin/zellij-gc" ]; then
+  ( PATH="$brew_bin:$PATH" nohup "$HOME/.local/bin/zellij-gc" >/dev/null 2>&1 & )
+fi
+
+# Hand the terminal to the zellij welcome chooser.
+if command -v zellij >/dev/null 2>&1; then
+  exec zellij -l welcome
+elif [ -x "$brew_bin/zellij" ]; then
+  exec "$brew_bin/zellij" -l welcome
+fi
+
+echo "zellij-welcome: zellij not found" >&2
+exit 127

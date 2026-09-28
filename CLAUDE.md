@@ -157,14 +157,35 @@ Tools that are NOT in `system_packages_autoinstall.yaml` (i.e. not installed on 
 Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exec `zellij -l welcome`
   on any OS via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser
   whose panes run nushell.
+The exec goes through `~/.local/bin/zellij-welcome` (source:
+  `private_dot_local/bin/executable_zellij-welcome.tmpl`), which the iTerm2 `zellij` profile also runs
+  directly, so every route into the chooser shares one entry point.
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
     scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes
     (VS Code/Cursor/Zed/JetBrains/Xcode) are never disturbed.
 - IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`).
+- The Claude desktop app's shell skipped by name (`TERM_PROGRAM=claude-desktop`).
 - `NO_ZELLIJ=1` environment variable opt-out.
 - Recursion prevention (checks `$ZELLIJ` variable).
 - Fallback to the normal shell if zellij missing.
+
+Inbound interactive SSH deliberately gets the chooser too, so a manual `ssh` from inside a local
+  Zellij pane nests.
+The non-nesting routes are the iTerm2 remote-host profiles and `NO_ZELLIJ=1`.
+
+**Abandoned Zellij session GC:**
+Closing a terminal at the welcome chooser leaves its session running forever, so `zellij-welcome`
+  starts `~/.local/bin/zellij-gc` in the background on every launch (a thin shim over the `zellij_gc`
+  Python package at `private_dot_local/lib/zellij-gc/`).
+It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
+  match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
+  a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
+The signature decides, not the session name, and any failed or unparseable query keeps the session
+  (which makes it a no-op on a zellij too old to answer the queries).
+EXITED (resurrectable) sessions are never touched.
+Deletions are logged to `~/.local/state/zellij-gc/gc.log`.
+Preview with `zellij-gc --dry-run`; disable with `ZELLIJ_GC_DISABLE=1`.
 
 ## Development Toolchain
 

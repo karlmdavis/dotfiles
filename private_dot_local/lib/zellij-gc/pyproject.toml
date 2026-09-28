@@ -1,0 +1,12 @@
+[project]
+name = "zellij-gc"
+version = "0.1.0"
+description = "Garbage-collect zellij sessions abandoned at the welcome screen."
+requires-python = ">=3.11"
+# No runtime dependencies: stdlib only; all session queries shell out to the zellij CLI.
+dependencies = []
+
+[tool.pytest.ini_options]
+# Run pytest from this directory; the package imports as `zellij_gc`.
+pythonpath = ["."]
+testpaths = ["tests"]

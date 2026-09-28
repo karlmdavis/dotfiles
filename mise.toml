@@ -14,6 +14,7 @@ experimental = true
 config_roots = [
   "private_dot_local/lib/aerospace-workspaces",
   "private_dot_local/lib/cmd-notify",
+  "private_dot_local/lib/zellij-gc",
 ]
 
 [tools]
@@ -41,6 +42,7 @@ echo "Running unit tests..."
 bats test/claude/
 mise run '//private_dot_local/lib/aerospace-workspaces:test'
 mise run '//private_dot_local/lib/cmd-notify:test'
+mise run '//private_dot_local/lib/zellij-gc:test'
 """
 
 [tasks.ci]
