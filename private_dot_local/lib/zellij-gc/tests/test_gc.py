@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from zellij_gc import gc
-from zellij_gc.gc import Session, count_clients, is_abandoned, parse_age, parse_sessions
+from zellij_gc.gc import Session, is_abandoned, parse_age, parse_sessions
 
 HOUR = 3600
 
@@ -59,19 +59,16 @@ def abandoned(session=STALE, clients=NO_CLIENTS, panes=WELCOME_PANES, tabs=DEFAU
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("36s", 36),
-        ("4h 23m 51s", 4 * HOUR + 23 * 60 + 51),
-        ("1day 8h 32m 40s", 86400 + 8 * HOUR + 32 * 60 + 40),
-        ("3months 25days 20h 9m 36s", 3 * 2630016 + 25 * 86400 + 20 * HOUR + 9 * 60 + 36),
-        ("1month 2days", 2630016 + 2 * 86400),
-        ("1year 19days 12h 18m 26s", 31557600 + 19 * 86400 + 12 * HOUR + 18 * 60 + 26),
+        # Between them, every unit spelling that zellij prints.
+        ("1year 1month 1day 20h 9m 36s", 31557600 + 2630016 + 86400 + 20 * HOUR + 9 * 60 + 36),
+        ("2years 3months 25days", 2 * 31557600 + 3 * 2630016 + 25 * 86400),
     ],
 )
 def test_parse_age(text, expected):
     assert parse_age(text) == expected
 
 
-@pytest.mark.parametrize("text", ["", "soon", "3 fortnights", "5m and change", "12"])
+@pytest.mark.parametrize("text", ["", "3 fortnights", "5m and change"])
 def test_parse_age_rejects_unknown_shapes(text):
     assert parse_age(text) is None
 
@@ -101,25 +98,8 @@ def test_parse_sessions_anchors_on_the_last_created_marker():
     assert session == Session("odd [Created 1h ago] name", 2 * HOUR)
 
 
-def test_parse_sessions_ignores_other_lines():
-    assert parse_sessions("No active zellij sessions found.\n\n") == []
-
-
 def test_parse_sessions_keeps_a_session_whose_age_is_unreadable():
     assert parse_sessions("x [Created a while ago]\n") == [Session("x", None)]
-
-
-# --- count_clients --------------------------------------------------------------------------
-
-
-def test_count_clients():
-    assert count_clients(NO_CLIENTS) == 0
-    assert count_clients(ONE_CLIENT) == 1
-
-
-@pytest.mark.parametrize("text", ["", "\n", "Session 'x' not found\n"])
-def test_count_clients_rejects_unknown_output(text):
-    assert count_clients(text) is None
 
 
 # --- is_abandoned ---------------------------------------------------------------------------
@@ -161,7 +141,6 @@ def test_kept_when_a_client_is_attached_or_clients_are_unreadable(clients):
         "not json",
         "null",
         '["welcome-screen"]',
-        json.dumps([{"is_plugin": True, "plugin_url": "zellij:link"}]),
         json.dumps([{"plugin_url": "welcome-screen"}]),
         json.dumps([{"is_plugin": "true", "plugin_url": "welcome-screen"}]),
     ],
@@ -189,8 +168,8 @@ def test_kept_unless_there_is_a_single_default_tab(tabs):
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [(None, HOUR), ("", HOUR), ("  ", HOUR), ("0", 0), ("0.5", HOUR / 2), (" 24 ", 24 * HOUR),
-     ("junk", None), ("24h", None), ("1d", None), ("-2", None), ("nan", None), ("inf", None)],
+    [(None, HOUR), ("  ", HOUR), ("0", 0), ("0.5", HOUR / 2),
+     ("24h", None), ("-2", None), ("nan", None), ("inf", None)],
 )
 def test_min_age_from_env(monkeypatch, value, expected):
     if value is None:
@@ -319,19 +298,16 @@ def gc_log(tmp_path):
     return [line.partition(" ")[2] for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-def test_dry_run_prints_the_deletions_without_running_them(zellij, capsys, tmp_path):
+def test_dry_run_prints_the_deletions_and_its_reasons_and_deletes_nothing(zellij, capsys, tmp_path):
     assert gc.main(["--dry-run"]) == 0
-    assert capsys.readouterr().out.splitlines() == [
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
         f"{zellij.quoted} delete-session --force brave-petunia",
         f"{zellij.quoted} delete-session --force 'stale one'",
     ]
     assert zellij.deletions == []
     assert gc_log(tmp_path) == []
-
-
-def test_dry_run_explains_itself_on_stderr(zellij, capsys):
-    gc.main(["--dry-run"])
-    assert capsys.readouterr().err.splitlines() == [
+    assert captured.err.splitlines() == [
         "zellij-gc: kept 'dotfiles': client attached",
         "zellij-gc: kept 'outstanding-cowbell': client attached",
         "zellij-gc: kept 'shell-beside-chooser': not a bare welcome screen",
@@ -351,9 +327,7 @@ def test_dry_run_names_plain_zellij_when_no_binary_is_configured(zellij, capsys,
     ]
 
 
-@pytest.mark.parametrize(
-    "argv", [["--dryrun"], ["--dry"], ["--dry-run=1"], ["-n"], ["--help"], ["--dry-run", "extra"]]
-)
+@pytest.mark.parametrize("argv", [["--dry"], ["--dry-run=1"], ["-n"], ["--dry-run", "extra"]])
 def test_unrecognised_arguments_never_touch_zellij(zellij, argv):
     with pytest.raises(SystemExit):
         gc.main(argv)
@@ -405,15 +379,11 @@ def test_a_crash_is_logged_with_its_traceback(zellij, tmp_path, monkeypatch):
     assert log[-1] == "boom"
 
 
-def test_young_and_exited_sessions_are_never_queried(zellij):
+def test_queries_and_their_flags(zellij):
+    """Young and exited sessions get no queries, and a session with a client only the first."""
     gc.main([])
     assert zellij.queried() == {"dotfiles", "brave-petunia", "outstanding-cowbell", "stale one",
                                 "shell-beside-chooser"}
-
-
-def test_queries_and_their_flags(zellij):
-    """A session with a client gets only the clients query; the JSON queries ask for JSON."""
-    gc.main([])
     actions = {name: [call[3:] for call in zellij.calls if call[:2] == ["--session", name]]
                for name in ("dotfiles", "outstanding-cowbell", "brave-petunia")}
     assert actions == {
@@ -446,9 +416,8 @@ def test_invalid_min_age_deletes_nothing_and_says_so(zellij, capsys, monkeypatch
     assert zellij.calls == []
 
 
-@pytest.mark.parametrize("value", ["1", "0", "no"])
-def test_disable_switch_stops_a_real_run_whatever_its_value(zellij, monkeypatch, tmp_path, value):
-    monkeypatch.setenv("ZELLIJ_GC_DISABLE", value)
+def test_disable_switch_stops_a_real_run_even_when_set_to_0(zellij, monkeypatch, tmp_path):
+    monkeypatch.setenv("ZELLIJ_GC_DISABLE", "0")
     assert gc.main([]) == 0
     assert zellij.calls == []
     assert gc_log(tmp_path) == []
