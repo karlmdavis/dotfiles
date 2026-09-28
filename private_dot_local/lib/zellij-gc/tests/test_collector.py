@@ -11,6 +11,7 @@ import fcntl
 import json
 import os
 import shlex
+import shutil
 import signal
 import subprocess
 import textwrap
@@ -241,42 +242,53 @@ REPLIES = {
     },
 }
 
-FAKE_ZELLIJ = """\
-#!/usr/bin/env python3
-import json, os, pathlib, sys, time
+# A shell script, since a run makes a dozen calls and a shell starts ten times faster than Python.
+# What it is to answer is laid out as files beside it by FakeZellij.configure().
+FAKE_ZELLIJ = r"""#!/bin/sh
+here=${0%/*}
+# Builtins only on the paths every call takes: on a busy machine each spawn costs milliseconds.
+show() { while IFS= read -r line || [ -n "$line" ]; do printf '%s\n' "$line"; done < "$1"; }
+IFS='	'
+printf '%s\n' "$*" >> "$here/calls"
+IFS=' '
 
-here = pathlib.Path(__file__).parent
-args = sys.argv[1:]
-with open(here / "calls.jsonl", "a") as calls:
-    calls.write(json.dumps(args) + "\\n")
-spec = json.loads((here / "spec.json").read_text())
-# A delay for every command, or for the named ones: "list-sessions", "<session>/<action>".
-command = f"{args[1]}/{args[3]}" if args[:1] == ["--session"] else args[0]
-delays = spec["sleep"]
-time.sleep(delays.get(command, 0) if isinstance(delays, dict) else delays)
+case $1 in
+  --session) command="$2/$4" ;;
+  *) command=$1 ;;
+esac
+# A delay for every command, or for one: "list-sessions", "delete-session", "<session>/<action>".
+for delay in "$here/delays/all" "$here/delays/$command"; do
+  [ -f "$delay" ] && read -r seconds < "$delay" && sleep "$seconds"
+done
 
-if args[:1] == ["list-sessions"]:
-    if spec["listing"] is None:
-        sys.exit("No active zellij sessions found.")
-    sys.stdout.write(spec["listing"])
-elif args[:1] == ["delete-session"]:
-    if spec["delete_status"]:
-        print(f'Session: "{args[-1]}" not found.', file=sys.stderr)
-        sys.exit(spec["delete_status"])
-    # A deletion that ran to its end says so, and whether it was out of the terminal's reach.
-    finished = {"name": args[-1], "leads_its_own_session": os.getsid(0) == os.getpid()}
-    with open(here / "finished.jsonl", "a") as log:
-        log.write(json.dumps(finished) + "\\n")
-    print(f'Session: "{args[-1]}" successfully deleted.')
-elif args[:1] == ["--session"] and args[2:3] == ["action"]:
-    reply = spec["replies"].get(args[1], {}).get(args[3])
+case $1 in
+  list-sessions)
+    [ -f "$here/listing" ] || { echo "No active zellij sessions found." >&2; exit 1; }
+    show "$here/listing"
+    ;;
+  delete-session)
+    read -r status < "$here/delete-status"
+    if [ "$status" -ne 0 ]; then
+      echo "Session: \"$3\" not found." >&2
+      exit "$status"
+    fi
+    # A deletion that ran to its end says so, and whether it was out of the terminal's reach:
+    # started in a session of its own, it leads its own process group.
+    leads=no
+    [ "$(ps -o pgid= -p $$ | tr -d ' ')" = "$$" ] && leads=yes
+    printf '%s\t%s\n' "$3" "$leads" >> "$here/finished"
+    echo "Session: \"$3\" successfully deleted."
+    ;;
+  --session)
     # As the real CLI: the JSON queries print a table, not JSON, unless asked for JSON.
-    wants_json = args[3] in ("list-panes", "list-tabs")
-    if reply is None or (wants_json and "--json" not in args):
-        sys.exit(2)
-    sys.stdout.write(reply)
-else:
-    sys.exit(64)
+    case $4 in
+      list-panes | list-tabs) case " $* " in *" --json "*) ;; *) exit 2 ;; esac ;;
+    esac
+    [ -f "$here/replies/$2/$4" ] || exit 2
+    show "$here/replies/$2/$4"
+    ;;
+  *) exit 64 ;;
+esac
 """
 
 
@@ -289,25 +301,38 @@ class FakeZellij:
         self.configure()
 
     def configure(self, listing=LISTING, replies=None, delete_status=0, sleep=0):
-        spec = {
-            "listing": listing,
-            "replies": REPLIES if replies is None else replies,
-            "delete_status": delete_status,
-            "sleep": sleep,
+        """Lay out what the fake is to answer. `sleep` is seconds, or seconds by command."""
+        for folder in ("replies", "delays"):
+            shutil.rmtree(self.directory / folder, ignore_errors=True)
+        (self.directory / "listing").unlink(missing_ok=True)
+        if listing is not None:
+            (self.directory / "listing").write_text(listing, encoding="utf-8")
+        (self.directory / "delete-status").write_text(f"{delete_status}\n", encoding="utf-8")
+        files = {
+            f"replies/{name}/{action}": text
+            for name, reply in (REPLIES if replies is None else replies).items()
+            for action, text in reply.items()
         }
-        (self.directory / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
+        delays = sleep if isinstance(sleep, dict) else {"all": sleep}
+        files.update({f"delays/{command}": f"{seconds}\n" for command, seconds in delays.items()})
+        for name, text in files.items():
+            (self.directory / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.directory / name).write_text(text, encoding="utf-8")
 
     @property
     def quoted(self):
         """The fake's path as dry-run output prints it."""
         return shlex.quote(str(self.path))
 
-    @property
-    def calls(self):
-        log = self.directory / "calls.jsonl"
+    def _records(self, name):
+        log = self.directory / name
         if not log.exists():
             return []
-        return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        return [line.split("\t") for line in log.read_text(encoding="utf-8").splitlines()]
+
+    @property
+    def calls(self):
+        return self._records("calls")
 
     @property
     def deletions(self):
@@ -316,16 +341,19 @@ class FakeZellij:
     @property
     def finished_deletions(self):
         """What each deletion that ran to its end recorded about itself."""
-        log = self.directory / "finished.jsonl"
-        if not log.exists():
-            return []
-        return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+        return [
+            {"name": name, "leads_its_own_group": leads == "yes"}
+            for name, leads in self._records("finished")
+        ]
 
     def queried(self):
         return {call[1] for call in self.calls if call[0] == "--session"}
 
     def interrupt_at(self, command):
         """Send this process a real Ctrl-C once the fake has been asked to run `command`."""
+        # A process started in the background by a shell without job control, as a test runner
+        # may well be, starts out ignoring Ctrl-C. The `zellij` fixture puts back what it found.
+        signal.signal(signal.SIGINT, signal.default_int_handler)
 
         def watch():
             while command not in self.calls:
@@ -370,7 +398,9 @@ def zellij(tmp_path, monkeypatch):
     directory.mkdir()
     fake = FakeZellij(directory)
     monkeypatch.setenv("ZELLIJ_GC_ZELLIJ", str(fake.path))
-    return fake
+    on_interrupt = signal.getsignal(signal.SIGINT)
+    yield fake
+    signal.signal(signal.SIGINT, on_interrupt)
 
 
 def gc_log(tmp_path):
@@ -434,7 +464,7 @@ def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path)
 
 def test_a_slow_run_says_so_on_the_terminal(zellij, capsys, monkeypatch):
     monkeypatch.setattr(collector, "NOTICE_AFTER_SECONDS", 0.1)
-    zellij.configure(listing=None, sleep=0.4)
+    zellij.configure(listing=None, sleep=0.25)
     assert collector.main([]) == 0
     captured = capsys.readouterr()
     assert captured.out == "zellij-gc: clearing out abandoned sessions (Ctrl-C to skip)...\n"
@@ -452,8 +482,9 @@ def test_a_run_out_of_time_keeps_what_it_has_not_reached(zellij, tmp_path, monke
 
 def test_a_run_out_of_time_part_way_deletes_nothing_more(zellij, tmp_path, monkeypatch):
     """The last query about the first abandoned session outlasts the budget; nothing is deleted."""
-    monkeypatch.setattr(collector, "BUDGET_SECONDS", 1.5)
-    zellij.configure(sleep={"brave-petunia/list-tabs": 3})
+    # Time enough for the quick calls that come first, even on a machine under heavy load.
+    monkeypatch.setattr(collector, "BUDGET_SECONDS", 2.0)
+    zellij.configure(sleep={"brave-petunia/list-tabs": 5})
     assert collector.main([]) == 0
     assert zellij.deletions == []
     # The sessions after it are not even asked about.
@@ -477,13 +508,13 @@ def test_ctrl_c_ends_the_run_and_what_was_already_deleted_is_on_record(zellij, t
 
 def test_a_deletion_under_way_is_not_cut_short_by_ctrl_c(zellij, tmp_path):
     """The Ctrl-C arrives while the first deletion runs: that one finishes, and no other starts."""
-    zellij.configure(sleep={"delete-session": 0.7})
+    zellij.configure(sleep={"delete-session": 0.3})
     zellij.interrupt_at(["delete-session", "--force", "brave-petunia"])
     assert collector.main([]) == 130
     assert zellij.finished_deletions == [
         {
             "name": "brave-petunia",
-            "leads_its_own_session": True,
+            "leads_its_own_group": True,
         }
     ]
     assert zellij.deletions == [["delete-session", "--force", "brave-petunia"]]
@@ -495,14 +526,16 @@ def test_a_deletion_under_way_is_not_cut_short_by_ctrl_c(zellij, tmp_path):
 
 def test_a_deletion_that_outlasts_the_wait_is_left_to_finish(zellij, tmp_path, monkeypatch):
     monkeypatch.setattr(collector, "DELETE_WAIT_SECONDS", 0.2)
-    zellij.configure(listing="brave-petunia [Created 5h ago]\n", sleep={"delete-session": 0.8})
+    zellij.configure(listing="brave-petunia [Created 5h ago]\n", sleep={"delete-session": 0.5})
     assert collector.main([]) == 1
     assert gc_log(tmp_path)[0] == (
         "FAILED to delete 'brave-petunia' (age 18000s): still running after 0.2s, "
         "and left to finish"
     )
     assert zellij.finished_deletions == []
-    time.sleep(1.5)
+    deadline = time.monotonic() + 5
+    while not zellij.finished_deletions and time.monotonic() < deadline:
+        time.sleep(0.02)
     assert [deletion["name"] for deletion in zellij.finished_deletions] == ["brave-petunia"]
 
 
