@@ -12,6 +12,7 @@ import json
 import shlex
 import subprocess
 import textwrap
+import time
 from pathlib import Path
 
 import pytest
@@ -299,7 +300,8 @@ class FakeZellij:
 
     @property
     def deletions(self):
-        return [call for call in self.calls if call[0] == "delete-session"]
+        """The delete calls received, sorted: sessions are settled side by side, in no order."""
+        return sorted(call for call in self.calls if call[0] == "delete-session")
 
     def queried(self):
         return {call[1] for call in self.calls if call[0] == "--session"}
@@ -377,6 +379,54 @@ def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path)
         f"deleted 'stale one' (age {parse_age('5h 1m')}s)",
         "run: 7 listed, 5 kept, 2 deleted, 0 failed to delete, 0 unparsed lines",
     ]
+
+
+def test_sessions_are_settled_side_by_side(zellij, tmp_path):
+    """Five sessions need 14 zellij calls; one after another at 0.3 s each would take over 4 s."""
+    zellij.configure(sleep=0.3)
+    started = time.monotonic()
+    assert collector.main([]) == 0
+    assert time.monotonic() - started < 3
+    assert len(zellij.deletions) == 2
+
+
+def test_a_slow_run_says_so_on_the_terminal(zellij, capsys, monkeypatch):
+    monkeypatch.setattr(collector, "NOTICE_AFTER_SECONDS", 0.1)
+    zellij.configure(sleep=0.3)
+    assert collector.main([]) == 0
+    captured = capsys.readouterr()
+    assert captured.out == "zellij-gc: clearing out abandoned sessions (Ctrl-C to skip)...\n"
+    assert captured.err == ""
+
+
+def test_a_run_out_of_time_keeps_what_it_has_not_reached(zellij, tmp_path, monkeypatch):
+    """The listing takes 0.3 s of a 0.2 s budget, so no session is inspected or deleted."""
+    monkeypatch.setattr(collector, "BUDGET_SECONDS", 0.2)
+    zellij.configure(sleep=0.3)
+    assert collector.main([]) == 0
+    assert zellij.queried() == set()
+    assert gc_log(tmp_path) == ["run: no sessions listed (timed out after 0.2s)"]
+
+
+def test_a_run_out_of_time_part_way_deletes_nothing_more(zellij, tmp_path, monkeypatch):
+    """There is time for the listing, but not for the three queries a deletion must follow."""
+    monkeypatch.setattr(collector, "BUDGET_SECONDS", 0.8)
+    zellij.configure(sleep=0.3)
+    assert collector.main([]) == 0
+    assert zellij.deletions == []
+    assert gc_log(tmp_path) == [
+        "run: 7 listed, 7 kept, 0 deleted, 0 failed to delete, 0 unparsed lines"
+    ]
+
+
+def test_ctrl_c_ends_the_run_and_deletes_nothing_more(zellij, tmp_path, monkeypatch):
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(collector, "settle", interrupted)
+    assert collector.main([]) == 130
+    assert zellij.deletions == []
+    assert gc_log(tmp_path) == ["run: interrupted"]
 
 
 def test_a_run_with_nothing_to_delete_still_leaves_a_line(zellij, tmp_path):

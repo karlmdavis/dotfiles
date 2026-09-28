@@ -4,12 +4,11 @@
 #
 # Requirements the wrapper must meet (each has at least one test below):
 #   1. `--check` exits 0 without starting anything.
-#   2. It hands over to `zellij -l welcome`.
-#   3. It starts `zellij-gc` in the background and does not wait for it.
-#   4. It still launches zellij when `zellij-gc` is not installed.
-#   5. Nothing the collector prints reaches the terminal.
-#   6. A collector that fails leaves its status and output in `last-failure.log`; one that
-#      succeeds leaves nothing.
+#   2. It runs `zellij-gc` to completion, and only then hands over to `zellij -l welcome`.
+#   3. It still launches zellij when `zellij-gc` is not installed, fails, or is interrupted.
+#   4. What the collector prints on stdout reaches the terminal; what it prints on stderr does not.
+#   5. A collector that fails leaves its status and stderr in `last-failure.log`; one that
+#      succeeds, or is interrupted, leaves nothing.
 #
 # No mocks: the wrapper runs through its own shebang in a throwaway HOME, against stand-in
 # `zellij` and `zellij-gc` executables that record how they were called.
@@ -29,12 +28,14 @@ setup() {
   chmod +x "$HOME/.local/bin/zellij-welcome"
   WELCOME="$HOME/.local/bin/zellij-welcome"
 
-  # Stand-in zellij: first on PATH, so the wrapper never reaches a real one.
+  # Stand-in zellij: first on PATH, so the wrapper never reaches a real one. It records whether
+  # the collector had finished by the time it was started.
   export RECORD="$BATS_TEST_TMPDIR/record"
   mkdir -p "$RECORD"
   cat > "$BATS_TEST_TMPDIR/bin/zellij" <<'EOF'
 #!/bin/sh
 echo "$*" > "$RECORD/zellij-args"
+[ -e "$RECORD/gc-done" ] && echo yes > "$RECORD/gc-was-done"
 echo "zellij stand-in ran"
 EOF
   chmod +x "$BATS_TEST_TMPDIR/bin/zellij"
@@ -47,34 +48,22 @@ install_gc() {
   chmod +x "$HOME/.local/bin/zellij-gc"
 }
 
-# Wait (up to 5 seconds) for a file that a background process is expected to write.
-wait_for() {
-  for _ in $(seq 50); do
-    [ -e "$1" ] && return 0
-    sleep 0.1
-  done
-  echo "timed out waiting for $1" >&2
-  return 1
-}
-
 @test "--check exits 0 and starts nothing" {
-  install_gc 'echo ran > "$RECORD/gc-ran"'
+  install_gc 'echo ran > "$RECORD/gc-done"'
   run "$WELCOME" --check
   [ "$status" -eq 0 ]
   [ -z "$output" ]
-  sleep 0.5
-  [ ! -e "$RECORD/gc-ran" ]
+  [ ! -e "$RECORD/gc-done" ]
   [ ! -e "$RECORD/zellij-args" ]
 }
 
-@test "starts the collector in the background without waiting for it" {
-  install_gc 'sleep 2; echo "$PATH" > "$RECORD/gc-path"'
+@test "runs the collector to completion, then hands over to zellij -l welcome" {
+  install_gc 'sleep 0.5; echo "$PATH" > "$RECORD/gc-path"; echo done > "$RECORD/gc-done"'
   run "$WELCOME"
   [ "$status" -eq 0 ]
-  # The collector had not finished when the wrapper returned, so the wrapper did not wait.
-  [ ! -e "$RECORD/gc-path" ]
+  [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
+  [ -e "$RECORD/gc-was-done" ]
 
-  wait_for "$RECORD/gc-path"
   # Homebrew's bin leads the collector's PATH (and only the collector's). The wrapper hard-codes
   # where it looks, so this needs a real Homebrew, which every machine this repo targets has.
   brew_bin=""
@@ -94,12 +83,21 @@ wait_for() {
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
 }
 
-@test "a failed collector's output goes to last-failure.log, not to the terminal" {
+@test "the collector's stdout reaches the terminal, and a success leaves nothing behind" {
+  install_gc 'echo "a notice"; echo "a complaint" >&2'
+  run "$WELCOME"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "a notice" ]
+  [ "${lines[1]}" = "zellij stand-in ran" ]
+  [ "${#lines[@]}" -eq 2 ]
+  [ ! -e "$STATE" ]
+}
+
+@test "a failed collector's stderr goes to last-failure.log, and zellij still launches" {
   install_gc 'echo "uv: command not found" >&2; exit 127'
   run "$WELCOME"
   [ "$status" -eq 0 ]
   [ "$output" = "zellij stand-in ran" ]
-  wait_for "$STATE/last-failure.log"
   run cat "$STATE/last-failure.log"
   [ "${#lines[@]}" -eq 2 ]
   case "${lines[0]}" in *" zellij-gc exited 127") ;; *) false ;; esac
@@ -108,11 +106,11 @@ wait_for() {
   [ "$(ls "$STATE")" = "last-failure.log" ]
 }
 
-@test "a successful collector leaves nothing behind" {
-  install_gc 'echo noise >&2; echo done > "$RECORD/gc-done"'
+@test "an interrupted collector is not a failure, and zellij still launches" {
+  install_gc 'exit 130'
   run "$WELCOME"
-  wait_for "$RECORD/gc-done"
-  sleep 0.3
+  [ "$status" -eq 0 ]
+  [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
   [ ! -e "$STATE" ]
 }
 
@@ -121,10 +119,10 @@ wait_for() {
   profile="$REPO/private_Library/private_Application Support/iTerm2/DynamicProfiles/zellij.json"
   command="$(jq -r '.Profiles[0].Command' "$profile")"
 
-  install_gc 'echo ran > "$RECORD/gc-ran"'
+  install_gc 'echo done > "$RECORD/gc-done"'
   # iTerm2 splits the command into words much as a shell does, so a shell stands in for it.
   run sh -c "$command"
   [ "$status" -eq 0 ]
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
-  wait_for "$RECORD/gc-ran"
+  [ -e "$RECORD/gc-was-done" ]
 }

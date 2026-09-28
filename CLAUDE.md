@@ -181,9 +181,12 @@ To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij)
 
 **Abandoned Zellij session GC:**
 Closing a terminal at the welcome chooser leaves its session running until the machine restarts, so
-  `zellij-welcome`
-  starts `~/.local/bin/zellij-gc` in the background on every launch (a thin shim over the `zellij_gc`
-  Python package at `private_dot_local/lib/zellij-gc/`).
+  `zellij-welcome` runs `~/.local/bin/zellij-gc` on every launch, before it opens the chooser (a thin
+  shim over the `zellij_gc` Python package at `private_dot_local/lib/zellij-gc/`).
+It runs to completion first so that the chooser never lists a session which then disappears.
+Since a terminal is waiting, the run is bounded: sessions are inspected side by side, the whole run
+  gives up after 10 seconds and leaves the rest for the next launch, and Ctrl-C skips it.
+A run still going after 1 second says so on the terminal.
 It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
   match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
   a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
@@ -192,17 +195,17 @@ The signature decides, not the session name, and any failed or unparseable query
 EXITED (resurrectable) sessions are never touched.
 A set but invalid `ZELLIJ_GC_MIN_AGE_HOURS` deletes nothing, since the default could be shorter than
   the retention that was meant.
-A background run must never write to the terminal, so it reports to files under
+Zellij clears the screen as soon as it starts, so what a run did is reported to files under
   `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`), all bounded in size:
 - `gc.log` gets one line per run and one per deletion or failed deletion, and is rotated to a single
-    `gc.log.1` past 256 KB.
+    `gc.log.1` at 256 KB.
     A collector that is working leaves a recent `run:` line there.
-- `last-failure.log` holds the exit status and output of the most recent run that failed, including
-    one that could not start at all (for example, no `uv` on `PATH`).
+- `last-failure.log` holds the exit status and error output of the most recent run that failed,
+    including one that could not start at all (for example, no `uv` on `PATH`).
     `zellij-welcome` writes it, and nothing removes it after a later success, so check its date.
 Preview with `zellij-gc --dry-run`, which prints the deletions on stdout and the reason each other
   session is kept on stderr.
-Disable background runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
+Disable real runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
 
 ## Development Toolchain
 

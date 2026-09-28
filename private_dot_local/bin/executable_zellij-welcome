@@ -5,9 +5,9 @@
 #
 # The single entry point for every terminal that lands in zellij: the login-shell launcher
 # (.chezmoitemplates/zellij-launch.sh) and the iTerm2 `zellij` profile, which runs this without a
-# login shell, so with only the system default PATH. Each launch also starts zellij-gc in the
-# background, which deletes sessions abandoned at the welcome screen (disable by setting
-# ZELLIJ_GC_DISABLE to anything non-empty).
+# login shell, so with only the system default PATH. Each launch first runs zellij-gc, which
+# deletes sessions abandoned at the welcome screen (disable by setting ZELLIJ_GC_DISABLE to
+# anything non-empty).
 ##
 
 # `--check` only proves that this script can start; callers probe with it before they exec.
@@ -23,27 +23,32 @@ for dir in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
   fi
 done
 
-# Collect abandoned sessions, detached so the chooser never waits on it, and deaf to the hangup
-# sent when the terminal closes. Homebrew's bin goes on PATH for this child only: the shim's
-# shebang needs `uv`, and the collector runs a bare `zellij`. The chooser itself inherits the
-# caller's environment unchanged.
+# Collect abandoned sessions before the chooser lists them, so that it never shows a session
+# which then disappears. The collector bounds its own run time, and says so on the terminal if
+# it is slow. Homebrew's bin goes on PATH for this child only: the shim's shebang needs `uv`,
+# and the collector runs a bare `zellij`. The chooser itself inherits the caller's environment
+# unchanged.
 #
-# Nothing may reach the terminal, so a failed run's output is kept in last-failure.log instead
-# (the collector's own log cannot record a failure to start). It is one file, written whole and
+# The collector's stdout (that notice) goes to the terminal; its stderr is captured, and for a
+# failed run is kept in last-failure.log, since zellij is about to clear the screen and the
+# collector's own log cannot record a failure to start. That is one file, written whole and
 # renamed into place, so concurrent launches cannot corrupt it and it cannot grow.
 if [ -x "$HOME/.local/bin/zellij-gc" ]; then
-  (
-    trap '' HUP
-    output=$(PATH="${brew_bin:+$brew_bin:}$PATH" "$HOME/.local/bin/zellij-gc" 2>&1)
-    status=$?
-    if [ "$status" -ne 0 ]; then
-      state="${XDG_STATE_HOME:-$HOME/.local/state}/zellij-gc"
-      mkdir -p "$state" &&
-        printf '%s zellij-gc exited %s\n%s\n' "$(date)" "$status" "$output" \
-          >"$state/last-failure.log.$$" &&
-        mv -f "$state/last-failure.log.$$" "$state/last-failure.log"
-    fi
-  ) </dev/null >/dev/null 2>&1 &
+  # Ctrl-C skips the collection, not the chooser: with a handler set, this script outlives it.
+  trap : INT
+  exec 3>&1
+  errors=$(PATH="${brew_bin:+$brew_bin:}$PATH" "$HOME/.local/bin/zellij-gc" 2>&1 >&3 </dev/null)
+  status=$?
+  exec 3>&-
+  trap - INT
+  # 130 is the collector saying it was interrupted, which is not a failure.
+  if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then
+    state="${XDG_STATE_HOME:-$HOME/.local/state}/zellij-gc"
+    mkdir -p "$state" 2>/dev/null &&
+      printf '%s zellij-gc exited %s\n%s\n' "$(date)" "$status" "$errors" \
+        >"$state/last-failure.log.$$" 2>/dev/null &&
+      mv -f "$state/last-failure.log.$$" "$state/last-failure.log" 2>/dev/null
+  fi
 fi
 
 # Prefer zellij from PATH; fall back to Homebrew's copy for callers with a bare PATH (the iTerm2
