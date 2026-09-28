@@ -6,3 +6,9 @@ theme = "base16_terminal"
 # Visually wraps all lines too long to fit the current editor without horizontal scrolling.
 [editor.soft-wrap]
 enable = true
+
+# Option/Alt+Left/Right move by word while typing, matching the shells. Insert mode only, where
+# these keys are otherwise unbound: normal and select mode keep Helix's defaults.
+[keys.insert]
+A-left = ["move_prev_word_start", "collapse_selection"]
+A-right = ["move_next_word_end", "collapse_selection"]

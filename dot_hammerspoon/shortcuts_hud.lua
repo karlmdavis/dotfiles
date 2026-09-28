@@ -9,7 +9,7 @@ local M = {}
 
 local sections = require("shortcuts")
 
-local PANEL_W, PANEL_H = 1180, 820
+local PANEL_W, PANEL_H = 1540, 820
 
 local function escapeHtml(s)
     return (s:gsub("[&<>]", { ["&"] = "&amp;", ["<"] = "&lt;", [">"] = "&gt;" }))
@@ -44,7 +44,7 @@ local function buildHtml()
         border-radius: 16px;
         padding: 22px 26px 8px;
         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-        column-count: 3;
+        column-count: 4;
         column-gap: 30px;
     }
     .title {
