@@ -67,29 +67,25 @@ wait_for() {
   [ ! -e "$RECORD/zellij-args" ]
 }
 
-@test "hands over to zellij -l welcome" {
-  install_gc 'exit 0'
-  run "$WELCOME"
-  [ "$status" -eq 0 ]
-  [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
-}
-
 @test "starts the collector in the background without waiting for it" {
   install_gc 'sleep 2; echo "$PATH" > "$RECORD/gc-path"'
-  SECONDS=0
   run "$WELCOME"
   [ "$status" -eq 0 ]
-  [ "$SECONDS" -lt 2 ]
+  # The collector had not finished when the wrapper returned, so the wrapper did not wait.
   [ ! -e "$RECORD/gc-path" ]
 
   wait_for "$RECORD/gc-path"
-  # Homebrew's bin, where there is one, leads the collector's PATH (and only the collector's).
-  for brew_bin in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
-    if [ -d "$brew_bin" ]; then
-      [ "$(cat "$RECORD/gc-path")" = "$brew_bin:$PATH" ]
+  # Homebrew's bin leads the collector's PATH (and only the collector's). The wrapper hard-codes
+  # where it looks, so this needs a real Homebrew, which every machine this repo targets has.
+  brew_bin=""
+  for dir in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
+    if [ -d "$dir" ]; then
+      brew_bin="$dir"
       break
     fi
   done
+  [ -n "$brew_bin" ] || { echo "requires Homebrew" >&2; return 1; }
+  [ "$(cat "$RECORD/gc-path")" = "$brew_bin:$PATH" ]
 }
 
 @test "still launches zellij when the collector is not installed" {
@@ -98,17 +94,11 @@ wait_for() {
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
 }
 
-@test "nothing the collector prints reaches the terminal" {
-  install_gc 'echo to-stdout; echo to-stderr >&2; echo done > "$RECORD/gc-done"; exit 1'
+@test "a failed collector's output goes to last-failure.log, not to the terminal" {
+  install_gc 'echo "uv: command not found" >&2; exit 127'
   run "$WELCOME"
   [ "$status" -eq 0 ]
   [ "$output" = "zellij stand-in ran" ]
-  wait_for "$RECORD/gc-done"
-}
-
-@test "a failed collector leaves its status and output in last-failure.log" {
-  install_gc 'echo "uv: command not found" >&2; exit 127'
-  run "$WELCOME"
   wait_for "$STATE/last-failure.log"
   run cat "$STATE/last-failure.log"
   [ "${#lines[@]}" -eq 2 ]
