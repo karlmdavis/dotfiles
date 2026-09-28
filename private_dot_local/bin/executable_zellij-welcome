@@ -9,22 +9,26 @@
 # abandoned at the welcome screen (disable with ZELLIJ_GC_DISABLE=1).
 ##
 
-{{ $brew := "/home/linuxbrew/.linuxbrew" -}}
-{{ if eq .chezmoi.os "darwin" -}}
-{{ $brew = "/opt/homebrew" -}}
-{{ end -}}
-brew_bin="{{ $brew }}/bin"
+# Homebrew's bin dir, found at runtime (macOS, then Linux) so this stays a plain, lintable script
+# rather than a chezmoi template.
+brew_bin=""
+for dir in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
+  if [ -d "$dir" ]; then
+    brew_bin="$dir"
+    break
+  fi
+done
 
 # Collect abandoned sessions, detached so the chooser never waits on it. Homebrew's bin goes on
 # PATH for this child only (the shim needs `uv`); zellij itself inherits the caller's environment.
 if [ -x "$HOME/.local/bin/zellij-gc" ]; then
-  ( PATH="$brew_bin:$PATH" nohup "$HOME/.local/bin/zellij-gc" >/dev/null 2>&1 & )
+  ( PATH="${brew_bin:+$brew_bin:}$PATH" nohup "$HOME/.local/bin/zellij-gc" >/dev/null 2>&1 & )
 fi
 
 # Hand the terminal to the zellij welcome chooser.
 if command -v zellij >/dev/null 2>&1; then
   exec zellij -l welcome
-elif [ -x "$brew_bin/zellij" ]; then
+elif [ -n "$brew_bin" ] && [ -x "$brew_bin/zellij" ]; then
   exec "$brew_bin/zellij" -l welcome
 fi
 

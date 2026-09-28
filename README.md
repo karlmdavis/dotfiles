@@ -109,7 +109,7 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 - [Zellij](https://zellij.dev/):
     [`~/.config/zellij/`](dot_config/zellij/),
     see also: [login-shell launch helper](.chezmoitemplates/zellij-launch.sh),
-    [`zellij-welcome` chooser wrapper](private_dot_local/bin/executable_zellij-welcome.tmpl).
+    [`zellij-welcome` chooser wrapper](private_dot_local/bin/executable_zellij-welcome).
 
 #### Development Tools and Editors
 

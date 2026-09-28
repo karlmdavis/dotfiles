@@ -158,7 +158,7 @@ Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exe
   on any OS via the shared `.chezmoitemplates/zellij-launch.sh`, dropping into the session chooser
   whose panes run nushell.
 The exec goes through `~/.local/bin/zellij-welcome` (source:
-  `private_dot_local/bin/executable_zellij-welcome.tmpl`), which the iTerm2 `zellij` profile also runs
+  `private_dot_local/bin/executable_zellij-welcome`), which the iTerm2 `zellij` profile also runs
   directly, so every route into the chooser shares one entry point.
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
