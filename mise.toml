@@ -23,7 +23,7 @@ bats = "latest"
 # Note: nushell is provided by system installation
 
 [tasks.lint]
-description = "Run shellcheck on managed bash scripts"
+description = "Run shellcheck on managed shell scripts"
 run = """
 echo "Running shellcheck..."
 shellcheck \

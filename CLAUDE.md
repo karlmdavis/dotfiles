@@ -71,6 +71,8 @@ The repository uses a sophisticated template hierarchy:
 - `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
 - `.chezmoitemplates/shell-aliases.sh` - Canonical shell-wide aliases, included by BOTH the login and rc files
 - `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
+- `private_dot_local/bin/executable_zellij-welcome` - Wrapper the launcher execs: opens the chooser and
+    starts the abandoned-session collector
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
   - PATH management for Homebrew, Cargo, Volta, pipx, and the generic bin dirs (kept in sync with `shell-env.sh`)
   - Starship prompt setup (with lite/full variants based on font support)
@@ -160,6 +162,8 @@ Interactive login shells (bash via `~/.bash_profile`, zsh via `~/.zprofile`) exe
 The exec goes through `~/.local/bin/zellij-welcome` (source:
   `private_dot_local/bin/executable_zellij-welcome`), which the iTerm2 `zellij` profile also runs
   directly, so every route into the chooser shares one entry point.
+Both callers probe it first with `zellij-welcome --check` and fall back to plain `zellij -l welcome`,
+  because a failed `exec` ends a zsh or macOS bash login shell and would lock out every login.
 Safeguards:
 - Interactive shells only (`case $- in *i*`) plus a real-tty check (`[ -t 1 ]`), so scripts, `ssh host 'cmd'`,
     scp/rsync, Ansible, cron, launchd, AppleScript, and editor env-resolution probes
@@ -172,20 +176,33 @@ Safeguards:
 
 Inbound interactive SSH deliberately gets the chooser too, so a manual `ssh` from inside a local
   Zellij pane nests.
-The non-nesting routes are the iTerm2 remote-host profiles and `NO_ZELLIJ=1`.
+To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij), or set `NO_ZELLIJ=1`
+  in the remote shell's environment; ssh does not forward it from the local side.
 
 **Abandoned Zellij session GC:**
-Closing a terminal at the welcome chooser leaves its session running forever, so `zellij-welcome`
+Closing a terminal at the welcome chooser leaves its session running until the machine restarts, so
+  `zellij-welcome`
   starts `~/.local/bin/zellij-gc` in the background on every launch (a thin shim over the `zellij_gc`
   Python package at `private_dot_local/lib/zellij-gc/`).
 It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
   match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
   a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
 The signature decides, not the session name, and any failed or unparseable query keeps the session
-  (which makes it a no-op on a zellij too old to answer the queries).
+  (so it deletes nothing on a zellij too old to answer the queries).
 EXITED (resurrectable) sessions are never touched.
-Deletions are logged to `~/.local/state/zellij-gc/gc.log`.
-Preview with `zellij-gc --dry-run`; disable with `ZELLIJ_GC_DISABLE=1`.
+A set but invalid `ZELLIJ_GC_MIN_AGE_HOURS` deletes nothing, since the default could be shorter than
+  the retention that was meant.
+A background run must never write to the terminal, so it reports to files under
+  `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`), all bounded in size:
+- `gc.log` gets one line per run and one per deletion or failed deletion, and is rotated to a single
+    `gc.log.1` past 256 KB.
+    A collector that is working leaves a recent `run:` line there.
+- `last-failure.log` holds the exit status and output of the most recent run that failed, including
+    one that could not start at all (for example, no `uv` on `PATH`).
+    `zellij-welcome` writes it, and nothing removes it after a later success, so check its date.
+Preview with `zellij-gc --dry-run`, which prints the deletions on stdout and the reason each other
+  session is kept on stderr.
+Disable background runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
 
 ## Development Toolchain
 
@@ -288,7 +305,7 @@ Commands support bash command interpolation with `!`backticks`` for dynamic cont
 This repository uses mise for task automation and testing.
 
 **Key tasks:**
-- `:lint` - Run shellcheck on managed bash scripts
+- `:lint` - Run shellcheck on managed shell scripts
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks
@@ -306,10 +323,12 @@ mise run ci
 ### Testing Approach
 
 Two test idioms coexist:
-- **bats** (under `test/`) for chezmoi-level black-box tests — currently `test/claude/`, which
-    drives the Python `modify_settings.json.tmpl` script through stdin, stdout, exit status, and
-    its `CLAUDE_SETTINGS_LOCAL` env seam, via the script's own `uv run --script` shebang so tests
-    and `chezmoi apply` share one entry point.
+- **bats** (under `test/`) for chezmoi-level black-box tests.
+    `test/claude/` drives the Python `modify_settings.json.tmpl` script through stdin, stdout, exit
+    status, and its `CLAUDE_SETTINGS_LOCAL` env seam, via the script's own `uv run --script` shebang
+    so tests and `chezmoi apply` share one entry point.
+    `test/zellij/` runs the `zellij-welcome` wrapper in a throwaway `HOME` against stand-in `zellij`
+    and `zellij-gc` executables.
 - **pytest** for the embedded Python mini-projects (`private_dot_local/lib/*/tests/`), run as a
     `uv` ephemeral (`uv run --no-project --with pytest`) so no persistent tool or `.venv` is added.
     The root `mise run test` cascades into each via the mise monorepo.
