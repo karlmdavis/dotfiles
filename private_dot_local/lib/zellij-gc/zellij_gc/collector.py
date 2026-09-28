@@ -36,8 +36,10 @@ import logging.handlers
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from dataclasses import dataclass
@@ -49,8 +51,9 @@ if TYPE_CHECKING:
 
 DEFAULT_MIN_AGE_HOURS = 1.0
 QUERY_TIMEOUT_SECONDS = 5
-DELETE_TIMEOUT_SECONDS = 15
-# A real run gives up after this long, leaving the rest for the next launch.
+# How long a deletion is waited for. One that takes longer is left to finish, never killed.
+DELETE_WAIT_SECONDS = 15
+# A real run starts nothing new after this long, leaving the rest for the next launch.
 BUDGET_SECONDS = 10
 # A real run that is still going after this long says so on the terminal.
 NOTICE_AFTER_SECONDS = 1
@@ -386,15 +389,66 @@ class Tally:
         )
 
 
+@contextlib.contextmanager
+def signals_held() -> Iterator[None]:
+    """Hold back Ctrl-C, hangup, and termination until the block is done, then let them in.
+
+    With handlers, not a signal mask: a mask covers only the thread that sets it, and a signal sent
+    to the process would be taken by any other thread, the slow-run notice's timer among them.
+    Python runs handlers in the main thread whichever thread the signal reached.
+    """
+    arrived: list[int] = []
+    held = (signal.SIGINT, signal.SIGHUP, signal.SIGTERM)
+    before = [
+        signal.signal(held_signal, lambda number, _frame: arrived.append(number))
+        for held_signal in held
+    ]
+    try:
+        yield
+    finally:
+        for held_signal, handler in zip(held, before, strict=True):
+            signal.signal(held_signal, handler)
+        for number in arrived:
+            signal.raise_signal(number)
+
+
 def delete(zellij: str, session: Session) -> Result:
-    """Delete one abandoned session."""
+    """Delete one abandoned session, without any way of cutting the deletion short.
+
+    `zellij delete-session --force` tells the server to quit and then removes the session's saved
+    state, as two separate steps. Stopped between them, it leaves a session that has exited but
+    can be resurrected, which nothing here would ever clear up. So, once started, it is never
+    killed: not by the run's time budget, not by a timeout, and not by a signal. Call this with
+    signals held, so that this process stays to see it through; the command itself gets a session
+    of its own, out of reach of whatever the terminal sends. If it outlasts the wait it is left
+    running, and its output goes to a file, not a pipe, so that it can finish after this process
+    has gone.
+    """
     # Accepted race: a client could attach between the queries that found the session abandoned
     # and this delete. It follows them directly, so the window is a few subprocess calls long, and
     # what would be lost is a welcome screen holding no work.
-    #
-    # --force kills the server first, and deleting (not just killing) leaves nothing to resurrect.
-    command = ["delete-session", "--force", session.name]
-    return run_zellij(zellij, command, timeout=DELETE_TIMEOUT_SECONDS)
+    command = [zellij, "delete-session", "--force", session.name]
+    with tempfile.TemporaryFile() as output:
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        except OSError as error:
+            return Result(None, f"could not run: {error}")
+        try:
+            status = process.wait(timeout=DELETE_WAIT_SECONDS)
+        except subprocess.TimeoutExpired:
+            return Result(None, f"still running after {DELETE_WAIT_SECONDS}s, and left to finish")
+        output.seek(0)
+        text = output.read().decode("utf-8", errors="replace")
+    if status != 0:
+        detail = text.strip().partition("\n")[0][:200]
+        return Result(None, f"exit {status}" + (f": {detail}" if detail else ""))
+    return Result(text)
 
 
 def collect(zellij: str, *, dry_run: bool, report: Callable[[str], None]) -> int:
@@ -455,14 +509,16 @@ def collect_within(
             print(shlex.join([zellij, "delete-session", "--force", name]))
             tally.deleted += 1
         else:
-            # Reported as each one happens, so that the log holds it whatever comes next.
-            result = delete(zellij, session)
-            if result.stdout is None:
-                report(f"FAILED to delete {name!r} ({age}): {result.failure}")
-                tally.failed += 1
-            else:
-                report(f"deleted {name!r} ({age})")
-                tally.deleted += 1
+            # Reported as each one happens, and before any signal that arrived meanwhile is let
+            # in, so that the log holds it whatever comes next.
+            with signals_held():
+                result = delete(zellij, session)
+                if result.stdout is None:
+                    report(f"FAILED to delete {name!r} ({age}): {result.failure}")
+                    tally.failed += 1
+                else:
+                    report(f"deleted {name!r} ({age})")
+                    tally.deleted += 1
     report(f"run: {tally.summary(dry_run=dry_run)}")
     return 1 if tally.failed else 0
 

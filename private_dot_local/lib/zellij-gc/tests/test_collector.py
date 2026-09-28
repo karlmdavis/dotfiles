@@ -243,7 +243,7 @@ REPLIES = {
 
 FAKE_ZELLIJ = """\
 #!/usr/bin/env python3
-import json, pathlib, sys, time
+import json, os, pathlib, sys, time
 
 here = pathlib.Path(__file__).parent
 args = sys.argv[1:]
@@ -262,7 +262,12 @@ if args[:1] == ["list-sessions"]:
 elif args[:1] == ["delete-session"]:
     if spec["delete_status"]:
         print(f'Session: "{args[-1]}" not found.', file=sys.stderr)
-    sys.exit(spec["delete_status"])
+        sys.exit(spec["delete_status"])
+    # A deletion that ran to its end says so, and whether it was out of the terminal's reach.
+    finished = {"name": args[-1], "leads_its_own_session": os.getsid(0) == os.getpid()}
+    with open(here / "finished.jsonl", "a") as log:
+        log.write(json.dumps(finished) + "\\n")
+    print(f'Session: "{args[-1]}" successfully deleted.')
 elif args[:1] == ["--session"] and args[2:3] == ["action"]:
     reply = spec["replies"].get(args[1], {}).get(args[3])
     # As the real CLI: the JSON queries print a table, not JSON, unless asked for JSON.
@@ -307,6 +312,14 @@ class FakeZellij:
     @property
     def deletions(self):
         return [call for call in self.calls if call[0] == "delete-session"]
+
+    @property
+    def finished_deletions(self):
+        """What each deletion that ran to its end recorded about itself."""
+        log = self.directory / "finished.jsonl"
+        if not log.exists():
+            return []
+        return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
 
     def queried(self):
         return {call[1] for call in self.calls if call[0] == "--session"}
@@ -460,6 +473,37 @@ def test_ctrl_c_ends_the_run_and_what_was_already_deleted_is_on_record(zellij, t
         f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
         "run: interrupted after 7 listed, 2 kept, 1 deleted, 0 failed to delete, 0 unparsed lines",
     ]
+
+
+def test_a_deletion_under_way_is_not_cut_short_by_ctrl_c(zellij, tmp_path):
+    """The Ctrl-C arrives while the first deletion runs: that one finishes, and no other starts."""
+    zellij.configure(sleep={"delete-session": 0.7})
+    zellij.interrupt_at(["delete-session", "--force", "brave-petunia"])
+    assert collector.main([]) == 130
+    assert zellij.finished_deletions == [
+        {
+            "name": "brave-petunia",
+            "leads_its_own_session": True,
+        }
+    ]
+    assert zellij.deletions == [["delete-session", "--force", "brave-petunia"]]
+    assert gc_log(tmp_path) == [
+        f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
+        "run: interrupted after 7 listed, 1 kept, 1 deleted, 0 failed to delete, 0 unparsed lines",
+    ]
+
+
+def test_a_deletion_that_outlasts_the_wait_is_left_to_finish(zellij, tmp_path, monkeypatch):
+    monkeypatch.setattr(collector, "DELETE_WAIT_SECONDS", 0.2)
+    zellij.configure(listing="brave-petunia [Created 5h ago]\n", sleep={"delete-session": 0.8})
+    assert collector.main([]) == 1
+    assert gc_log(tmp_path)[0] == (
+        "FAILED to delete 'brave-petunia' (age 18000s): still running after 0.2s, "
+        "and left to finish"
+    )
+    assert zellij.finished_deletions == []
+    time.sleep(1.5)
+    assert [deletion["name"] for deletion in zellij.finished_deletions] == ["brave-petunia"]
 
 
 # --- The metadata files ---------------------------------------------------------------------

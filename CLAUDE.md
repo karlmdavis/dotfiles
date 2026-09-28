@@ -194,6 +194,9 @@ That file is an internal detail of zellij, so it is only ever a reason to keep a
   one that looks abandoned, or has no readable file, is put to `zellij` itself.
 The whole run gives up after 10 seconds and leaves the rest for the next launch, and Ctrl-C skips it.
 A run still going after 1 second says so on the terminal.
+A deletion that has begun is the one thing never cut short, by the time limit, by Ctrl-C, or by the
+  terminal closing: `zellij delete-session` stops the server and removes its saved state as two
+  steps, and stopping between them would leave an exited session that nothing clears up.
 It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
   match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
   a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
