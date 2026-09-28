@@ -181,11 +181,18 @@ To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij)
 
 **Abandoned Zellij session GC:**
 Closing a terminal at the welcome chooser leaves its session running until the machine restarts, so
-  `zellij-welcome` runs `~/.local/bin/zellij-gc` on every launch, before it opens the chooser (a thin
-  shim over the `zellij_gc` Python package at `private_dot_local/lib/zellij-gc/`).
-It runs to completion first so that the chooser never lists a session which then disappears.
-Since a terminal is waiting, the run is bounded: sessions are inspected side by side, the whole run
-  gives up after 10 seconds and leaves the rest for the next launch, and Ctrl-C skips it.
+  `zellij-welcome` runs `~/.local/bin/zellij-gc` (a thin shim over the `zellij_gc` Python package at
+  `private_dot_local/lib/zellij-gc/`) on every launch, before it opens the chooser.
+It runs to completion first so that the chooser does not normally list a session which is about to
+  disappear.
+Since a terminal is waiting, the run is built to be quick and bounded.
+Every `zellij` command first probes every session on the machine, so commands are what cost time.
+The run therefore starts from the metadata file that each zellij server keeps about itself
+  (`session_info/<session>/session-metadata.kdl` in zellij's cache directory), and keeps the sessions
+  which that shows to be in use without querying them.
+That file is an internal detail of zellij, so it is only ever a reason to keep a session:
+  one that looks abandoned, or has no readable file, is put to `zellij` itself.
+The whole run gives up after 10 seconds and leaves the rest for the next launch, and Ctrl-C skips it.
 A run still going after 1 second says so on the terminal.
 It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
   match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,

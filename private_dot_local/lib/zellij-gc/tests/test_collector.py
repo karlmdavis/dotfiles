@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import fcntl
 import json
+import os
 import shlex
+import signal
 import subprocess
 import textwrap
+import threading
 import time
 from pathlib import Path
 
@@ -247,7 +250,10 @@ args = sys.argv[1:]
 with open(here / "calls.jsonl", "a") as calls:
     calls.write(json.dumps(args) + "\\n")
 spec = json.loads((here / "spec.json").read_text())
-time.sleep(spec["sleep"])
+# A delay for every command, or for the named ones: "list-sessions", "<session>/<action>".
+command = f"{args[1]}/{args[3]}" if args[:1] == ["--session"] else args[0]
+delays = spec["sleep"]
+time.sleep(delays.get(command, 0) if isinstance(delays, dict) else delays)
 
 if args[:1] == ["list-sessions"]:
     if spec["listing"] is None:
@@ -300,11 +306,41 @@ class FakeZellij:
 
     @property
     def deletions(self):
-        """The delete calls received, sorted: sessions are settled side by side, in no order."""
-        return sorted(call for call in self.calls if call[0] == "delete-session")
+        return [call for call in self.calls if call[0] == "delete-session"]
 
     def queried(self):
         return {call[1] for call in self.calls if call[0] == "--session"}
+
+    def interrupt_at(self, command):
+        """Send this process a real Ctrl-C once the fake has been asked to run `command`."""
+
+        def watch():
+            while command not in self.calls:
+                time.sleep(0.01)
+            os.kill(os.getpid(), signal.SIGINT)
+
+        threading.Thread(target=watch, daemon=True).start()
+
+
+def write_metadata(name, *, clients=0, panes=((True, "welcome-screen"),), tabs=("Tab #1",)):
+    """Write a session's metadata file as its zellij server would, in zellij's own layout."""
+    lines = [f'name "{name}"', "tabs {"]
+    for position, tab in enumerate(tabs):
+        lines += ["    tab {", f"        position {position}", f'        name "{tab}"', "    }"]
+    lines += ["}", "panes {"]
+    for number, (is_plugin, plugin_url) in enumerate(panes):
+        lines += [
+            "    pane {",
+            f"        id {number}",
+            f"        is_plugin {str(is_plugin).lower()}",
+        ]
+        lines += [f'        plugin_url "{plugin_url}"'] if plugin_url else []
+        lines += ["        tab_position 0", "    }"]
+    lines += ["}", f"connected_clients {clients}", "creation_time 18000", ""]
+    folder = collector.zellij_cache_dir() / "contract_version_1" / "session_info" / name
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / collector.METADATA_FILE).write_text("\n".join(lines), encoding="utf-8")
+    return "\n".join(lines)
 
 
 @pytest.fixture
@@ -315,6 +351,8 @@ def zellij(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     for var in ("ZELLIJ_GC_DISABLE", "ZELLIJ_GC_MIN_AGE_HOURS"):
         monkeypatch.delenv(var, raising=False)
+    # Only the test of the slow-run notice should ever see it, however loaded the machine is.
+    monkeypatch.setattr(collector, "NOTICE_AFTER_SECONDS", 3600)
     directory = tmp_path / "fake"
     directory.mkdir()
     fake = FakeZellij(directory)
@@ -381,18 +419,9 @@ def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path)
     ]
 
 
-def test_sessions_are_settled_side_by_side(zellij, tmp_path):
-    """Five sessions need 14 zellij calls; one after another at 0.3 s each would take over 4 s."""
-    zellij.configure(sleep=0.3)
-    started = time.monotonic()
-    assert collector.main([]) == 0
-    assert time.monotonic() - started < 3
-    assert len(zellij.deletions) == 2
-
-
 def test_a_slow_run_says_so_on_the_terminal(zellij, capsys, monkeypatch):
     monkeypatch.setattr(collector, "NOTICE_AFTER_SECONDS", 0.1)
-    zellij.configure(sleep=0.3)
+    zellij.configure(listing=None, sleep=0.4)
     assert collector.main([]) == 0
     captured = capsys.readouterr()
     assert captured.out == "zellij-gc: clearing out abandoned sessions (Ctrl-C to skip)...\n"
@@ -400,33 +429,103 @@ def test_a_slow_run_says_so_on_the_terminal(zellij, capsys, monkeypatch):
 
 
 def test_a_run_out_of_time_keeps_what_it_has_not_reached(zellij, tmp_path, monkeypatch):
-    """The listing takes 0.3 s of a 0.2 s budget, so no session is inspected or deleted."""
+    """The listing takes longer than the whole budget, so no session is inspected or deleted."""
     monkeypatch.setattr(collector, "BUDGET_SECONDS", 0.2)
-    zellij.configure(sleep=0.3)
+    zellij.configure(sleep={"list-sessions": 0.5})
     assert collector.main([]) == 0
     assert zellij.queried() == set()
     assert gc_log(tmp_path) == ["run: no sessions listed (timed out after 0.2s)"]
 
 
 def test_a_run_out_of_time_part_way_deletes_nothing_more(zellij, tmp_path, monkeypatch):
-    """There is time for the listing, but not for the three queries a deletion must follow."""
-    monkeypatch.setattr(collector, "BUDGET_SECONDS", 0.8)
-    zellij.configure(sleep=0.3)
+    """The last query about the first abandoned session outlasts the budget; nothing is deleted."""
+    monkeypatch.setattr(collector, "BUDGET_SECONDS", 1.5)
+    zellij.configure(sleep={"brave-petunia/list-tabs": 3})
     assert collector.main([]) == 0
     assert zellij.deletions == []
+    # The sessions after it are not even asked about.
+    assert zellij.queried() == {"dotfiles", "brave-petunia"}
     assert gc_log(tmp_path) == [
         "run: 7 listed, 7 kept, 0 deleted, 0 failed to delete, 0 unparsed lines"
     ]
 
 
-def test_ctrl_c_ends_the_run_and_deletes_nothing_more(zellij, tmp_path, monkeypatch):
-    def interrupted(*args, **kwargs):
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr(collector, "settle", interrupted)
+def test_ctrl_c_ends_the_run_and_what_was_already_deleted_is_on_record(zellij, tmp_path):
+    """A real Ctrl-C, arriving part-way through the inspection of the second abandoned session."""
+    zellij.configure(sleep={"stale one/list-tabs": 5})
+    zellij.interrupt_at(["--session", "stale one", "action", "list-tabs", "--json"])
     assert collector.main([]) == 130
-    assert zellij.deletions == []
-    assert gc_log(tmp_path) == ["run: interrupted"]
+    assert zellij.deletions == [["delete-session", "--force", "brave-petunia"]]
+    assert gc_log(tmp_path) == [
+        f"deleted 'brave-petunia' (age {parse_age('3months 25days 20h 9m 36s')}s)",
+        "run: interrupted after 7 listed, 2 kept, 1 deleted, 0 failed to delete, 0 unparsed lines",
+    ]
+
+
+# --- The metadata files ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("described", "expected"),
+    [
+        ({}, None),
+        ({"clients": 2}, "client attached"),
+        ({"panes": ((True, "welcome-screen"), (False, None))}, "has a terminal pane"),
+        ({"tabs": ("Tab #1", "Tab #2")}, "has more than one tab"),
+        ({"tabs": ("scratch",)}, "has a renamed tab"),
+    ],
+)
+def test_metadata_is_only_ever_a_reason_to_keep(zellij, described, expected):
+    assert collector.metadata_keep_reason(write_metadata("x", **described)) == expected
+
+
+@pytest.mark.parametrize("text", ["", "not kdl at all", "connected_clients many\n", "{}"])
+def test_metadata_that_makes_no_sense_is_no_reason_at_all(text):
+    assert collector.metadata_keep_reason(text) is None
+
+
+def test_sessions_in_use_by_their_metadata_cost_no_queries(zellij, tmp_path):
+    write_metadata("dotfiles", clients=1, panes=((False, None),), tabs=("claude-settings",))
+    write_metadata("outstanding-cowbell", clients=1)
+    write_metadata("shell-beside-chooser", panes=((True, "welcome-screen"), (False, None)))
+    assert collector.main([]) == 0
+    assert zellij.queried() == {"brave-petunia", "stale one"}
+    assert len(zellij.deletions) == 2
+    assert gc_log(tmp_path)[-1] == (
+        "run: 7 listed, 5 kept, 2 deleted, 0 failed to delete, 0 unparsed lines"
+    )
+
+
+def test_dry_run_says_when_the_metadata_decided(zellij, capsys):
+    write_metadata("dotfiles", clients=1)
+    collector.main(["--dry-run"])
+    assert "zellij-gc: kept 'dotfiles': client attached, by its metadata file" in (
+        capsys.readouterr().err.splitlines()
+    )
+
+
+def test_nothing_is_deleted_on_the_word_of_the_metadata(zellij):
+    """Every file says abandoned, but zellij itself says two of these sessions are in use."""
+    for name in REPLIES:
+        write_metadata(name)
+    assert collector.main([]) == 0
+    assert zellij.queried() == set(REPLIES) - {"didactic-river"}
+    assert zellij.deletions == [
+        ["delete-session", "--force", "brave-petunia"],
+        ["delete-session", "--force", "stale one"],
+    ]
+
+
+def test_metadata_is_read_from_the_newest_of_zellij_s_folders(zellij):
+    """Folders for earlier versions of the file format are left behind, holding stale files."""
+    current = write_metadata("dotfiles", clients=1)
+    stale = collector.zellij_cache_dir() / "0.43.1" / "session_info" / "dotfiles"
+    stale.mkdir(parents=True)
+    (stale / collector.METADATA_FILE).write_text("connected_clients 0\n", encoding="utf-8")
+    os.utime(stale / collector.METADATA_FILE, (0, 0))
+    assert collector.read_metadata("dotfiles") == current
+    assert collector.read_metadata("no-such-session") is None
+    assert collector.read_metadata("*") is None
 
 
 def test_a_run_with_nothing_to_delete_still_leaves_a_line(zellij, tmp_path):
