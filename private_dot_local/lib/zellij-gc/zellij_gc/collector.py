@@ -490,6 +490,9 @@ def signals_held() -> Iterator[None]:
     finally:
         for held_signal, handler in zip(held, before, strict=True):
             signal.signal(held_signal, handler)
+        # Sent again, now to whatever handled them before. For hangup and termination that is
+        # the default, which ends this process; for Ctrl-C it is Python's, which raises
+        # KeyboardInterrupt.
         for number in arrived:
             signal.raise_signal(number)
 
