@@ -42,16 +42,16 @@ DEFAULT_TAB_NAME = "Tab #1"
 SESSION_LINE = re.compile(r"^(?P<name>.+) \[Created (?P<age>[^\]]*) ago\](?P<flags>.*)$")
 AGE_TOKEN = re.compile(r"(\d+)\s*([A-Za-z]+)")
 
-# Unit lengths as the `humantime` crate defines them; zellij formats ages with it. Only
-# years/months/days/h/m/s are ever printed; the other spellings are humantime's parser aliases.
+# The units zellij prints, with lengths as the `humantime` crate (which formats them) defines
+# them. Deliberately no other spellings: an age in a unit not listed here is unreadable, and a
+# session whose age is unreadable is kept.
 UNIT_SECONDS = {
-    "s": 1, "sec": 1, "secs": 1, "second": 1, "seconds": 1,
-    "m": 60, "min": 60, "mins": 60, "minute": 60, "minutes": 60,
-    "h": 3600, "hr": 3600, "hrs": 3600, "hour": 3600, "hours": 3600,
-    "d": 86400, "day": 86400, "days": 86400,
-    "w": 604800, "week": 604800, "weeks": 604800,
-    "M": 2630016, "month": 2630016, "months": 2630016,
-    "y": 31557600, "year": 31557600, "years": 31557600,
+    "s": 1,
+    "m": 60,
+    "h": 3600,
+    "day": 86400, "days": 86400,
+    "month": 2630016, "months": 2630016,
+    "year": 31557600, "years": 31557600,
 }
 
 

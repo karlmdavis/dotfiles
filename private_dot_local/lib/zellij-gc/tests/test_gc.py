@@ -68,7 +68,7 @@ def test_parse_age(text, expected):
     assert parse_age(text) == expected
 
 
-@pytest.mark.parametrize("text", ["", "3 fortnights", "5m and change"])
+@pytest.mark.parametrize("text", ["", "3 fortnights", "5m and change", "1w", "2hrs 5m"])
 def test_parse_age_rejects_unknown_shapes(text):
     assert parse_age(text) is None
 
