@@ -7,7 +7,7 @@ end to end against a fake `zellij`.
 A session is abandoned when it never got past the welcome screen and nobody is looking at it: it is
 running, older than the minimum age, and has no clients, no terminal panes, the welcome-screen
 plugin, and a single default tab. Such a session holds no user state, so its name plays no part.
-Every doubt (a failed, timed-out, or unparseable query) resolves to "keep the session".
+Every doubt (a failed or unparseable query) resolves to "keep the session".
 
 A real run happens while a terminal waits for its chooser, so it is built to be quick. Every
 zellij command probes every session on the machine before it does anything else, so commands are
@@ -50,10 +50,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
 DEFAULT_MIN_AGE_HOURS = 1.0
-# A healthy zellij answers in well under a second, and a session that doesn't answer is waited
-# for again on every launch until someone deals with it, so the wait is kept short.
-QUERY_TIMEOUT_SECONDS = 2
 # How long a deletion is waited for. One that takes longer is left to finish, never killed.
+# Ctrl-C is held back while a deletion runs, so this is the only way out of one that hangs.
 DELETE_WAIT_SECONDS = 15
 # The conventional exit status for "ended by Ctrl-C".
 EXIT_INTERRUPTED = 130
@@ -103,8 +101,8 @@ class Result:
 
     stdout: str | None
     failure: str = ""
-    # Whether zellij ran and answered, whatever its answer: False for a timeout or a failure to
-    # start it, neither of which says anything about the sessions.
+    # Whether zellij ran and answered, whatever its answer: False for a failure to start it,
+    # which says nothing about the sessions.
     answered: bool = True
 
 
@@ -240,8 +238,11 @@ class RunFailedError(Exception):
 
 
 def run_zellij(zellij: str, args: list[str]) -> Result:
-    """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures."""
-    timeout = QUERY_TIMEOUT_SECONDS
+    """Run `zellij <args>`; a non-zero exit and a failure to start are both failures.
+
+    It is waited for as long as it takes. The terminal shows which session is being asked about,
+    and Ctrl-C skips the rest of the run.
+    """
     try:
         result = subprocess.run(
             [zellij, *args],
@@ -251,11 +252,8 @@ def run_zellij(zellij: str, args: list[str]) -> Result:
             # valid UTF-8 comes through mangled, which at worst fails to parse (session kept).
             encoding="utf-8",
             errors="replace",
-            timeout=timeout,
             check=False,
         )
-    except subprocess.TimeoutExpired:
-        return Result(None, f"timed out after {timeout}s", answered=False)
     except (OSError, subprocess.SubprocessError) as error:
         return Result(None, f"could not run: {error}", answered=False)
     if result.returncode != 0:

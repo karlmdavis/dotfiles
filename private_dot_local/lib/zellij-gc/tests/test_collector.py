@@ -392,9 +392,6 @@ def zellij(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     for var in ("ZELLIJ_GC_DISABLE", "ZELLIJ_GC_MIN_AGE_HOURS"):
         monkeypatch.delenv(var, raising=False)
-    # However loaded the machine is, only the test of a query that hangs should ever see a
-    # command give up waiting.
-    monkeypatch.setattr(collector, "QUERY_TIMEOUT_SECONDS", 60)
     directory = tmp_path / "fake"
     directory.mkdir()
     fake = FakeZellij(directory)
@@ -768,27 +765,6 @@ def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, t
     [line] = gc_log(tmp_path)
     assert " 0 undecided" not in line
     assert line.endswith(f"{missing} failed (exit 2)")
-
-
-def test_a_query_that_hangs_leaves_its_session_undecided(zellij, monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr(collector, "QUERY_TIMEOUT_SECONDS", 0.3)
-    zellij.configure(sleep={"brave-petunia/list-panes": 2})
-    assert collector.main([]) == 0
-    assert zellij.deletions == [["delete-session", "--force", "stale one"]]
-    assert gc_log(tmp_path)[-1] == (
-        f"run: {summary(7, 5, 1, undecided=1)}; "
-        "first undecided: 'brave-petunia', list-panes failed (timed out after 0.3s)"
-    )
-    shown = capsys.readouterr().out.splitlines()
-    assert "  brave-petunia: kept (list-panes failed (timed out after 0.3s))" in shown
-
-
-def test_a_listing_that_hangs_is_a_failure(zellij, monkeypatch, tmp_path):
-    monkeypatch.setattr(collector, "QUERY_TIMEOUT_SECONDS", 0.3)
-    zellij.configure(sleep={"list-sessions": 2})
-    assert collector.main([]) == 1
-    assert zellij.queried() == set()
-    assert gc_log(tmp_path) == ["run: could not list the sessions (timed out after 0.3s)"]
 
 
 def test_undecodable_output_does_not_stop_the_run(zellij, capsys, monkeypatch, tmp_path):
