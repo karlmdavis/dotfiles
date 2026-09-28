@@ -183,49 +183,18 @@ To avoid nesting, use an iTerm2 remote-host profile (which runs no local Zellij)
 Closing a terminal at the welcome chooser leaves its session running until the machine restarts, so
   `zellij-welcome` runs `~/.local/bin/zellij-gc` (a thin shim over the `zellij_gc` Python package at
   `private_dot_local/lib/zellij-gc/`) on every launch, before it opens the chooser.
-It runs to completion first so that the chooser does not normally list a session which is about to
-  disappear.
-Since a terminal is waiting, the run is built to be quick.
-Every `zellij` command first probes every session on the machine, so commands are what cost time.
-The run therefore starts from the metadata file that each zellij server keeps about itself
-  (`session_info/<session>/session-metadata.kdl` in zellij's cache directory), and keeps the sessions
-  which that shows to be in use without querying them.
-That file is an internal detail of zellij, so it is only ever a reason to keep a session:
-  one that looks abandoned, or has no readable file, is put to `zellij` itself.
-Putting a session to `zellij` is the slow part, so the run names each such session on the terminal
-  as it comes to it, with what became of it, and Ctrl-C skips the rest of the run.
-A run with no such session, which is the usual one, shows nothing.
-A deletion that has begun is the one thing never cut short, by Ctrl-C or by the terminal closing:
-  `zellij delete-session` stops the server and removes its saved state as two steps, and stopping
-  between them would leave an exited session that nothing clears up.
-It deletes (`zellij delete-session --force`, so nothing is left to resurrect) only sessions that
-  match the whole signature: running, no clients, no terminal panes, the `welcome-screen` plugin,
-  a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
-The signature decides, not the session name, and any failed or unparseable query keeps the session
-  (so it deletes nothing on a zellij too old to answer the queries).
-A query is waited for 2 seconds at most.
-EXITED (resurrectable) sessions are never touched.
-A set but invalid `ZELLIJ_GC_MIN_AGE_HOURS` deletes nothing, since the default could be shorter than
-  the retention that was meant.
-Zellij clears the screen as soon as it starts, so what a run did is reported to files under
-  `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`), none of which grows without limit:
-- `gc.log` gets one line per run, and two per deletion: one before it, and one after it that says
-    whether it worked.
-    It is rotated to a single `gc.log.1` before it would pass 256 KB.
-    A collector that is working leaves a recent `run:` line there.
-    That line counts the sessions kept for a reason apart from those `undecided`, which were kept
-    for want of an answer, and gives the first example of those.
-    A collector that is always undecided about the same sessions is not working.
-- `last-failure.log` holds the exit status and stderr of the most recent run that exited non-zero,
-    other than one skipped with Ctrl-C.
-    That covers a run that could not start at all (for example, no `uv` on `PATH`, or no Python for
-    `uv` to use, since it is told not to download one).
-    `zellij-welcome` writes it, and nothing removes it after a later success, so check its date.
-Nothing is deleted that cannot be put on record: a log that cannot be written stops the deletions.
-A run fails, with a non-zero exit, if a deletion fails or the sessions cannot be listed.
-Preview with `zellij-gc --dry-run`, which prints the deletions on stdout and the reason each other
-  session is kept on stderr.
-Disable real runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
+- It deletes only sessions that are running, have no clients and no terminal panes, show nothing
+    but the welcome screen, and are older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
+    A session's name plays no part, and EXITED (resurrectable) sessions are never touched.
+- Every doubt keeps the session, and nothing is deleted that cannot be put on record.
+- A usual launch shows nothing.
+    One with sessions to look into names each on the terminal as it goes, and Ctrl-C skips the rest.
+- What it did is recorded under `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`):
+    `gc.log` for every run, and `last-failure.log` for the most recent run that failed.
+- Preview with `zellij-gc --dry-run`, which also says why each other session would be kept.
+- Disable real runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
+
+How it decides, and why it is built as it is, is set out in the package's `collector.py`.
 
 ## Development Toolchain
 

@@ -37,6 +37,7 @@ done
 # failed run is kept in last-failure.log, since zellij is about to clear the screen and the
 # collector's own log cannot record a failure to start. That is one file, written whole and
 # renamed into place, so concurrent launches cannot corrupt it and it does not accumulate.
+# Nothing removes it after a later run that works, so it is dated, as the collector's log is.
 if [ -x "$HOME/.local/bin/zellij-gc" ]; then
   # Ctrl-C skips the collection, not the chooser: with a handler set, this script outlives it.
   # The handler is `:` and not '', because a signal that is ignored stays ignored in every
