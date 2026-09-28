@@ -212,6 +212,9 @@ def collect(zellij: str, *, dry_run: bool) -> int:
             # Shell-quoted, so a name with spaces or parens can be pasted back into a shell.
             print(shlex.join(["zellij", *command]))
             continue
+        # Accepted race: a client could attach between the queries above and this delete. Each
+        # session is deleted straight after its own inspection, so the window is a few subprocess
+        # calls long, and what would be lost is a welcome screen holding no work.
         # --force kills the server first, and deleting (not just killing) leaves nothing to resurrect.
         if run_zellij(zellij, command, timeout=DELETE_TIMEOUT_SECONDS) is None:
             log(f"FAILED to delete {session.name!r} (age {session.age_seconds}s)")
