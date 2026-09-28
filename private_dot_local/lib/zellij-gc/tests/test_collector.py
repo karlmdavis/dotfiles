@@ -392,8 +392,10 @@ def zellij(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     for var in ("ZELLIJ_GC_DISABLE", "ZELLIJ_GC_MIN_AGE_HOURS"):
         monkeypatch.delenv(var, raising=False)
-    # Only the test of the slow-run notice should ever see it, however loaded the machine is.
+    # However loaded the machine is, only the test of the slow-run notice should ever see it,
+    # and only the tests of what is slow should ever see a command give up waiting.
     monkeypatch.setattr(collector, "NOTICE_AFTER_SECONDS", 3600)
+    monkeypatch.setattr(collector, "QUERY_TIMEOUT_SECONDS", 60)
     directory = tmp_path / "fake"
     directory.mkdir()
     fake = FakeZellij(directory)
@@ -756,9 +758,10 @@ def test_a_query_that_zellij_cannot_answer_keeps_every_session(zellij, capsys, t
     assert line.endswith(f"{missing} failed (exit 2)")
 
 
-def test_query_that_hangs_is_a_failure(zellij):
+def test_query_that_hangs_is_a_failure(zellij, monkeypatch):
+    monkeypatch.setattr(collector, "QUERY_TIMEOUT_SECONDS", 0.3)
     zellij.configure(sleep=1)
-    result = collector.run_zellij(str(zellij.path), ["list-sessions"], timeout=0.3)
+    result = collector.run_zellij(str(zellij.path), ["list-sessions"])
     assert result == collector.Result(None, "timed out after 0.3s", answered=False)
 
 

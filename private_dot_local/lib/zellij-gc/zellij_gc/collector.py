@@ -265,14 +265,18 @@ def run_zellij(
     zellij: str,
     args: list[str],
     *,
-    timeout: float = QUERY_TIMEOUT_SECONDS,
+    timeout: float | None = None,
     budget: Budget = UNLIMITED,
 ) -> Result:
-    """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures."""
+    """Run `zellij <args>`; a non-zero exit, a timeout, and a failure to start are all failures.
+
+    It is waited for `timeout` seconds, or QUERY_TIMEOUT_SECONDS if none is given, and in either
+    case no longer than the budget has left.
+    """
     remaining = budget.remaining()
     if remaining <= 0:
         return Result(None, "out of time", answered=False)
-    timeout = min(timeout, remaining)
+    timeout = min(QUERY_TIMEOUT_SECONDS if timeout is None else timeout, remaining)
     try:
         result = subprocess.run(
             [zellij, *args],
