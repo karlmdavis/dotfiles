@@ -8,6 +8,7 @@ receives; no mocking framework.
 from __future__ import annotations
 
 import json
+import shlex
 import textwrap
 
 import pytest
@@ -257,6 +258,11 @@ class FakeZellij:
         (self.directory / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
 
     @property
+    def quoted(self):
+        """The fake's path as dry-run output prints it."""
+        return shlex.quote(str(self.path))
+
+    @property
     def calls(self):
         log = self.directory / "calls.jsonl"
         if not log.exists():
@@ -294,11 +300,18 @@ def gc_log(tmp_path):
 def test_dry_run_prints_the_deletions_without_running_them(zellij, capsys, tmp_path):
     assert gc.main(["--dry-run"]) == 0
     assert capsys.readouterr().out.splitlines() == [
-        "zellij delete-session --force brave-petunia",
-        "zellij delete-session --force 'stale one'",
+        f"{zellij.quoted} delete-session --force brave-petunia",
+        f"{zellij.quoted} delete-session --force 'stale one'",
     ]
     assert zellij.deletions == []
     assert gc_log(tmp_path) == ""
+
+
+def test_dry_run_names_plain_zellij_when_no_binary_is_configured(zellij, capsys, monkeypatch):
+    monkeypatch.delenv("ZELLIJ_GC_ZELLIJ")
+    monkeypatch.setenv("PATH", str(zellij.directory), prepend=":")
+    gc.main(["--dry-run"])
+    assert capsys.readouterr().out.splitlines()[0] == "zellij delete-session --force brave-petunia"
 
 
 def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path):
@@ -333,7 +346,8 @@ def test_session_with_a_client_gets_only_the_clients_query(zellij):
 def test_min_age_override_widens_the_net(zellij, capsys, monkeypatch):
     monkeypatch.setenv("ZELLIJ_GC_MIN_AGE_HOURS", "0")
     gc.main(["--dry-run"])
-    assert "zellij delete-session --force didactic-river" in capsys.readouterr().out.splitlines()
+    expected = f"{zellij.quoted} delete-session --force didactic-river"
+    assert expected in capsys.readouterr().out.splitlines()
 
 
 def test_disable_switch_does_nothing(zellij, monkeypatch):
