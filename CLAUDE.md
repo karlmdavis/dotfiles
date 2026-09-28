@@ -71,8 +71,8 @@ The repository uses a sophisticated template hierarchy:
 - `.chezmoitemplates/shell-env.sh` - Canonical PATH/utility/env setup shared by the bash and zsh login files
 - `.chezmoitemplates/shell-aliases.sh` - Canonical shell-wide aliases, included by BOTH the login and rc files
 - `.chezmoitemplates/zellij-launch.sh` - Interactive zellij `welcome` launcher shared by bash and zsh
-- `private_dot_local/bin/executable_zellij-welcome` - Wrapper the launcher execs: opens the chooser and
-    starts the abandoned-session collector
+- `private_dot_local/bin/executable_zellij-welcome` - Wrapper the launcher execs: runs the
+    abandoned-session collector, then opens the chooser
 - `.chezmoitemplates/config.nu` - Comprehensive nushell configuration with:
   - PATH management for Homebrew, Cargo, Volta, pipx, and the generic bin dirs (kept in sync with `shell-env.sh`)
   - Starship prompt setup (with lite/full variants based on font support)
@@ -202,17 +202,26 @@ It deletes (`zellij delete-session --force`, so nothing is left to resurrect) on
   a single tab named `Tab #1`, and older than `ZELLIJ_GC_MIN_AGE_HOURS` (default 1).
 The signature decides, not the session name, and any failed or unparseable query keeps the session
   (so it deletes nothing on a zellij too old to answer the queries).
+A query is waited for 2 seconds at most.
 EXITED (resurrectable) sessions are never touched.
 A set but invalid `ZELLIJ_GC_MIN_AGE_HOURS` deletes nothing, since the default could be shorter than
   the retention that was meant.
 Zellij clears the screen as soon as it starts, so what a run did is reported to files under
-  `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`), all bounded in size:
-- `gc.log` gets one line per run and one per deletion or failed deletion, and is rotated to a single
-    `gc.log.1` at 256 KB.
+  `~/.local/state/zellij-gc/` (or `$XDG_STATE_HOME/zellij-gc/`), none of which grows without limit:
+- `gc.log` gets one line per run, and two per deletion: one before it, and one after it that says
+    whether it worked.
+    It is rotated to a single `gc.log.1` before it would pass 256 KB.
     A collector that is working leaves a recent `run:` line there.
-- `last-failure.log` holds the exit status and error output of the most recent run that failed,
-    including one that could not start at all (for example, no `uv` on `PATH`).
+    That line counts the sessions kept for a reason apart from those `undecided`, which were kept
+    for want of an answer, and gives the first example of those.
+    A collector that is always undecided about the same sessions is not working.
+- `last-failure.log` holds the exit status and stderr of the most recent run that exited non-zero,
+    other than one skipped with Ctrl-C.
+    That covers a run that could not start at all (for example, no `uv` on `PATH`, or no Python for
+    `uv` to use, since it is told not to download one).
     `zellij-welcome` writes it, and nothing removes it after a later success, so check its date.
+Nothing is deleted that cannot be put on record: a log that cannot be written stops the deletions.
+A run fails, with a non-zero exit, if a deletion fails or the sessions cannot be listed.
 Preview with `zellij-gc --dry-run`, which prints the deletions on stdout and the reason each other
   session is kept on stderr.
 Disable real runs by setting `ZELLIJ_GC_DISABLE` to any non-empty value; the preview still works.
@@ -319,7 +328,7 @@ This repository uses mise for task automation and testing.
 
 **Key tasks:**
 - `:lint` - Run shellcheck on managed shell scripts, plus `ruff` and `mypy` on the Python
-    mini-projects that define a `lint` task (configured in each one's `pyproject.toml`)
+    mini-projects whose `lint` task the root task calls (configured in each one's `pyproject.toml`)
 - `:test` - Run unit tests
 - `:ci` - Run complete CI suite (lint + test in parallel)
 - `:install-hooks` - Install git pre-commit hooks

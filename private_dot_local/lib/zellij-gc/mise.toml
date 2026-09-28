@@ -1,9 +1,10 @@
 # Subproject config for the zellij-gc embedded mini-project (mise monorepo member).
-# Referenced from the repo root as `//private_dot_local/lib/zellij-gc:test`.
+# Referenced from the repo root as `//private_dot_local/lib/zellij-gc:test` and `:lint`.
 
 [tasks.lint]
 description = "Run ruff (lint + format check) and mypy over the zellij-gc package"
 # Ephemeral, like the tests: nothing is installed and no caches are left in this source dir.
+# The shim has no .py extension and sits outside this directory, so ruff is given it by name.
 env = { PYTHONDONTWRITEBYTECODE = "1" }
 run = [
   "uv run --no-project --with ruff ruff check --no-cache . ../../bin/executable_zellij-gc",

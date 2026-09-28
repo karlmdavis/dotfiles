@@ -18,8 +18,8 @@ readable file, is put to zellij itself, and nothing is deleted on the file's wor
 has a time budget, and Ctrl-C ends it.
 
 What a run did goes to a size-capped log, since zellij clears the screen straight afterwards.
-Every run that gets the lock leaves one line there, which is what tells "nothing to do" apart from
-"broken".
+Every run that gets the lock leaves at least one line there, which is what tells "nothing to do"
+apart from "broken". Nothing is deleted that cannot be put on record there.
 
 POSIX only: the lock is `fcntl.flock`, and the shim's shebang needs an `env` that has `-S`.
 """

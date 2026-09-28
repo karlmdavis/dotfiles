@@ -5,7 +5,7 @@
 # ///
 """zellij-gc — delete zellij sessions abandoned at the welcome screen (thin launcher shim).
 
-Started in the background by ~/.local/bin/zellij-welcome, or run by hand:
+Run by ~/.local/bin/zellij-welcome before it opens the chooser, or by hand:
   zellij-gc [--dry-run]
 
 The real logic lives in the zellij_gc package at ~/.local/lib/zellij-gc (an embedded mini-project,
