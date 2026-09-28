@@ -9,6 +9,9 @@
 #   4. What the collector prints on stdout reaches the terminal; what it prints on stderr does not.
 #   5. A collector that fails leaves its status and stderr in `last-failure.log`; one that
 #      succeeds, or is interrupted, leaves nothing.
+#   6. If that file cannot be written, it says so on the terminal, and leaves no litter.
+#   7. Ctrl-C during the collection reaches the collector, and the wrapper lives to launch zellij.
+#   8. The collector is run with `uv` forbidden to download a Python.
 #
 # No mocks: the wrapper runs through its own shebang in a throwaway HOME, against stand-in
 # `zellij` and `zellij-gc` executables that record how they were called.
@@ -58,11 +61,15 @@ install_gc() {
 }
 
 @test "runs the collector to completion, then hands over to zellij -l welcome" {
-  install_gc 'sleep 0.5; echo "$PATH" > "$RECORD/gc-path"; echo done > "$RECORD/gc-done"'
+  install_gc 'sleep 0.3
+    echo "$PATH" > "$RECORD/gc-path"
+    echo "$UV_PYTHON_DOWNLOADS" > "$RECORD/gc-downloads"
+    echo done > "$RECORD/gc-done"'
   run "$WELCOME"
   [ "$status" -eq 0 ]
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
   [ -e "$RECORD/gc-was-done" ]
+  [ "$(cat "$RECORD/gc-downloads")" = "never" ]
 
   # Homebrew's bin leads the collector's PATH (and only the collector's). The wrapper hard-codes
   # where it looks, so this needs a real Homebrew, which every machine this repo targets has.
@@ -77,10 +84,12 @@ install_gc() {
   [ "$(cat "$RECORD/gc-path")" = "$brew_bin:$PATH" ]
 }
 
-@test "still launches zellij when the collector is not installed" {
+@test "still launches zellij when the collector is not installed, and that is no failure" {
   run "$WELCOME"
   [ "$status" -eq 0 ]
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
+  [ "$output" = "zellij stand-in ran" ]
+  [ ! -e "$STATE" ]
 }
 
 @test "the collector's stdout reaches the terminal, and a success leaves nothing behind" {
@@ -100,10 +109,35 @@ install_gc() {
   [ "$output" = "zellij stand-in ran" ]
   run cat "$STATE/last-failure.log"
   [ "${#lines[@]}" -eq 2 ]
-  case "${lines[0]}" in *" zellij-gc exited 127") ;; *) false ;; esac
+  # Dated as the collector's log is: 2026-09-28T17:31:29-0400.
+  case "${lines[0]}" in 2???-??-??T??:??:??[-+]????" zellij-gc exited 127") ;; *) false ;; esac
   [ "${lines[1]}" = "uv: command not found" ]
   # Written whole and renamed into place, so no partial files are left beside it.
   [ "$(ls "$STATE")" = "last-failure.log" ]
+}
+
+@test "a failure that cannot be put on file is put on the terminal, and leaves no litter" {
+  # A file where the state directory's parent should be, so that nothing can be made under it.
+  mkdir -p "$HOME/.local"
+  : > "$HOME/.local/state"
+  install_gc 'exit 3'
+  run "$WELCOME"
+  [ "$status" -eq 0 ]
+  said="zellij-welcome: zellij-gc exited 3, and $STATE/last-failure.log could not be written"
+  [ "${lines[0]}" = "$said" ]
+  [ "${lines[1]}" = "zellij stand-in ran" ]
+  [ -f "$HOME/.local/state" ]
+}
+
+@test "Ctrl-C during the collection reaches the collector, and zellij still launches" {
+  # The collector interrupts its whole process group, as a terminal does on Ctrl-C, so the
+  # wrapper gets it too. The wrapper is given a group of its own, to keep that from bats.
+  install_gc 'kill -INT 0; sleep 3; echo survived > "$RECORD/gc-survived"'
+  run perl -e 'setpgrp(0, 0); exec @ARGV' "$WELCOME"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
+  [ ! -e "$RECORD/gc-survived" ]
+  [ ! -e "$STATE" ]
 }
 
 @test "an interrupted collector is not a failure, and zellij still launches" {

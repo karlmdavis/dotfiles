@@ -13,8 +13,8 @@
 # `--check` only proves that this script can start; callers probe with it before they exec.
 [ "${1:-}" = --check ] && exit 0
 
-# Homebrew's bin dir, probed at runtime (Apple-silicon macOS, then Linux). Not templated per OS,
-# so that shellcheck can lint this file as it is.
+# Homebrew's bin dir, probed at runtime (Apple-silicon macOS, then Linux), which keeps this file
+# plain sh that shellcheck can lint.
 brew_bin=""
 for dir in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
   if [ -d "$dir" ]; then
@@ -23,31 +23,49 @@ for dir in /opt/homebrew/bin /home/linuxbrew/.linuxbrew/bin; do
   fi
 done
 
-# Collect abandoned sessions before the chooser lists them, so that it never shows a session
-# which then disappears. The collector bounds its own run time, and says so on the terminal if
-# it is slow. Homebrew's bin goes on PATH for this child only: the shim's shebang needs `uv`,
-# and the collector runs a bare `zellij`. The chooser itself inherits the caller's environment
-# unchanged.
+# Collect abandoned sessions before the chooser lists them, so that it does not normally show a
+# session which then disappears. (It still can: a launch that finds another collector running
+# does not wait for it, and a run that was out of time, or skipped, leaves sessions for a later
+# launch to delete.) The collector bounds its own run time, and says so on the terminal if it is
+# slow. That bound covers the collection, not the time `uv` takes to start the shim, so `uv` is
+# told not to go and download a Python: without one it fails at once, and on the record.
+#
+# Homebrew's bin goes on PATH for this child only: the shim's shebang needs `uv`, and the
+# collector runs a bare `zellij`. The chooser itself inherits the caller's environment unchanged.
 #
 # The collector's stdout (that notice) goes to the terminal; its stderr is captured, and for a
 # failed run is kept in last-failure.log, since zellij is about to clear the screen and the
 # collector's own log cannot record a failure to start. That is one file, written whole and
-# renamed into place, so concurrent launches cannot corrupt it and it cannot grow.
+# renamed into place, so concurrent launches cannot corrupt it and it does not accumulate.
 if [ -x "$HOME/.local/bin/zellij-gc" ]; then
   # Ctrl-C skips the collection, not the chooser: with a handler set, this script outlives it.
+  # The handler is `:` and not '', because a signal that is ignored stays ignored in every
+  # command started from here, and the collector has to get the Ctrl-C. A handler, unlike that,
+  # is dropped at the exec below, so zellij starts with Ctrl-C as it should be.
   trap : INT
+  # fd 3 is the terminal: inside $(...), stderr goes to the capture and stdout to fd 3.
   exec 3>&1
-  errors=$(PATH="${brew_bin:+$brew_bin:}$PATH" "$HOME/.local/bin/zellij-gc" 2>&1 >&3 </dev/null)
+  errors=$(
+    PATH="${brew_bin:+$brew_bin:}$PATH" UV_PYTHON_DOWNLOADS=never \
+      "$HOME/.local/bin/zellij-gc" 2>&1 >&3 </dev/null
+  )
   status=$?
   exec 3>&-
-  trap - INT
   # 130 is the collector saying it was interrupted, which is not a failure.
   if [ "$status" -ne 0 ] && [ "$status" -ne 130 ]; then
     state="${XDG_STATE_HOME:-$HOME/.local/state}/zellij-gc"
-    mkdir -p "$state" 2>/dev/null &&
-      printf '%s zellij-gc exited %s\n%s\n' "$(date)" "$status" "$errors" \
-        >"$state/last-failure.log.$$" 2>/dev/null &&
-      mv -f "$state/last-failure.log.$$" "$state/last-failure.log" 2>/dev/null
+    # Dated as the collector's log is, so that the two can be compared.
+    if ! {
+      mkdir -p "$state" &&
+        printf '%s zellij-gc exited %s\n%s\n' \
+          "$(date +%Y-%m-%dT%H:%M:%S%z)" "$status" "$errors" >"$state/last-failure.log.$$" &&
+        mv -f "$state/last-failure.log.$$" "$state/last-failure.log"
+    } 2>/dev/null; then
+      rm -f "$state/last-failure.log.$$" 2>/dev/null
+      # Soon cleared from the screen by zellij, but no other place is left to say it.
+      echo "zellij-welcome: zellij-gc exited $status, and $state/last-failure.log" \
+        "could not be written" >&2
+    fi
   fi
 fi
 
