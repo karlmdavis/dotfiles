@@ -47,12 +47,14 @@ if [ -x "$HOME/.local/bin/zellij-gc" ]; then
 fi
 
 # Prefer zellij from PATH; fall back to Homebrew's copy for callers with a bare PATH (the iTerm2
-# profile).
+# profile). `exec` replaces this script with zellij, so nothing below it runs afterwards: when a
+# session is detached or quit, what ends is zellij itself, with zellij's exit status.
 if command -v zellij >/dev/null 2>&1; then
   exec zellij -l welcome
 elif [ -n "$brew_bin" ] && [ -x "$brew_bin/zellij" ]; then
   exec "$brew_bin/zellij" -l welcome
 fi
 
+# Reached only when neither exec above ran, which is when zellij is not installed.
 echo "zellij-welcome: zellij not found" >&2
 exit 127
