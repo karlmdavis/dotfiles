@@ -389,6 +389,30 @@ def test_older_zellij_without_the_query_actions_deletes_nothing(zellij, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_undecodable_output_does_not_stop_the_run(zellij, capsys, monkeypatch, tmp_path):
+    """One session name that isn't UTF-8 must not abort collection for the others."""
+    script = tmp_path / "latin1-zellij"
+    script.write_text(
+        textwrap.dedent(
+            f"""\
+            #!/bin/sh
+            if [ "$1" = list-sessions ]; then
+              printf 'caf\\351 [Created 5h ago]\\n'
+            fi
+            exec {shlex.quote(str(zellij.path))} "$@"
+            """
+        ),
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    monkeypatch.setenv("ZELLIJ_GC_ZELLIJ", str(script))
+    assert gc.main(["--dry-run"]) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"{shlex.quote(str(script))} delete-session --force brave-petunia",
+        f"{shlex.quote(str(script))} delete-session --force 'stale one'",
+    ]
+
+
 def test_failed_listing_is_a_quiet_no_op(zellij):
     zellij.configure(listing=None)
     assert gc.main([]) == 0

@@ -138,7 +138,10 @@ def run_zellij(zellij: str, args: list[str], *, timeout: int = QUERY_TIMEOUT_SEC
             [zellij, *args],
             stdin=subprocess.DEVNULL,
             capture_output=True,
-            text=True,
+            # Decoded as UTF-8 whatever the locale, and never raising: a name or title that isn't
+            # valid UTF-8 comes through mangled, which at worst fails to parse (session kept).
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             check=False,
         )
