@@ -12,6 +12,7 @@ resolves to "keep the session".
 
 from __future__ import annotations
 
+import argparse
 import datetime
 import fcntl
 import json
@@ -224,9 +225,23 @@ def collect(zellij: str, *, dry_run: bool) -> int:
     return status
 
 
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
+    """Parse the command line; anything unrecognised exits with status 2 before zellij is touched."""
+    parser = argparse.ArgumentParser(
+        prog="zellij-gc",
+        description="Delete zellij sessions abandoned at the welcome screen.",
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the deletions that would be made, without making them",
+    )
+    return parser.parse_args(argv)
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    dry_run = "--dry-run" in args
+    dry_run = parse_args(argv).dry_run
     if os.environ.get("ZELLIJ_GC_DISABLE"):
         return 0
     zellij = os.environ.get("ZELLIJ_GC_ZELLIJ") or "zellij"

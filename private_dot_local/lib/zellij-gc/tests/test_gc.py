@@ -314,6 +314,15 @@ def test_dry_run_names_plain_zellij_when_no_binary_is_configured(zellij, capsys,
     assert capsys.readouterr().out.splitlines()[0] == "zellij delete-session --force brave-petunia"
 
 
+@pytest.mark.parametrize(
+    "argv", [["--dryrun"], ["--dry"], ["--dry-run=1"], ["-n"], ["--help"], ["--dry-run", "extra"]]
+)
+def test_unrecognised_arguments_never_touch_zellij(zellij, argv):
+    with pytest.raises(SystemExit):
+        gc.main(argv)
+    assert zellij.calls == []
+
+
 def test_deletes_only_abandoned_sessions_and_logs_them(zellij, capsys, tmp_path):
     assert gc.main([]) == 0
     assert zellij.deletions == [
