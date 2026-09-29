@@ -4,6 +4,13 @@ session_serialization true
 serialize_pane_viewport true
 scrollback_lines_to_serialize 0
 
+// Free Alt+Left/Right (default: MoveFocusOrTab) so they reach the pane, where the shells and
+// editors use them for word movement. Both keys must share one `unbind` line: zellij reads only
+// the first global `unbind` node. Pane focus is still available via Ctrl+P then arrows.
+keybinds {
+    unbind "Alt Left" "Alt Right"
+}
+
 {{- $nu := lookPath "nu" }}
 {{- if $nu }}
 default_shell "{{ $nu }}"

@@ -1,0 +1,76 @@
+"""Shared fixtures: fake `aerospace` binaries for exercising the bounded CLI runner."""
+
+from __future__ import annotations
+
+import os
+import random
+import stat
+
+import pytest
+
+
+def _write_script(path, body: str) -> str:
+    path.write_text("#!/bin/sh\n" + body, encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return str(path)
+
+
+@pytest.fixture()
+def hang_marker():
+    """A sleep duration unique to this test, e.g. "30.482913", so `no_sleep_leftover` can pgrep
+    for exactly the child this test spawned and not any other `sleep 30` on the machine."""
+    return f"30.{random.randrange(10**6):06d}"
+
+
+@pytest.fixture()
+def hanging_aerospace(tmp_path, monkeypatch, hang_marker):
+    """A fake `aerospace` that never answers (what the real server does while the screen is
+    locked / Universal Control is active). `exec` so the timeout kill hits `sleep` itself and no
+    grandchild survives. Timeout is shortened so the tests stay fast."""
+    path = _write_script(tmp_path / "aerospace", f"exec sleep {hang_marker}\n")
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.setenv("AEROSPACE_TIMEOUT", "0.2")
+    return path
+
+
+@pytest.fixture()
+def echoing_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` that prints its arguments, one per line, and exits 0."""
+    path = _write_script(tmp_path / "aerospace", 'for a in "$@"; do printf "%s\\n" "$a"; done\n')
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path
+
+
+@pytest.fixture()
+def failing_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` that exits non-zero."""
+    path = _write_script(tmp_path / "aerospace", 'echo "boom" >&2\nexit 3\n')
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path
+
+
+@pytest.fixture()
+def no_sleep_leftover(hang_marker):
+    """Assert the test left no `sleep <marker>` child behind (the timeout must kill the CLI)."""
+    yield
+    assert os.system(f"pgrep -f 'sleep {hang_marker}' >/dev/null") != 0, "timeout left a hung child alive"
+
+
+@pytest.fixture()
+def null_json_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` that answers every query with `null`: valid JSON, wrong shape."""
+    path = _write_script(tmp_path / "aerospace", "echo null\n")
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path
+
+
+@pytest.fixture()
+def invalid_utf8_aerospace(tmp_path, monkeypatch):
+    """A fake `aerospace` whose output contains a byte that is not valid UTF-8."""
+    path = _write_script(tmp_path / "aerospace", "printf 'ws\\377\\n'\n")
+    monkeypatch.setenv("AEROSPACE_BIN", path)
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    return path

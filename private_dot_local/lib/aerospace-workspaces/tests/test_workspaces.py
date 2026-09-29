@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import subprocess
 import textwrap
+import time
 
 import pytest
 
 from aerospace_workspaces.workspaces import (
+    DEFAULT_TIMEOUT,
     aerospace_bin,
+    aerospace_timeout,
     label,
     load_workspaces,
+    run_aerospace,
     sanitize,
     workspaces_yaml,
 )
@@ -151,3 +156,42 @@ def test_sanitize_quotes():
 
 def test_sanitize_newlines():
     assert sanitize("a\nb\rc") == "a b c"
+
+
+# --- aerospace_timeout / run_aerospace ----------------------------------------------------------
+
+
+def test_aerospace_timeout_default(monkeypatch):
+    monkeypatch.delenv("AEROSPACE_TIMEOUT", raising=False)
+    assert aerospace_timeout() == DEFAULT_TIMEOUT
+
+
+def test_aerospace_timeout_override(monkeypatch):
+    monkeypatch.setenv("AEROSPACE_TIMEOUT", "0.5")
+    assert aerospace_timeout() == 0.5
+
+
+def test_aerospace_timeout_garbage_falls_back(monkeypatch):
+    monkeypatch.setenv("AEROSPACE_TIMEOUT", "soon")
+    assert aerospace_timeout() == DEFAULT_TIMEOUT
+
+
+def test_run_aerospace_returns_stdout(echoing_aerospace):
+    assert run_aerospace(["list-workspaces", "--focused"]) == "list-workspaces\n--focused\n"
+
+
+def test_run_aerospace_raises_on_nonzero_exit(failing_aerospace):
+    with pytest.raises(subprocess.CalledProcessError):
+        run_aerospace(["list-workspaces", "--focused"])
+
+
+def test_run_aerospace_times_out_and_kills_child(hanging_aerospace, no_sleep_leftover):
+    started = time.monotonic()
+    with pytest.raises(subprocess.TimeoutExpired):
+        run_aerospace(["list-workspaces", "--focused"])
+    assert time.monotonic() - started < 2.0
+
+
+def test_run_aerospace_replaces_undecodable_bytes(invalid_utf8_aerospace):
+    # Decoding must never raise; the bad byte becomes the replacement character.
+    assert run_aerospace(["list-workspaces", "--focused"]) == "ws\ufffd\n"

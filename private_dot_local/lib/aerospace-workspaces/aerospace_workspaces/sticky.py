@@ -11,6 +11,10 @@ each workspace's tiling tree, re-splitting the layout and losing its own size an
 
 `plan_commands` is pure so it's unit-testable without a running AeroSpace. `--dry-run` prints the
 `aerospace` commands that WOULD run instead of executing them.
+
+Every `aerospace` call is bounded (see `run_aerospace`): the server doesn't answer while the screen is
+locked or Universal Control has the cursor, and a hung workspace-change hook would delay the
+SwiftBar refresh chained after it. Any failure just skips this switch; the next one retries.
 """
 
 from __future__ import annotations
@@ -23,7 +27,7 @@ import sys
 
 import yaml
 
-from aerospace_workspaces.workspaces import aerospace_bin, focused_workspace, workspaces_yaml
+from aerospace_workspaces.workspaces import run_aerospace, workspaces_yaml
 
 # (app bundle id, optional title pattern). A rule with no pattern matches every window of the app.
 Rule = tuple[str, "re.Pattern[str] | None"]
@@ -87,21 +91,23 @@ def plan_commands(windows: list[dict[str, object]], rules: list[Rule], target: s
 
 def _list_windows() -> list[dict[str, object]]:
     """Every window on every monitor, with the fields `plan_commands` reads."""
-    result = subprocess.run(
-        [
-            aerospace_bin(),
-            "list-windows",
-            "--monitor",
-            "all",
-            "--format",
-            "%{window-id}%{app-bundle-id}%{window-title}%{workspace}%{window-layout}",
-            "--json",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
+    windows = json.loads(
+        run_aerospace(
+            [
+                "list-windows",
+                "--monitor",
+                "all",
+                "--format",
+                "%{window-id}%{app-bundle-id}%{window-title}%{workspace}%{window-layout}",
+                "--json",
+            ]
+        )
     )
-    return json.loads(result.stdout)
+    return windows if isinstance(windows, list) else []
+
+
+def _focused_workspace() -> str:
+    return run_aerospace(["list-workspaces", "--focused"]).strip()
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -111,13 +117,16 @@ def main(argv: list[str] | None = None) -> None:
     rules = load_sticky_rules(workspaces_yaml())
     if not rules:
         return
-    # AeroSpace sets this for exec-on-workspace-change; fall back to asking for manual runs.
-    target = os.environ.get("AEROSPACE_FOCUSED_WORKSPACE") or focused_workspace()
-    if not target:
+    try:
+        # AeroSpace sets this for exec-on-workspace-change; fall back to asking for manual runs.
+        target = os.environ.get("AEROSPACE_FOCUSED_WORKSPACE") or _focused_workspace()
+        if not target:
+            return
+        for command in plan_commands(_list_windows(), rules, target):
+            if dry_run:
+                print(" ".join(["aerospace", *command]))
+            else:
+                run_aerospace(command)
+    except (subprocess.SubprocessError, OSError, ValueError):
+        # ValueError covers json.JSONDecodeError. Skip this switch rather than fail the hook.
         return
-
-    for command in plan_commands(_list_windows(), rules, target):
-        if dry_run:
-            print(" ".join(["aerospace", *command]))
-        else:
-            subprocess.run([aerospace_bin(), *command], check=False)

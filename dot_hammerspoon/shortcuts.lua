@@ -7,8 +7,11 @@
 -- this repo) and still need to be confirmed — they render highlighted so they're obviously unverified.
 --
 -- Sources: AeroSpace from ~/.aerospace.toml (dot_aerospace.toml.tmpl); display hotkeys from
--- init.lua; Zellij from the v0.44 defaults (config.kdl sets no custom keybinds); readline set is
--- the emacs-mode bindings shared by zsh/bash/nushell and macOS text fields.
+-- init.lua; Zellij from the v0.44 defaults (config.kdl only unbinds Alt+Left/Right); readline set
+-- is the emacs-mode bindings shared by zsh/bash/nushell and macOS text fields, except word
+-- movement: ⌥←/⌥→ is what survives AeroSpace (which owns ⌥+letter) and is bound explicitly in
+-- dot_zshrc.tmpl, dot_bashrc.tmpl, and helix/config.toml (nushell and Claude Code have it built
+-- in). Helix from the 25.07 default keymap; its keys are case-sensitive, so ⇧ marks a capital.
 
 return {
     {
@@ -75,7 +78,7 @@ return {
         items = {
             { keys = "⌃ A  ⌃ E", desc = "Start / end of line" },
             { keys = "⌃ B  ⌃ F", desc = "Back / forward one char" },
-            { keys = "Esc B / F", desc = "Back / forward one word" },
+            { keys = "⌥ ←  ⌥ →", desc = "Back / forward one word" },
             { keys = "⌃ W", desc = "Delete word before cursor" },
             { keys = "⌃ U", desc = "Delete to start of line" },
             { keys = "⌃ K", desc = "Delete to end of line" },
@@ -85,6 +88,51 @@ return {
             { keys = "⌃ P  ⌃ N", desc = "Previous / next history" },
             { keys = "⌃ T", desc = "Transpose characters" },
             { keys = "⌃ L", desc = "Clear screen" },
+        },
+    },
+    {
+        title = "Helix · Modes & motions",
+        items = {
+            { keys = "Esc", desc = "Normal mode" },
+            { keys = "I  A", desc = "Insert before / after selection" },
+            { keys = "⇧I  ⇧A", desc = "Insert at line start / end" },
+            { keys = "O  ⇧O", desc = "Open line below / above" },
+            { keys = "V", desc = "Select (extend) mode" },
+            { keys = ":", desc = "Command mode · :w write · :q quit" },
+            { keys = "H J K L", desc = "Left / down / up / right" },
+            { keys = "W  B  E", desc = "Next word / previous word / word end" },
+            { keys = "⌥ ←  ⌥ →", desc = "Back / forward one word (insert mode)" },
+            { keys = "F  T + char", desc = "Jump to / until char" },
+            { keys = "G G  G E", desc = "Start / end of file" },
+            { keys = "G H  G L", desc = "Start / end of line" },
+            { keys = "⌃ D  ⌃ U", desc = "Half page down / up" },
+        },
+    },
+    {
+        title = "Helix · Select & edit",
+        items = {
+            { keys = "X", desc = "Select line (repeat to extend)" },
+            { keys = "%", desc = "Select whole file" },
+            { keys = "M I  M A + obj", desc = "Select inside / around: W word · ( parens · F function" },
+            { keys = ";", desc = "Collapse selection to cursor" },
+            { keys = "⇧C  ,", desc = "Add cursor below / keep only primary" },
+            { keys = "D  C", desc = "Delete / change selection" },
+            { keys = "Y  P  ⇧P", desc = "Yank / paste after / paste before" },
+            { keys = "U  ⇧U", desc = "Undo / redo" },
+            { keys = ">  <", desc = "Indent / unindent" },
+            { keys = "/  N  ⇧N", desc = "Search / next / previous" },
+        },
+    },
+    {
+        title = "Helix · Space & goto",
+        items = {
+            { keys = "Space F  Space B", desc = "File picker / buffer picker" },
+            { keys = "Space /", desc = "Search across workspace" },
+            { keys = "Space Y  Space P", desc = "Yank to / paste from system clipboard" },
+            { keys = "Space K", desc = "Show docs for symbol (LSP hover)" },
+            { keys = "Space ?", desc = "Command palette" },
+            { keys = "G D  G R", desc = "Go to definition / references" },
+            { keys = "⌃ W", desc = "Window: V S split · H J K L focus · Q close" },
         },
     },
 }

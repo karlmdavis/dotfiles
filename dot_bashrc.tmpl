@@ -33,6 +33,20 @@ shopt -s histappend
 # Keep $LINES/$COLUMNS correct after each command.
 shopt -s checkwinsize
 
+
+##
+# Line editing
+##
+
+# Option/Alt+Left/Right move by word, matching zsh and nushell. readline 8+ binds the xterm form
+# by default, but macOS's bash 3.2 does not; the ESC-prefixed form covers terminals that send that
+# instead. Set here rather than in ~/.inputrc, which would replace Ubuntu's /etc/inputrc.
+bind '"\e[1;3D": backward-word'
+bind '"\e[1;3C": forward-word'
+bind '"\e\e[D": backward-word'
+bind '"\e\e[C": forward-word'
+
+
 {{ if ne .chezmoi.os "darwin" -}}
 ##
 # Linux-only interactive niceties (absent / no-ops on macOS)

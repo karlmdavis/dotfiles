@@ -1,0 +1,21 @@
+# Subproject config for the zellij-gc embedded mini-project (mise monorepo member).
+# Referenced from the repo root as `//private_dot_local/lib/zellij-gc:test` and `:lint`.
+
+[tasks.lint]
+description = "Run ruff (lint + format check) and mypy over the zellij-gc package"
+# Ephemeral, like the tests: nothing is installed and no caches are left in this source dir.
+# The shim has no .py extension and sits outside this directory, so ruff is given it by name.
+env = { PYTHONDONTWRITEBYTECODE = "1" }
+run = [
+  "uv run --no-project --with ruff ruff check --no-cache . ../../bin/executable_zellij-gc",
+  "uv run --no-project --with ruff ruff format --no-cache --check . ../../bin/executable_zellij-gc",
+  "uv run --no-project --with mypy mypy --no-incremental --cache-dir=/dev/null",
+]
+
+[tasks.test]
+description = "Run pytest for the zellij-gc package"
+# pytest runs in a fully ephemeral uv env: --no-project avoids creating a .venv / writing uv.lock
+# in this source dir, and --with pulls pytest on the fly (no persistent mise tool, no runtime deps).
+# -p no:cacheprovider stops pytest from writing a .pytest_cache here.
+env = { PYTHONDONTWRITEBYTECODE = "1" }  # no __pycache__/*.pyc left in the source tree.
+run = "uv run --no-project --with pytest pytest -q -p no:cacheprovider"

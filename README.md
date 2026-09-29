@@ -108,7 +108,8 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     [`~/.tmux.conf`](dot_tmux.conf).
 - [Zellij](https://zellij.dev/):
     [`~/.config/zellij/`](dot_config/zellij/),
-    see also: [login-shell launch helper](.chezmoitemplates/zellij-launch.sh).
+    see also: [login-shell launch helper](.chezmoitemplates/zellij-launch.sh),
+    [`zellij-welcome` chooser wrapper](private_dot_local/bin/executable_zellij-welcome).
 
 #### Development Tools and Editors
 
@@ -146,6 +147,10 @@ Custom development authored here; each could plausibly be broken out into its ow
     a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind a
     thin shim at [`~/.local/bin/cmd-notify`](private_dot_local/bin/executable_cmd-notify),
     see also: [icon URL map](private_dot_local/share/cmd-notify/icons.txt).
+- `zellij-gc` (garbage collector for Zellij sessions abandoned at the welcome screen):
+    [`~/.local/lib/zellij-gc/`](private_dot_local/lib/zellij-gc/),
+    a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind a
+    thin shim at [`~/.local/bin/zellij-gc`](private_dot_local/bin/executable_zellij-gc).
 - `aerospace-workspaces` (shared AeroSpace workspace logic for the SwiftBar plugin + HUD):
     [`~/.local/lib/aerospace-workspaces/`](private_dot_local/lib/aerospace-workspaces/),
     a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind

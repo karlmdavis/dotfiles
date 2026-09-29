@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+import time
 from urllib.parse import unquote
 
 import pytest
@@ -128,6 +129,23 @@ def test_dry_run_prefix_applied(capsys, monkeypatch, yaml_seam):
 
 
 def test_empty_workspace_id_is_noop(capsys, monkeypatch, yaml_seam):
-    monkeypatch.setattr(hud, "focused_workspace", lambda: "")
+    monkeypatch.setattr(hud, "_focused_workspace", lambda: "")
     hud.main(["--dry-run"])
     assert capsys.readouterr().out == ""
+
+
+# --- _focused_workspace must never hang ---------------------------------------------------------
+
+
+def test_focused_workspace_empty_on_hang(hanging_aerospace, no_sleep_leftover):
+    started = time.monotonic()
+    assert hud._focused_workspace() == ""
+    assert time.monotonic() - started < 2.0
+
+
+def test_focused_workspace_empty_on_failure(failing_aerospace):
+    assert hud._focused_workspace() == ""
+
+
+def test_focused_workspace_strips_output(echoing_aerospace):
+    assert hud._focused_workspace() == "list-workspaces\n--focused"

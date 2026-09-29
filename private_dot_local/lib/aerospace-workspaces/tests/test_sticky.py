@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+import time
 
 import pytest
 
@@ -143,7 +144,7 @@ def test_dry_run_prints_commands_for_focused_workspace(capsys, monkeypatch, rule
 
 def test_dry_run_falls_back_to_focused_query(capsys, monkeypatch, rules_seam):
     monkeypatch.delenv("AEROSPACE_FOCUSED_WORKSPACE", raising=False)
-    monkeypatch.setattr(sticky, "focused_workspace", lambda: "C")
+    monkeypatch.setattr(sticky, "_focused_workspace", lambda: "C")
     monkeypatch.setattr(sticky, "_list_windows", lambda: [_window(9, title="1 Alert")])
     sticky.main(["--dry-run"])
     assert capsys.readouterr().out.strip() == "aerospace move-node-to-workspace --window-id 9 C"
@@ -156,5 +157,27 @@ def test_no_rules_skips_window_query(tmp_path, capsys, monkeypatch):
         raise AssertionError("list-windows should not be queried without rules")
 
     monkeypatch.setattr(sticky, "_list_windows", fail)
+    sticky.main(["--dry-run"])
+    assert capsys.readouterr().out == ""
+
+
+# --- the hook must never hang or crash ------------------------------------------------------
+
+
+def test_hook_returns_quickly_when_aerospace_hangs(monkeypatch, rules_seam, hanging_aerospace,
+                                                    no_sleep_leftover):
+    monkeypatch.setenv("AEROSPACE_FOCUSED_WORKSPACE", "B")
+    started = time.monotonic()
+    sticky.main([])
+    assert time.monotonic() - started < 2.0
+
+
+def test_hook_tolerates_failing_aerospace(monkeypatch, rules_seam, failing_aerospace):
+    monkeypatch.setenv("AEROSPACE_FOCUSED_WORKSPACE", "B")
+    sticky.main([])  # no exception
+
+
+def test_hook_tolerates_wrong_shape_json(capsys, monkeypatch, rules_seam, null_json_aerospace):
+    monkeypatch.setenv("AEROSPACE_FOCUSED_WORKSPACE", "B")
     sticky.main(["--dry-run"])
     assert capsys.readouterr().out == ""
