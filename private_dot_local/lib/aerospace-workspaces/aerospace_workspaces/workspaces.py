@@ -13,6 +13,7 @@ Both are read at call time (not import time) so tests can set them per-case.
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -24,6 +25,19 @@ Record = dict[str, str]
 def aerospace_bin() -> str:
     """Path to the `aerospace` binary. $AEROSPACE_BIN overrides (default: Homebrew prefix)."""
     return os.environ.get("AEROSPACE_BIN", "/opt/homebrew/bin/aerospace")
+
+
+def focused_workspace() -> str:
+    """The currently focused workspace id (empty string on any failure)."""
+    try:
+        return subprocess.run(
+            [aerospace_bin(), "list-workspaces", "--focused"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        return ""
 
 
 def workspaces_yaml() -> str:

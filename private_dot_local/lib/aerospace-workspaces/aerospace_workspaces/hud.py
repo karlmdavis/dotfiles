@@ -17,7 +17,7 @@ import subprocess
 import sys
 from urllib.parse import quote
 
-from aerospace_workspaces.workspaces import aerospace_bin, load_workspaces, workspaces_yaml
+from aerospace_workspaces.workspaces import focused_workspace, load_workspaces, workspaces_yaml
 
 
 def resolve_display(workspace_id: str, prefix: str, records: dict[str, dict[str, str]]) -> tuple[str, str]:
@@ -48,19 +48,6 @@ def build_osascript_body(display: str, hint: str) -> str:
     return f"{display} — {hint}" if hint else display
 
 
-def _focused_workspace() -> str:
-    """The currently focused workspace id (empty string on any failure)."""
-    try:
-        return subprocess.run(
-            [aerospace_bin(), "list-workspaces", "--focused"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except (subprocess.SubprocessError, OSError):
-        return ""
-
-
 def _hammerspoon_running() -> bool:
     """True if the Hammerspoon app is running (so it can catch the URL event)."""
     return subprocess.run(["pgrep", "-xq", "Hammerspoon"]).returncode == 0
@@ -73,7 +60,7 @@ def main(argv: list[str] | None = None) -> None:
         dry_run = True
         args = [a for a in args if a != "--dry-run"]
 
-    workspace_id = args[0] if args else _focused_workspace()
+    workspace_id = args[0] if args else focused_workspace()
     if not workspace_id:
         return
     prefix = args[1] if len(args) > 1 else ""

@@ -128,6 +128,6 @@ def test_dry_run_prefix_applied(capsys, monkeypatch, yaml_seam):
 
 
 def test_empty_workspace_id_is_noop(capsys, monkeypatch, yaml_seam):
-    monkeypatch.setattr(hud, "_focused_workspace", lambda: "")
+    monkeypatch.setattr(hud, "focused_workspace", lambda: "")
     hud.main(["--dry-run"])
     assert capsys.readouterr().out == ""
