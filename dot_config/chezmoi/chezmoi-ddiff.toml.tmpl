@@ -1,13 +1,18 @@
 ##
-# Config behind the `chezmoi-ddiff` shell alias: the live chezmoi config plus difftastic as the
-# diff command.
+# chezmoi config behind the `chezmoi-ddiff` shell alias. The copy at
+# ~/.config/chezmoi/chezmoi-ddiff.toml is generated: do not edit it.
 #
-# chezmoi has no command-line flag for the diff command; it only reads `diff.command` from a
-# config file. Setting it in the main config would change plain `chezmoi diff` for everything,
-# scripts and agents included, so the alias passes this file via `--config` instead. The live
-# config is included verbatim so `[data]` etc. are never duplicated, and sitting beside it means
-# both share the same persistent state. The path is spelled out rather than taken from
-# `.chezmoi.configFile` because under `chezmoi-ddiff` that variable names this file itself.
+# `chezmoi apply` renders it from `dot_config/chezmoi/chezmoi-ddiff.toml.tmpl` in the chezmoi source
+# directory (see `chezmoi source-path`). To change it, edit that template and re-run `chezmoi apply`.
+#
+# The source is a template so that it can include ~/.config/chezmoi/chezmoi.toml verbatim and append
+# difftastic as the diff command, without duplicating `[data]` etc. The path is spelled out rather
+# than taken from `.chezmoi.configFile` because under `chezmoi-ddiff` that variable names this file.
+#
+# It is a separate file because chezmoi has no command-line flag for the diff command; it only
+# reads `diff.command` from a config file. Setting it in the main config would change plain
+# `chezmoi diff` for everything, scripts and agents included, so the alias passes this file via
+# `--config` instead. Sitting beside the main config means both share the same persistent state.
 ##
 {{ include (joinPath .chezmoi.homeDir ".config/chezmoi/chezmoi.toml") }}
 [diff]
