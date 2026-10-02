@@ -21,6 +21,8 @@
 # optional and narrows it to e.g. one popup rather than all of the app's windows. The hook is
 # only wired into ~/.aerospace.toml when this list is non-empty, so after adding the first rule
 # run `chezmoi apply`; later edits take effect on the next workspace switch.
+# A rule with an invalid 'title-regex' is skipped; run
+# `~/.config/aerospace/follow-sticky-windows.py --dry-run` to see the warning.
 #
 # Find an app's bundle ID with:
 #   mdls -name kMDItemCFBundleIdentifier /Applications/AppName.app

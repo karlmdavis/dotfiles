@@ -54,7 +54,7 @@ def test_load_rules_missing_key(tmp_path):
     assert sticky.load_sticky_rules(_write(tmp_path, "workspaces:\n  C:\n    name: Comms\n")) == []
 
 
-def test_load_rules_skips_malformed_entries(tmp_path):
+def test_load_rules_skips_malformed_entries(tmp_path, capsys):
     path = _write(
         tmp_path,
         """\
@@ -67,6 +67,12 @@ def test_load_rules_skips_malformed_entries(tmp_path):
         """,
     )
     assert [app for app, _ in sticky.load_sticky_rules(path)] == ["com.example.Good"]
+    # Only the bad regex is worth a warning; the other skips are structural junk.
+    # (The trailing re.error text varies across Python versions, so only our own part is pinned.)
+    [warning] = capsys.readouterr().err.splitlines()
+    assert warning.startswith(
+        "sticky-windows: skipping rule for com.example.Bad: invalid title-regex '(unclosed' ("
+    )
 
 
 # --- plan_commands --------------------------------------------------------------------------

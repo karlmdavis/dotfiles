@@ -37,7 +37,8 @@ def load_sticky_rules(path: str) -> list[Rule]:
     """Parse the `sticky-windows:` list from workspaces.yaml.
 
     Each entry needs an `app-id`; `title-regex` (a Python regex, matched with `re.search`) is
-    optional. Entries without an `app-id` or with an invalid regex are skipped. Returns [] if the
+    optional. Entries without an `app-id` or with an invalid regex are skipped (the latter with a
+    warning on stderr). Returns [] if the
     file is absent or malformed, or has no `sticky-windows` list.
     """
     try:
@@ -55,7 +56,14 @@ def load_sticky_rules(path: str) -> list[Rule]:
         pattern = entry.get("title-regex")
         try:
             compiled = re.compile(str(pattern)) if pattern else None
-        except re.error:
+        except re.error as err:
+            # The hook runs headless, so this only shows on manual / --dry-run runs; that's where
+            # you'd look when a rule never seems to apply.
+            print(
+                f"sticky-windows: skipping rule for {entry['app-id']}: "
+                f"invalid title-regex {str(pattern)!r} ({err})",
+                file=sys.stderr,
+            )
             continue
         rules.append((str(entry["app-id"]), compiled))
     return rules
