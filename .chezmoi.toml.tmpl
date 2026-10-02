@@ -1,4 +1,16 @@
-{{- $systemType := promptStringOnce . "systemType" "Is this a personal or CMS system? (personal/cms)" -}}
+##
+# chezmoi's config file. The copy at ~/.config/chezmoi/chezmoi.toml is generated: do not edit it.
+#
+# `chezmoi init` renders it from `.chezmoi.toml.tmpl` in the chezmoi source directory (see
+# `chezmoi source-path`). To change a setting, edit that template and re-run `chezmoi init`.
+#
+# The source is a template so that `chezmoi init` can prompt once for the system type and record
+# the answer under `[data]`, where the repo's other templates read it (e.g. `.isCMS`).
+#
+# Do not add a `[diff]` table to the template: dot_config/chezmoi/chezmoi-ddiff.toml.tmpl includes
+# the generated file and appends its own, and TOML rejects a table defined twice.
+##
+{{- $systemType := promptStringOnce . "systemType" "Is this a personal or CMS system? (personal/cms)" }}
 
 [data]
 systemType = {{ $systemType | quote }}
