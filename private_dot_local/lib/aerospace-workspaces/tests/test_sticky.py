@@ -110,6 +110,14 @@ def test_plan_rule_without_regex_matches_any_title():
     ]
 
 
+def test_plan_skips_malformed_records():
+    malformed = [None, {}, "junk", {"app-bundle-id": "com.example.Popup", "window-title": "1 Alert"}]
+    windows = [*malformed, _window(10, title="1 Alert")]
+    assert sticky.plan_commands(windows, RULES, "B") == [
+        ["move-node-to-workspace", "--window-id", "10", "B"]
+    ]
+
+
 def test_plan_ignores_other_apps():
     windows = [_window(7, app="com.example.Other", title="1 Alert", layout="h_tiles")]
     assert sticky.plan_commands(windows, RULES, "B") == []
@@ -148,6 +156,13 @@ def test_dry_run_falls_back_to_focused_query(capsys, monkeypatch, rules_seam):
     monkeypatch.setattr(sticky, "_list_windows", lambda: [_window(9, title="1 Alert")])
     sticky.main(["--dry-run"])
     assert capsys.readouterr().out.strip() == "aerospace move-node-to-workspace --window-id 9 C"
+
+
+def test_dry_run_tolerates_null_records(capsys, monkeypatch, rules_seam):
+    monkeypatch.setenv("AEROSPACE_FOCUSED_WORKSPACE", "B")
+    monkeypatch.setattr(sticky, "_list_windows", lambda: [None, {}, _window(11, title="1 Alert")])
+    sticky.main(["--dry-run"])
+    assert capsys.readouterr().out.strip() == "aerospace move-node-to-workspace --window-id 11 B"
 
 
 def test_no_rules_skips_window_query(tmp_path, capsys, monkeypatch):

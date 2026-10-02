@@ -70,15 +70,18 @@ def _matches(window: dict[str, object], rules: list[Rule]) -> bool:
     )
 
 
-def plan_commands(windows: list[dict[str, object]], rules: list[Rule], target: str) -> list[list[str]]:
+def plan_commands(windows: list[object], rules: list[Rule], target: str) -> list[list[str]]:
     """The `aerospace` argument lists that make every matching window floating and on `target`.
 
     `windows` are `aerospace list-windows --json` records with app-bundle-id, window-id,
     window-title, workspace and window-layout fields. Windows already floating on `target` need
-    nothing.
+    nothing. Malformed records (not a dict, or no window-id) are skipped, so one bad entry can't
+    keep the rest from following.
     """
     commands: list[list[str]] = []
     for window in windows:
+        if not isinstance(window, dict) or window.get("window-id") in (None, ""):
+            continue
         if not _matches(window, rules):
             continue
         window_id = str(window["window-id"])
