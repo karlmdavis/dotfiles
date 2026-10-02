@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import textwrap
 import time
 
@@ -70,7 +71,7 @@ def test_load_rules_skips_malformed_entries(tmp_path):
 
 # --- plan_commands --------------------------------------------------------------------------
 
-RULES = [("com.example.Popup", sticky.re.compile(r"^[0-9]+ Alerts?$")), ("com.example.Palette", None)]
+RULES = [("com.example.Popup", re.compile(r"^[0-9]+ Alerts?$")), ("com.example.Palette", None)]
 
 
 def test_plan_moves_matching_floating_window():
@@ -179,8 +180,10 @@ def test_no_rules_skips_window_query(tmp_path, capsys, monkeypatch):
 # --- the hook must never hang or crash ------------------------------------------------------
 
 
-def test_hook_returns_quickly_when_aerospace_hangs(monkeypatch, rules_seam, hanging_aerospace,
-                                                    no_sleep_leftover):
+# `no_sleep_leftover` (tests/conftest.py) asserts the timeout actually killed the hung fake CLI.
+def test_hook_returns_quickly_when_aerospace_hangs(
+    monkeypatch, rules_seam, hanging_aerospace, no_sleep_leftover
+):
     monkeypatch.setenv("AEROSPACE_FOCUSED_WORKSPACE", "B")
     started = time.monotonic()
     sticky.main([])

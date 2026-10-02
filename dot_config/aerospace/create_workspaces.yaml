@@ -12,6 +12,8 @@
 # 'window-rules' auto-assigns applications to workspaces when windows open. Each
 # rule needs 'app-id' and 'workspace'; 'title-regex' is optional for apps with
 # multiple window types. Rules are evaluated in order — first match wins.
+# This 'title-regex' is AeroSpace's own matcher (window-title-regex-substring), unlike
+# the Python regex used by 'sticky-windows' below.
 #
 # 'sticky-windows' keeps matching windows visible on every workspace (AeroSpace has no
 # native option for this): on each workspace switch they're made floating and moved to the

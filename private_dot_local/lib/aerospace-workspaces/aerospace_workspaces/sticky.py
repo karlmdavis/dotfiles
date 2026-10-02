@@ -54,7 +54,7 @@ def load_sticky_rules(path: str) -> list[Rule]:
             continue
         pattern = entry.get("title-regex")
         try:
-            compiled = re.compile(str(pattern)) if pattern not in (None, "") else None
+            compiled = re.compile(str(pattern)) if pattern else None
         except re.error:
             continue
         rules.append((str(entry["app-id"]), compiled))
