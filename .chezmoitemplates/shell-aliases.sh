@@ -27,3 +27,6 @@ fi
 
 # `td` -- Todoist CLI via pinned npx fetch (no global install).
 alias td='npx --package={{ .tools.todoist_cli }} -- td'
+
+# `chezmoi-ddiff` -- `chezmoi diff` rendered by difftastic (see dot_config/chezmoi/chezmoi-ddiff.toml.tmpl).
+alias chezmoi-ddiff='chezmoi diff --config "$HOME/.config/chezmoi/chezmoi-ddiff.toml"'
