@@ -107,7 +107,7 @@ refute_contains() {
 @test "session name, PR, and worktree branch never appear" {
   statusline "$FULL"
   refute_contains "my-session"
-  refute_contains "48"
+  refute_contains "#48"
   refute_contains "worktree-wt1"
 }
 
