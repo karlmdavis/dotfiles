@@ -24,6 +24,8 @@ packages:
         - helix
         # GitHub CLI for managing repos, PRs, and issues from terminal.
         - gh
+        # Syntax-aware structural diff (Rust impl); behind `git ddiff` etc. and `chezmoi-ddiff`.
+        - difftastic
         # Resilient SSH replacement that survives suspend/wake and network changes (mosh.org).
         - mosh
         # Basic command line utility for downloading web content.
@@ -93,6 +95,8 @@ packages:
         - helix
         # GitHub CLI for managing repos, PRs, and issues from terminal.
         - gh
+        # Syntax-aware structural diff (Rust impl); behind `git ddiff` etc. and `chezmoi-ddiff`.
+        - difftastic
         # JSON parsing utility for shell scripts.
         - jq
         # Polyglot tool version manager (asdf-style, Rust impl); shells activate it from rc files.
