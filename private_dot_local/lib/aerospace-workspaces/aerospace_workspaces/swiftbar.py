@@ -3,8 +3,9 @@
 `main()` is the entry point invoked by the thin SwiftBar plugin shim
 (~/.config/swiftbar/plugins/aerospace-workspaces.10s.py). It queries AeroSpace, then renders:
 
-  - a menu-bar title of the focused workspace as "<emoji> <id>: <name>" (name truncated so it
-    doesn't overrun the bar);
+  - a menu-bar title that is a strip of the occupied workspaces: the ones without focus as their
+    bare id, dimmed, and the focused one as "<emoji> <id>: <name>" in an accent colour (truncated
+    so it doesn't overrun the bar). Empty workspaces are left out, apart from the focused one;
   - a dropdown listing every workspace the same way (declared workspaces first, in file order),
     each switching to that workspace on click, with a hover tooltip when the workspace has a hint;
   - under each workspace, its open windows as an indented submenu, each focusing that exact window.
@@ -40,9 +41,20 @@ from aerospace_workspaces.workspaces import (
     workspaces_yaml,
 )
 
-# Friendly names longer than this are truncated (with an ellipsis) in the menu-bar title only;
-# the dropdown always shows the full name.
-TITLE_NAME_LIMIT = 30
+# The focused workspace's label is truncated to this many characters (with an ellipsis) in the
+# menu-bar title only; the dropdown always shows the full name. Kept short because the title also
+# carries every other occupied workspace, and a title that is too wide pushes the status items to
+# its left under the display notch.
+TITLE_NAME_LIMIT = 24
+
+# ANSI colours for the menu-bar title, which SwiftBar renders when the line carries `ansi=true`.
+# SwiftBar gives uncoloured text in an ANSI title no menu-bar colour at all (it comes out black),
+# so every segment starts with one of these. 256-colour indexes, because SwiftBar maps the basic
+# 16 to saturated system colours: a mid grey for the workspaces without focus, and a light blue
+# for the focused one. Both are picked for a dark menu bar.
+_CSI = "\x1b["
+TITLE_DIM = f"{_CSI}38;5;245m"
+TITLE_ACCENT = f"{_CSI}38;5;111m"
 
 # Menu-bar title shown while AeroSpace can't be queried.
 UNAVAILABLE_TITLE = "⚠️ AeroSpace"
@@ -67,6 +79,31 @@ def ordered_ids(ids: list[str], declared_order: list[str]) -> list[str]:
     return declared_live + remaining
 
 
+def menu_bar_title(
+    focused: str,
+    ids: list[str],
+    windows_by_ws: dict[str, list[dict[str, object]]],
+    records: dict[str, Record],
+) -> str:
+    """Build the menu-bar title line: the strip of occupied workspaces (pure: no I/O).
+
+    Workspaces appear in `ids` order (AeroSpace's own, which is stable) rather than the dropdown's
+    declared-first order, so an entry keeps its position as others come and go. A workspace is
+    shown when it has a window or has focus; a focused id missing from `ids` is still shown, last.
+    """
+    shown = [ws for ws in ids if ws == focused or windows_by_ws.get(ws)]
+    if focused not in shown:
+        shown.append(focused)
+
+    entries = [
+        TITLE_ACCENT + truncate(sanitize(label(ws, records)))
+        if ws == focused
+        else TITLE_DIM + sanitize(ws)
+        for ws in shown
+    ]
+    return " ".join(entries) + " | ansi=true"
+
+
 def render(
     focused: str,
     ids: list[str],
@@ -82,8 +119,7 @@ def render(
     aerospace = aerospace_bin()
     lines: list[str] = []
 
-    # Menu-bar title: focused workspace, name truncated so it doesn't overrun the bar.
-    lines.append(truncate(label(focused, records)))
+    lines.append(menu_bar_title(focused, ids, windows_by_ws, records))
     lines.append("---")
 
     for workspace_id in ordered_ids(ids, declared_order):
