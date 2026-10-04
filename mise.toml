@@ -34,7 +34,8 @@ shellcheck \
   .chezmoiscripts/run_once_after_2026-09-16-cleanup-superpowers.sh \
   private_dot_claude/statusline-command.sh \
   private_dot_local/bin/executable_zellij-welcome \
-  "private_Library/private_Application Support/private_obsidian/modify_obsidian.json"
+  "private_Library/private_Application Support/private_obsidian/modify_obsidian.json" \
+  dot_config/borders/executable_bordersrc
 
 # Sourced snippet with no shebang, so the shell dialect is given explicitly.
 shellcheck --shell=sh .chezmoitemplates/zellij-launch.sh
