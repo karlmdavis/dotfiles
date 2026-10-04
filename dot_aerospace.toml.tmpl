@@ -1,9 +1,15 @@
 config-version = 2
 
-# Push a SwiftBar refresh once the server is up, so the menu-bar workspace indicator stops
-# showing "unavailable" at login as soon as AeroSpace can answer, instead of waiting for the
-# plugin's next 10s tick. Same push as exec-on-workspace-change below.
-after-startup-command = ['exec-and-forget open -g "swiftbar://refreshallplugins"']
+# Once the server is up:
+#   - Push a SwiftBar refresh, so the menu-bar workspace indicator stops showing "unavailable" at
+#     login as soon as AeroSpace can answer, instead of waiting for the plugin's next 10s tick.
+#     Same push as exec-on-workspace-change below.
+#   - Start JankyBorders. No arguments, so it reads ~/.config/borders/bordersrc; it detects an
+#     already-running instance, so an AeroSpace restart does not start a second one.
+after-startup-command = [
+    'exec-and-forget open -g "swiftbar://refreshallplugins"',
+    'exec-and-forget borders',
+]
 start-at-login = true
 
 enable-normalization-flatten-containers = true
@@ -30,13 +36,15 @@ exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallpl
 [key-mapping]
     preset = 'qwerty'
 
+# Just wide enough for JankyBorders' focused-window border (~2pt, see ~/.config/borders/bordersrc),
+# which is drawn outside the window and would otherwise be clipped at the screen edges.
 [gaps]
-    inner.horizontal = 0
-    inner.vertical =   0
-    outer.left =       0
-    outer.bottom =     0
-    outer.top =        0
-    outer.right =      0
+    inner.horizontal = 2
+    inner.vertical =   2
+    outer.left =       2
+    outer.bottom =     2
+    outer.top =        2
+    outer.right =      2
 
 [mode.main.binding]
 
