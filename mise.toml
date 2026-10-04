@@ -38,6 +38,12 @@ shellcheck \
 # Sourced snippet with no shebang, so the shell dialect is given explicitly.
 shellcheck --shell=sh .chezmoitemplates/zellij-launch.sh
 
+# The SketchyBar scripts all source common.sh; -x lets shellcheck follow that.
+shellcheck -x \
+  dot_config/sketchybar/executable_sketchybarrc \
+  dot_config/sketchybar/common.sh \
+  dot_config/sketchybar/plugins/*.sh
+
 echo "✓ Shellcheck passed!"
 """
 
