@@ -20,6 +20,10 @@ local shortcutsHud = require("shortcuts_hud")
 hs.hotkey.bind({ "alt", "shift" }, "/", function() shortcutsHud.toggle() end)
 hs.urlevent.bind("shortcuts", function() shortcutsHud.toggle() end)
 
+-- Focused-window border: a thin frame just inside the edges of whichever window has focus (see
+-- focus_border.lua).
+require("focus_border").start()
+
 hs.urlevent.bind("workspace", function(_, params)
     -- `name` already arrives with its emoji prepended (see hud-display-workspace-name.py). When a
     -- `hint` is present, show it as a smaller, dimmer second line below the name (and linger a bit

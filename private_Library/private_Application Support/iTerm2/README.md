@@ -115,3 +115,10 @@ So prefer an ANSI-based theme where the app offers one, and pick the matching To
 
 Zellij and Starship follow neither a palette change nor light mode.
 If the iTerm2 palette moves away from Tokyo Night Storm, update those two by hand.
+
+## Apps outside the terminal
+
+Desktop tools styled to match the terminal hard-code Tokyo Night Storm hex values as well, and need
+  the same by-hand update if the palette moves:
+
+- Hammerspoon: the focused-window border colour in `dot_hammerspoon/focus_border.lua`.
