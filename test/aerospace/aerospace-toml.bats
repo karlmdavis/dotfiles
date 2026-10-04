@@ -5,9 +5,9 @@
 #
 # Requirements the template must meet (each has at least one test below):
 #   1. With no `sticky-windows` rules (no workspaces.yaml, or one without the key), the
-#      exec-on-workspace-change hook is the SwiftBar refresh alone, so machines without rules
-#      pay nothing per workspace switch.
-#   2. With rules, the hook runs follow-sticky-windows.py first, then the SwiftBar refresh.
+#      exec-on-workspace-change hook is the indicator refresh (SwiftBar + SketchyBar) alone, so
+#      machines without rules pay nothing per workspace switch.
+#   2. With rules, the hook runs follow-sticky-windows.py first, then the indicator refresh.
 #   3. `window-rules` still render as [[on-window-detected]] blocks alongside sticky rules.
 #
 # Rendering uses `chezmoi execute-template` with HOME pointed at a temp dir, which is what
@@ -56,23 +56,24 @@ assert_not_contains() {   # assert_not_contains "$haystack" "$needle"
   return 0
 }
 
-SWIFTBAR_ONLY_HOOK="exec-on-workspace-change = ['/bin/bash', '-c', \"open -g 'swiftbar://refreshallplugins'\"]"
-STICKY_HOOK="\"~/.config/aerospace/follow-sticky-windows.py; open -g 'swiftbar://refreshallplugins'\"]"
+REFRESH="open -g 'swiftbar://refreshallplugins'; sketchybar --trigger aerospace_workspace_change"
+REFRESH_ONLY_HOOK="exec-on-workspace-change = ['/bin/bash', '-c', \"$REFRESH\"]"
+STICKY_HOOK="\"~/.config/aerospace/follow-sticky-windows.py; $REFRESH\"]"
 
-@test "no workspaces.yaml: the hook is the SwiftBar refresh alone" {
+@test "no workspaces.yaml: the hook is the indicator refresh alone" {
   run --separate-stderr render
   [ "$status" -eq 0 ] || { echo "render failed: $stderr" >&2; return 1; }
-  assert_contains "$output" "$SWIFTBAR_ONLY_HOOK"
+  assert_contains "$output" "$REFRESH_ONLY_HOOK"
   assert_not_contains "$output" "follow-sticky-windows"
 }
 
-@test "workspaces.yaml without sticky-windows: the hook is the SwiftBar refresh alone" {
+@test "workspaces.yaml without sticky-windows: the hook is the indicator refresh alone" {
   write_workspaces_yaml 'workspaces:
   C:
     name: Comms'
   run --separate-stderr render
   [ "$status" -eq 0 ] || { echo "render failed: $stderr" >&2; return 1; }
-  assert_contains "$output" "$SWIFTBAR_ONLY_HOOK"
+  assert_contains "$output" "$REFRESH_ONLY_HOOK"
   assert_not_contains "$output" "follow-sticky-windows"
 }
 
@@ -80,17 +81,17 @@ STICKY_HOOK="\"~/.config/aerospace/follow-sticky-windows.py; open -g 'swiftbar:/
   write_workspaces_yaml 'sticky-windows: []'
   run --separate-stderr render
   [ "$status" -eq 0 ] || { echo "render failed: $stderr" >&2; return 1; }
-  assert_contains "$output" "$SWIFTBAR_ONLY_HOOK"
+  assert_contains "$output" "$REFRESH_ONLY_HOOK"
   assert_not_contains "$output" "follow-sticky-windows"
 }
 
-@test "sticky-windows rules: the hook runs the sticky script, then the SwiftBar refresh" {
+@test "sticky-windows rules: the hook runs the sticky script, then the indicator refresh" {
   write_workspaces_yaml 'sticky-windows:
   - app-id: com.example.Popup'
   run --separate-stderr render
   [ "$status" -eq 0 ] || { echo "render failed: $stderr" >&2; return 1; }
   assert_contains "$output" "$STICKY_HOOK"
-  assert_not_contains "$output" "$SWIFTBAR_ONLY_HOOK"
+  assert_not_contains "$output" "$REFRESH_ONLY_HOOK"
   # Exactly one hook definition (a duplicate key would be a TOML error in AeroSpace).
   [ "$(printf '%s\n' "$output" | grep -c '^exec-on-workspace-change')" -eq 1 ]
 }
