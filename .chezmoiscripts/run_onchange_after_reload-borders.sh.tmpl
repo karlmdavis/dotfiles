@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Push an edited bordersrc into the running JankyBorders, so `chezmoi apply` is the whole tweak
+# loop. Re-runs whenever the file changes:
+#   bordersrc hash: {{ include "dot_config/borders/executable_bordersrc" | sha256sum }}
+#
+# Only when `borders` is already running: bordersrc ends in a `borders <options>` call, which
+# live-updates a running instance but would otherwise become the daemon itself and block this
+# script. Starting it is AeroSpace's job (after-startup-command in ~/.aerospace.toml).
+if pgrep -xq borders; then
+  "${HOME}/.config/borders/bordersrc"
+fi
+{{ end -}}
