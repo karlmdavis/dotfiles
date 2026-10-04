@@ -1,8 +1,9 @@
 """Shared AeroSpace workspace data: the name map, labeling, and sanitization.
 
-This module is consumed by both `aerospace_workspaces.swiftbar` (the SwiftBar menu-bar plugin) and
-`aerospace_workspaces.hud` (the workspace-switch HUD), which is why it lives in a shared package
-rather than being duplicated in each entry-point script.
+This module is consumed by `aerospace_workspaces.swiftbar` (the SwiftBar menu-bar plugin),
+`aerospace_workspaces.sketchybar` (the SketchyBar workspace strip), and `aerospace_workspaces.hud`
+(the workspace-switch HUD), which is why it lives in a shared package rather than being duplicated
+in each entry-point script.
 
 Two environment seams double as runtime overrides and test seams:
   - $AEROSPACE_BIN — the `aerospace` binary path (SwiftBar's launchd PATH omits Homebrew).
