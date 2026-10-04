@@ -23,6 +23,7 @@ return {
             { keys = "⌥ /", desc = "Toggle tiles (horizontal/vertical)" },
             { keys = "⌥ ,", desc = "Accordion layout" },
             { keys = "⌥ -  ⌥ =", desc = "Shrink / grow pane" },
+            { keys = "⌥ 0", desc = "Toggle fullscreen" },
         },
     },
     {
