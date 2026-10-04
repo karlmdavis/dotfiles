@@ -1,0 +1,73 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+##
+# Makes the apps listed in `.chezmoidata/default_apps.yaml` the default for their file types, so that
+# e.g. double-clicking a YAML file opens an editor rather than Xcode.
+#
+# The list is rendered into the calls at the bottom of this script, so editing it changes this
+# script's content hash, which is what makes chezmoi re-run it. An app that is not installed renders
+# as a comment instead of a call: installing it later changes the hash too, so its types are applied
+# on the next `chezmoi apply` rather than a skipped run being recorded as done.
+#
+# This is a run_onchange_after_ script so that it runs after the package manifest's script has
+# installed `utiluti`.
+#
+# Since macOS 26.4 the system asks the user to confirm every such change in a dialog, and `utiluti`
+# waits for the answer; there is no supported way to pre-approve. So only the types whose default
+# actually differs are set: the first run on a machine costs one click per type, and later runs cost
+# one click per type added to the list. A `chezmoi apply` with nobody at the screen (e.g. over SSH)
+# waits on those dialogs.
+##
+
+set -euo pipefail
+shopt -s nocasematch # Bundle IDs are case-insensitive.
+
+failed=()
+
+# Whether <bundle-id> is already the default app for files with <extension>.
+is_default() {
+  local current
+  # Prints a placeholder rather than a bundle ID when the type has no default app at all.
+  current="$(utiluti type --extension "$2" --bundle-id)"
+  [[ "$current" == "$1" ]]
+}
+
+# Usage: set_default_app <app-name> <bundle-id> <extension>...
+set_default_app() {
+  local name="$1" bundle_id="$2" ext
+  shift 2
+
+  local pending=()
+  for ext in "$@"; do
+    is_default "$bundle_id" "$ext" || pending+=("$ext")
+  done
+  if [ "${#pending[@]}" -eq 0 ]; then
+    echo "default apps: ${name} is already the default for all $# listed file types"
+    return
+  fi
+
+  echo "default apps: making ${name} the default for: ${pending[*]}"
+  echo "  macOS asks to confirm each change: expect up to ${#pending[@]} dialogs, and choose ${name} in each."
+  for ext in "${pending[@]}"; do
+    # Re-checked because extensions can share a type (yaml/yml), which the first of them settles.
+    is_default "$bundle_id" "$ext" && continue
+    utiluti type set --extension "$ext" "$bundle_id" || failed+=("$ext")
+  done
+}
+
+{{ range .default_apps.macos -}}
+{{ $name := base .app_path | trimSuffix ".app" -}}
+{{ if stat .app_path -}}
+set_default_app {{ $name | quote }} {{ .bundle_id | quote }}{{ range .extensions }} {{ . | quote }}{{ end }}
+{{ else -}}
+# {{ $name }} is not installed ({{ .app_path }}); its file types are left alone.
+{{ end -}}
+{{ end }}
+# Fail rather than exit 0, which would record the hash and leave the refused types unset for good.
+if [ "${#failed[@]}" -gt 0 ]; then
+  echo "default apps: not changed (declined, or refused by macOS): ${failed[*]}" >&2
+  echo "  Re-run 'chezmoi apply' to be asked again." >&2
+  exit 1
+fi
+{{- end -}}

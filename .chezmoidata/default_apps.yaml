@@ -1,0 +1,54 @@
+##
+# Default apps for file types, i.e. what opens on double-click / `open <file>`.
+#
+# Applied by ../.chezmoiscripts/run_onchange_after_macos_default_apps.sh.tmpl, which re-runs whenever
+# this list changes. An entry is skipped on machines where `app_path` does not exist, and applied on
+# the first `chezmoi apply` after the app is installed.
+#
+# Types are listed by file extension rather than by uniform type identifier (UTI): many of these have
+# no declared UTI, only an unreadable dynamic one (e.g. `dyn.ah62d4rv4ge8067k` for `.nu`).
+#
+# Only list what should be taken AWAY from another app (or has no app at all). Types the app already
+# wins by default need no entry, and listing them would only add confirmation dialogs: since macOS 26.4
+# every change made here has to be confirmed by hand, once, in a system dialog.
+##
+default_apps:
+  macos:
+    # Xcode claims most source and data formats as soon as it is installed. Take the general-purpose
+    # ones back, and leave it the ones specific to Apple development (`swift`, `m`, `plist`).
+    - app_path: "/Applications/Visual Studio Code.app"
+      bundle_id: com.microsoft.VSCode
+      extensions:
+        # Data and config.
+        - yaml
+        - yml
+        - xml
+        - jsonl
+        - ndjson
+        - conf
+        - env
+        - tf
+        - hcl
+        - kdl
+        - graphql
+        - proto
+        - tmpl
+        # Source.
+        - bash
+        - zsh
+        - nu
+        - py
+        - rb
+        - c
+        - h
+        - cpp
+        - cc
+        - hpp
+        - kt
+        - scala
+        # `mjs` shares a type with `js`, so it follows without an entry.
+        - js
+        - css
+        # Plain text.
+        - txt
+        - log

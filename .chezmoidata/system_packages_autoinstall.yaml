@@ -51,6 +51,8 @@ packages:
         - yq
         # Switch display resolutions from CLI (used by Hammerspoon hotkeys).
         - displayplacer
+        # Set the default app per file type from CLI (applies `default_apps.yaml`).
+        - utiluti
         # Get overview of system CPU, memory, etc. resource usage.
         #- btop
       casks:
