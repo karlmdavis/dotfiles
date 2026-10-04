@@ -11,6 +11,8 @@ packages:
         - oven-sh/bun
         # Aerospace tiling window manager (macOS).
         - nikitabobko/tap
+        # FelixKratz's macOS desktop tools.
+        - FelixKratz/formulae
       brews:
         # Manage dotfiles with incredible UX (Go impl).
         - chezmoi
@@ -51,6 +53,8 @@ packages:
         - yq
         # Switch display resolutions from CLI (used by Hammerspoon hotkeys).
         - displayplacer
+        # JankyBorders: border around the focused window (C impl, builds from source).
+        - FelixKratz/formulae/borders
         # Get overview of system CPU, memory, etc. resource usage.
         #- btop
       casks:
