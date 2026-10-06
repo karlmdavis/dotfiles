@@ -10,7 +10,10 @@ Sticky windows are always floating: a tiled window moved on every switch would b
 each workspace's tiling tree, re-splitting the layout and losing its own size and position.
 
 `plan_commands` is pure so it's unit-testable without a running AeroSpace. `--dry-run` prints the
-`aerospace` commands that WOULD run instead of executing them.
+`aerospace` commands that WOULD run instead of executing them. The target is
+$AEROSPACE_FOCUSED_WORKSPACE when set (AeroSpace sets it for the hook), else the live focused
+workspace; so if your shell has a stale export of it, a manual `--dry-run` plans against that
+workspace instead (`env -u AEROSPACE_FOCUSED_WORKSPACE ... --dry-run` to avoid that).
 
 Every `aerospace` call is bounded (see `run_aerospace`): the server doesn't answer while the screen is
 locked or Universal Control has the cursor, and a hung workspace-change hook would delay the
