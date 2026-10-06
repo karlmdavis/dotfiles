@@ -1,3 +1,9 @@
+{{- /* Per-machine data (window-rules, sticky-windows) from ~/.config/aerospace/workspaces.yaml. */ -}}
+{{- $data := dict }}
+{{- $yaml := joinPath .chezmoi.homeDir ".config/aerospace/workspaces.yaml" }}
+{{- if stat $yaml }}
+{{-   $data = output "cat" $yaml | fromYaml | default dict }}
+{{- end -}}
 config-version = 2
 
 # Push a SwiftBar refresh once the server is up, so the menu-bar workspace indicator stops
@@ -22,10 +28,18 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B",
 
 on-mode-changed = []
 
-# Push an instant SwiftBar refresh on every workspace switch so the menu-bar workspace
-# indicator updates immediately (the plugin's 10s filename interval is just the fallback).
+# On every workspace switch, push an instant SwiftBar refresh so the menu-bar workspace indicator
+# updates immediately (the plugin's 10s filename interval is just the fallback).
 # See ~/.config/swiftbar/plugins/aerospace-workspaces.10s.py.
+{{- if index $data "sticky-windows" }}
+# First, float and pull this machine's "sticky" windows (its workspaces.yaml `sticky-windows:`
+# rules) onto the new workspace, since AeroSpace has no show-on-all-workspaces option.
+# See ~/.config/aerospace/follow-sticky-windows.py.
+exec-on-workspace-change = ['/bin/bash', '-c',
+    "~/.config/aerospace/follow-sticky-windows.py; open -g 'swiftbar://refreshallplugins'"]
+{{- else }}
 exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallplugins'"]
+{{- end }}
 
 [key-mapping]
     preset = 'qwerty'
@@ -149,11 +163,7 @@ exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallpl
 # keep working with every AeroSpace binding unregistered, and two apps cannot both register the
 # same Carbon hotkey. `aerospace mode main` in a terminal is the last resort.
 [mode.passthrough.binding]
-{{- $yaml := joinPath .chezmoi.homeDir ".config/aerospace/workspaces.yaml" }}
-{{- if stat $yaml }}
-{{- $content := output "cat" $yaml }}
-{{- $data := fromYaml $content }}
-{{- if and $data (index $data "window-rules") }}
+{{- if index $data "window-rules" }}
 
 # Window detection rules (generated from ~/.config/aerospace/workspaces.yaml)
 {{ range index $data "window-rules" }}
@@ -164,5 +174,4 @@ if.window-title-regex-substring = '{{ index . "title-regex" }}'
 {{- end }}
 run = 'move-node-to-workspace {{ .workspace }}'
 {{ end }}
-{{- end }}
 {{- end }}

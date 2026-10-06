@@ -45,7 +45,7 @@ echo "✓ Shellcheck passed!"
 description = "Run unit tests"
 run = """
 echo "Running unit tests..."
-bats test/claude/ test/zellij/
+bats test/aerospace/ test/claude/ test/zellij/
 mise run '//private_dot_local/lib/aerospace-workspaces:test'
 mise run '//private_dot_local/lib/cmd-notify:test'
 mise run '//private_dot_local/lib/zellij-gc:test'

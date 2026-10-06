@@ -12,6 +12,20 @@
 # 'window-rules' auto-assigns applications to workspaces when windows open. Each
 # rule needs 'app-id' and 'workspace'; 'title-regex' is optional for apps with
 # multiple window types. Rules are evaluated in order — first match wins.
+# This 'title-regex' is AeroSpace's own matcher (window-title-regex-substring), unlike
+# the Python regex used by 'sticky-windows' below.
+#
+# 'sticky-windows' keeps matching windows visible on every workspace (AeroSpace has no
+# native option for this): on each workspace switch they're made floating and moved to the
+# newly focused workspace. With several monitors they follow your focus across them too,
+# leaving the other monitors' workspaces.
+# Each rule needs 'app-id'. 'title-regex' (a Python regex) is optional and narrows the rule
+# to e.g. one popup rather than all of the app's windows: omit it (or leave it null) to
+# match every window; '' matches only untitled windows.
+# The hook is only wired into ~/.aerospace.toml when this list is non-empty, so after adding
+# the first rule run `chezmoi apply`; later edits take effect on the next workspace switch.
+# A rule with an invalid 'title-regex' is skipped; run
+# `~/.config/aerospace/follow-sticky-windows.py --dry-run` to see the warning.
 #
 # Find an app's bundle ID with:
 #   mdls -name kMDItemCFBundleIdentifier /Applications/AppName.app
@@ -37,3 +51,7 @@
 #     workspace: S
 #   - app-id: com.microsoft.Outlook
 #     workspace: C
+#
+# sticky-windows:
+#   - app-id: com.example.Calendar
+#     title-regex: '^[0-9]+ Reminders?$'
