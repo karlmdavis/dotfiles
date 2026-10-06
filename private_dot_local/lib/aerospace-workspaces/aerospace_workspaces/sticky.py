@@ -15,9 +15,9 @@ $AEROSPACE_FOCUSED_WORKSPACE when set (AeroSpace sets it for the hook), else the
 workspace; so if your shell has a stale export of it, a manual `--dry-run` plans against that
 workspace instead (`env -u AEROSPACE_FOCUSED_WORKSPACE ... --dry-run` to avoid that).
 
-Every `aerospace` call is bounded (see `run_aerospace`): the server doesn't answer while the screen is
-locked or Universal Control has the cursor, and a hung workspace-change hook would delay the
-SwiftBar refresh chained after it. Any failure just skips this switch; the next one retries.
+Every `aerospace` call is bounded (see `run_aerospace`): the server doesn't answer while the
+screen is locked or Universal Control has the cursor, and a hung workspace-change hook would delay
+the SwiftBar refresh chained after it. Any failure just skips this switch; the next one retries.
 """
 
 from __future__ import annotations
@@ -42,9 +42,9 @@ def load_sticky_rules(path: str) -> list[Rule]:
     Each entry needs an `app-id`; `title-regex` (a Python regex, matched with `re.search`) is
     optional. A missing or null `title-regex` matches every window of the app, while an empty
     string matches only windows whose title is empty (a bare `re.search("")` would match
-    everything, silently widening a rule that looks narrowed). Entries without an `app-id` or with an invalid regex are skipped (the latter with a
-    warning on stderr). Returns [] if the file is absent or malformed, or has no `sticky-windows`
-    list.
+    everything, silently widening a rule that looks narrowed). Entries without an `app-id` or with
+    an invalid regex are skipped (the latter with a warning on stderr). Returns [] if the file is
+    absent or malformed, or has no `sticky-windows` list.
     """
     try:
         with open(path, encoding="utf-8") as handle:
