@@ -18,7 +18,8 @@
 # 'sticky-windows' keeps matching windows visible on every workspace (AeroSpace has no
 # native option for this): on each workspace switch they're made floating and moved to the
 # newly focused workspace. Each rule needs 'app-id'; 'title-regex' (a Python regex) is
-# optional and narrows it to e.g. one popup rather than all of the app's windows. The hook is
+# optional and narrows it to e.g. one popup rather than all of the app's windows (omit it,
+# or leave it null, to match every window; '' matches only untitled windows). The hook is
 # only wired into ~/.aerospace.toml when this list is non-empty, so after adding the first rule
 # run `chezmoi apply`; later edits take effect on the next workspace switch.
 # A rule with an invalid 'title-regex' is skipped; run

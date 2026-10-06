@@ -37,7 +37,9 @@ def load_sticky_rules(path: str) -> list[Rule]:
     """Parse the `sticky-windows:` list from workspaces.yaml.
 
     Each entry needs an `app-id`; `title-regex` (a Python regex, matched with `re.search`) is
-    optional. Entries without an `app-id` or with an invalid regex are skipped (the latter with a
+    optional. A missing or null `title-regex` matches every window of the app, while an empty
+    string matches only windows whose title is empty (a bare `re.search("")` would match
+    everything, silently widening a rule that looks narrowed). Entries without an `app-id` or with an invalid regex are skipped (the latter with a
     warning on stderr). Returns [] if the file is absent or malformed, or has no `sticky-windows`
     list.
     """
@@ -55,7 +57,12 @@ def load_sticky_rules(path: str) -> list[Rule]:
             continue
         pattern = entry.get("title-regex")
         try:
-            compiled = re.compile(str(pattern)) if pattern else None
+            if pattern is None:
+                compiled = None
+            elif pattern == "":
+                compiled = re.compile(r"\A\Z")  # an explicitly empty title
+            else:
+                compiled = re.compile(str(pattern))
         except re.error as err:
             # The hook runs headless, so this only shows on manual / --dry-run runs; that's where
             # you'd look when a rule never seems to apply.

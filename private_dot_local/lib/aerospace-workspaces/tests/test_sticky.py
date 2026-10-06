@@ -46,6 +46,30 @@ def test_load_rules_with_and_without_title_regex(tmp_path):
     assert rules[1][1] is None
 
 
+def test_load_rules_null_title_regex_matches_all_but_empty_matches_only_untitled(tmp_path):
+    path = _write(
+        tmp_path,
+        """\
+        sticky-windows:
+          - app-id: com.example.Null
+            title-regex:
+          - app-id: com.example.Empty
+            title-regex: ''
+        """,
+    )
+    rules = sticky.load_sticky_rules(path)
+    null_rule, empty_rule = rules
+    assert null_rule == ("com.example.Null", None)
+    assert empty_rule[1] is not None
+    windows = [
+        _window(1, app="com.example.Null", title="anything"),
+        _window(2, app="com.example.Empty", title="anything"),
+        _window(3, app="com.example.Empty", title=""),
+    ]
+    moved = [cmd[2] for cmd in sticky.plan_commands(windows, rules, "B")]
+    assert moved == ["1", "3"]
+
+
 def test_load_rules_missing_file(tmp_path):
     assert sticky.load_sticky_rules(str(tmp_path / "absent.yaml")) == []
 
