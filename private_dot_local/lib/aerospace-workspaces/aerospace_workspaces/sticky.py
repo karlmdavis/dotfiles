@@ -38,8 +38,8 @@ def load_sticky_rules(path: str) -> list[Rule]:
 
     Each entry needs an `app-id`; `title-regex` (a Python regex, matched with `re.search`) is
     optional. Entries without an `app-id` or with an invalid regex are skipped (the latter with a
-    warning on stderr). Returns [] if the
-    file is absent or malformed, or has no `sticky-windows` list.
+    warning on stderr). Returns [] if the file is absent or malformed, or has no `sticky-windows`
+    list.
     """
     try:
         with open(path, encoding="utf-8") as handle:
