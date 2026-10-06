@@ -119,6 +119,8 @@ def _list_windows() -> list[dict[str, object]]:
                 "--monitor",
                 "all",
                 "--format",
+                # With --json, --format only picks which fields go in each record, so the
+                # variables need no separators (and it's what adds workspace / window-layout).
                 "%{window-id}%{app-bundle-id}%{window-title}%{workspace}%{window-layout}",
                 "--json",
             ]
