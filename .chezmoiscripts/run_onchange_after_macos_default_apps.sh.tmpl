@@ -23,6 +23,13 @@
 set -euo pipefail
 shopt -s nocasematch # Bundle IDs are case-insensitive.
 
+# Fail rather than exit 0, which would record the hash and never apply the list.
+if ! command -v utiluti >/dev/null 2>&1; then
+  echo "default apps: utiluti is not installed (the package manifest should have installed it)." >&2
+  echo "  Install it, then re-run 'chezmoi apply'." >&2
+  exit 1
+fi
+
 failed=()
 
 # Whether <bundle-id> is already the default app for files with <extension>.
