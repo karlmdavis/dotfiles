@@ -89,6 +89,16 @@ The repository uses a sophisticated template hierarchy:
 - `.chezmoidata/system_packages_autoinstall.yaml` - Declarative package manifest for macOS (Homebrew) and Ubuntu (apt + Homebrew)
 - `.chezmoiscripts/run_onchange_system_packages_autoinstall.sh.tmpl` - Script that runs when manifest changes, uses `brew bundle` for installation
 
+**Default Apps (macOS):**
+- `.chezmoidata/default_apps.yaml` - Which app opens which file extensions on double-click
+    (e.g. VS Code rather than Xcode for YAML, Python, C).
+    Lists only types to take away from another app; Apple-development types stay with Xcode.
+- `.chezmoiscripts/run_onchange_after_macos_default_apps.sh.tmpl` - Applies that list with `utiluti`
+    when it changes, and when a listed app that was missing gets installed.
+    Since macOS 26.4 the system makes the user confirm each change in a dialog and nothing can
+    pre-approve it, so the script sets only the types whose default differs, and an apply with
+    nobody at the screen waits on those dialogs.
+
 ### File Placement
 
 The top-level `README.md`'s "Repository Map" section is the source of truth for where things

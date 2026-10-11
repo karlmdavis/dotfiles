@@ -132,6 +132,9 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 
 #### System Ops
 
+- macOS default apps (file associations, set with [utiluti](https://github.com/scriptingosx/utiluti)):
+    [extension list](.chezmoidata/default_apps.yaml),
+    see also: [applier](.chezmoiscripts/run_onchange_after_macos_default_apps.sh.tmpl).
 - [SSH](https://www.openssh.com/):
     [`~/.ssh/`](private_dot_ssh/).
 - [System packages (Homebrew + apt)](https://brew.sh/):
