@@ -33,7 +33,8 @@ shellcheck \
   private_dot_local/lib/executable_check-mise-usage.sh \
   .chezmoiscripts/run_once_after_2026-09-16-cleanup-superpowers.sh \
   private_dot_claude/statusline-command.sh \
-  private_dot_local/bin/executable_zellij-welcome
+  private_dot_local/bin/executable_zellij-welcome \
+  dot_config/borders/executable_bordersrc
 
 # Sourced snippet with no shebang, so the shell dialect is given explicitly.
 shellcheck --shell=sh .chezmoitemplates/zellij-launch.sh
