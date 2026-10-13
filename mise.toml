@@ -2,9 +2,9 @@
 # Task runner for linting and testing
 
 # Treat this repo as a mise monorepo so embedded mini-projects can carry their own mise.toml and be
-# driven from here via `//<path>:<task>`. `experimental` is required for the monorepo feature and
+# driven from here via `//<path>:<task>`. `experimental` is required for the monorepo task syntax and
 # is set in-file so bare `mise run` (and the pre-commit hook) work without MISE_EXPERIMENTAL=1.
-experimental_monorepo_root = true
+monorepo_root = true
 
 [settings]
 experimental = true
