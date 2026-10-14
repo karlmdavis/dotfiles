@@ -99,6 +99,14 @@ The repository uses a sophisticated template hierarchy:
     pre-approve it, so the script sets only the types whose default differs, and an apply with
     nobody at the screen waits on those dialogs.
 
+**Obsidian (macOS):**
+- Installed by the `obsidian` cask in the package manifest, which also links the `obsidian` command.
+- Opens `.md` files, via its entry in `.chezmoidata/default_apps.yaml`.
+- `private_Library/private_Application Support/private_obsidian/modify_obsidian.json` - Turns on the
+    "Command line interface" setting (`"cli": true`) that lets the `obsidian` command reach the app.
+    It edits only that key in the app-wide `obsidian.json`, passing the rest (the vault list) through
+    byte-for-byte; tested by `test/obsidian/`.
+
 ### File Placement
 
 The top-level `README.md`'s "Repository Map" section is the source of truth for where things

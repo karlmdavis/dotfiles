@@ -125,6 +125,10 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
 
 - [Git](https://git-scm.com/):
     [`~/.gitconfig`](dot_gitconfig.tmpl).
+- [Obsidian](https://obsidian.md/) (macOS notes app):
+    [`~/Library/Application Support/obsidian/obsidian.json` CLI-setting script](private_Library/private_Application%20Support/private_obsidian/modify_obsidian.json),
+    see also: its cask in the [package manifest](.chezmoidata/system_packages_autoinstall.yaml) and its
+    `md` entry in the [default-apps list](.chezmoidata/default_apps.yaml).
 - [PostgreSQL psql](https://www.postgresql.org/docs/current/app-psql.html):
     [`~/.psqlrc`](dot_psqlrc).
 - [Rust toolchain](https://www.rust-lang.org/) (installer only):

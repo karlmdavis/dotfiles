@@ -1,0 +1,40 @@
+#!/bin/sh
+# chezmoi modify_ script.
+#
+# chezmoi runs this with the CURRENT target file on stdin and replaces the
+# target with our stdout.
+# We enforce Obsidian's "Command line interface" setting (Settings -> General ->
+# Advanced), which lets the `obsidian` command the Homebrew cask links talk to
+# the app. Obsidian keeps it in this app-wide file alongside the vault list, so
+# everything else is passed through exactly as Obsidian wrote it.
+#
+# Obsidian reads this file at launch and rewrites it from memory, so a change
+# made while it is running can be overwritten; it sticks from the next launch.
+set -eu
+
+# Command substitution strips trailing newlines, so read through a sentinel to
+# keep any the file ends with.
+current="$(cat; printf x)"
+current="${current%x}"
+
+# Already on: emit the file byte-for-byte, so Obsidian's own formatting never
+# causes `chezmoi diff` noise.
+if [ -n "$current" ] && printf '%s' "$current" | jq -e '.cli == true' >/dev/null; then
+  printf '%s' "$current"
+  exit 0
+fi
+
+# Rewriting re-serializes every number in the file. jq before 1.7 rounds
+# integers beyond 2^53 while doing so; refuse rather than alter the vault list.
+big='9007199254740993'
+if [ "$(printf '%s' "$big" | jq -c .)" != "$big" ]; then
+  echo "modify_obsidian.json: $(jq --version) rounds large numbers; jq 1.7+ is needed to edit obsidian.json safely." >&2
+  exit 1
+fi
+
+# Obsidian writes this file compact and with no trailing newline; match that
+# (command substitution strips the trailing newline jq adds). No file yet means
+# Obsidian has never run, and it starts from this one.
+[ -n "$current" ] || current='{}'
+result="$(printf '%s' "$current" | jq -c '.cli = true')"
+printf '%s' "$result"
