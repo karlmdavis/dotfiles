@@ -30,11 +30,3 @@
 
 # # Docker CLI plugins / binaries (Docker Desktop).
 # _pp "$HOME/.docker/bin"
-
-
-##
-# GUI apps
-##
-
-# # Obsidian (macOS app bundle) — lets you launch it from the shell.
-# _pp "/Applications/Obsidian.app/Contents/MacOS"

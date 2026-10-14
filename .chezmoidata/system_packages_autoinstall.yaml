@@ -68,6 +68,8 @@ packages:
         - thaw
         # Scriptable macOS menu bar app (renders the AeroSpace workspace indicator plugin).
         - swiftbar
+        # Markdown notes over local folders of plain files ("vaults"); also links the `obsidian` CLI.
+        - obsidian
         # Fancy launcher, replacement for Spotlight (VC-backed but not yet enshittified).
         #- raycast
   ubuntu:

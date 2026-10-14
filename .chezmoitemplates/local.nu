@@ -31,11 +31,3 @@
 
 # let docker_bin = ([$nu.home-dir, '.docker', 'bin'] | path join)
 # if ($docker_bin | path exists) { path add $docker_bin }
-
-
-##
-# GUI apps
-##
-
-# let obsidian_bin = '/Applications/Obsidian.app/Contents/MacOS'
-# if ($obsidian_bin | path exists) { path add $obsidian_bin }
