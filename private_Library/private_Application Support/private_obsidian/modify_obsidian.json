@@ -12,13 +12,24 @@
 # made while it is running can be overwritten; it sticks from the next launch.
 set -eu
 
-current="$(cat)"
+# Command substitution strips trailing newlines, so read through a sentinel to
+# keep any the file ends with.
+current="$(cat; printf x)"
+current="${current%x}"
 
 # Already on: emit the file byte-for-byte, so Obsidian's own formatting never
 # causes `chezmoi diff` noise.
 if [ -n "$current" ] && printf '%s' "$current" | jq -e '.cli == true' >/dev/null; then
   printf '%s' "$current"
   exit 0
+fi
+
+# Rewriting re-serializes every number in the file. jq before 1.7 rounds
+# integers beyond 2^53 while doing so; refuse rather than alter the vault list.
+big='9007199254740993'
+if [ "$(printf '%s' "$big" | jq -c .)" != "$big" ]; then
+  echo "modify_obsidian.json: $(jq --version) rounds large numbers; jq 1.7+ is needed to edit obsidian.json safely." >&2
+  exit 1
 fi
 
 # Obsidian writes this file compact and with no trailing newline; match that
