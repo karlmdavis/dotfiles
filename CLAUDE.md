@@ -99,6 +99,12 @@ The repository uses a sophisticated template hierarchy:
     pre-approve it, so the script sets only the types whose default differs, and an apply with
     nobody at the screen waits on those dialogs.
 
+**Obsidian (macOS):**
+- `private_Library/private_Application Support/private_obsidian/modify_obsidian.json` - Turns on
+    Obsidian's "Command line interface" setting (`"cli": true`) in its app-wide config, passing the
+    rest of the file (the vault list) through untouched. The Homebrew cask links the `obsidian`
+    command; this setting lets it reach the app. Tested by `test/obsidian/`.
+
 ### File Placement
 
 The top-level `README.md`'s "Repository Map" section is the source of truth for where things
