@@ -100,10 +100,12 @@ The repository uses a sophisticated template hierarchy:
     nobody at the screen waits on those dialogs.
 
 **Obsidian (macOS):**
-- `private_Library/private_Application Support/private_obsidian/modify_obsidian.json` - Turns on
-    Obsidian's "Command line interface" setting (`"cli": true`) in its app-wide config, passing the
-    rest of the file (the vault list) through untouched. The Homebrew cask links the `obsidian`
-    command; this setting lets it reach the app. Tested by `test/obsidian/`.
+- Installed by the `obsidian` cask in the package manifest, which also links the `obsidian` command.
+- Opens `.md` files, via its entry in `.chezmoidata/default_apps.yaml`.
+- `private_Library/private_Application Support/private_obsidian/modify_obsidian.json` - Turns on the
+    "Command line interface" setting (`"cli": true`) that lets the `obsidian` command reach the app.
+    It edits only that key in the app-wide `obsidian.json`, passing the rest (the vault list) through
+    byte-for-byte; tested by `test/obsidian/`.
 
 ### File Placement
 
