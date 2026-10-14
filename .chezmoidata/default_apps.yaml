@@ -52,3 +52,9 @@ default_apps:
         # Plain text.
         - txt
         - log
+    # Markdown is claimed by Obsidian, VS Code, Xcode, TextEdit, Word and LibreOffice alike, so which
+    # one wins depends on install order. Pin it to the notes app.
+    - app_path: "/Applications/Obsidian.app"
+      bundle_id: md.obsidian
+      extensions:
+        - md
