@@ -1,0 +1,29 @@
+#!/bin/sh
+# chezmoi modify_ script.
+#
+# chezmoi runs this with the CURRENT target file on stdin and replaces the
+# target with our stdout.
+# We enforce Obsidian's "Command line interface" setting (Settings -> General ->
+# Advanced), which lets the `obsidian` command the Homebrew cask links talk to
+# the app. Obsidian keeps it in this app-wide file alongside the vault list, so
+# everything else is passed through exactly as Obsidian wrote it.
+#
+# Obsidian reads this file at launch and rewrites it from memory, so a change
+# made while it is running can be overwritten; it sticks from the next launch.
+set -eu
+
+current="$(cat)"
+
+# Already on: emit the file byte-for-byte, so Obsidian's own formatting never
+# causes `chezmoi diff` noise.
+if [ -n "$current" ] && printf '%s' "$current" | jq -e '.cli == true' >/dev/null; then
+  printf '%s' "$current"
+  exit 0
+fi
+
+# Obsidian writes this file compact and with no trailing newline; match that
+# (command substitution strips the trailing newline jq adds). No file yet means
+# Obsidian has never run, and it starts from this one.
+[ -n "$current" ] || current='{}'
+result="$(printf '%s' "$current" | jq -c '.cli = true')"
+printf '%s' "$result"
