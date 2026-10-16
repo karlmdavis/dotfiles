@@ -32,6 +32,7 @@ test/
 Library/
 .aerospace.toml
 .config/aerospace/
+.config/sketchybar/
 .config/swiftbar/
 .hammerspoon/
 # Shared package behind the (macOS-only) SwiftBar plugin + AeroSpace HUD.
