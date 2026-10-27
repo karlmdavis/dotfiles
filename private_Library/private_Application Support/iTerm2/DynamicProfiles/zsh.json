@@ -1,0 +1,9 @@
+{
+  "Profiles": [{
+    "Name" : "zsh",
+    "Guid" : "1F4BCF97-639D-4ACF-B9BD-ACEB46858102",
+    "Dynamic Profile Parent Name" : "zellij",
+    "Command" : "/usr/bin/env NO_ZELLIJ=1 /bin/zsh -l",
+    "Custom Command" : "Yes"
+  }]
+}

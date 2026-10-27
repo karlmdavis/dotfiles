@@ -11,6 +11,8 @@ This page explains how a palette gets into a profile, which palette is applied t
     one JSON file per profile, deployed to `~/Library/Application Support/iTerm2/DynamicProfiles/` on
     macOS.
     `zellij.json` is the base profile.
+    `zsh.json` is a local login zsh started with `NO_ZELLIJ=1`, so it never opens the zellij chooser;
+      it holds no colour keys and inherits them from the base profile.
     The `karl-<host>.json` and `work-wifi-longview.json` files are remote-host profiles that SSH
     somewhere; which of them deploy on a given machine is decided in
     [`.chezmoiignore`](../../../.chezmoiignore) (never the one for the host you are on, none of them

@@ -160,3 +160,18 @@ install_gc() {
   [ "$(cat "$RECORD/zellij-args")" = "-l welcome" ]
   [ -e "$RECORD/gc-was-done" ]
 }
+
+@test "the iTerm2 zsh profile command opts out of zellij and lands in a login zsh" {
+  command -v jq >/dev/null 2>&1 || { echo "requires jq" >&2; return 1; }
+  [ -x /bin/zsh ] || skip "requires /bin/zsh"
+  profile="$REPO/private_Library/private_Application Support/iTerm2/DynamicProfiles/zsh.json"
+  command="$(jq -r '.Profiles[0].Command' "$profile")"
+
+  # iTerm2 splits the command into words much as a shell does, so a shell stands in for it. The
+  # throwaway HOME has no ~/.zprofile, so this proves only what the command itself sets up.
+  run sh -c "$command -c 'echo \"\$NO_ZELLIJ\"; [[ -o login ]] && echo login'"
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "1" ]
+  [ "${lines[1]}" = "login" ]
+  [ "${#lines[@]}" -eq 2 ]
+}

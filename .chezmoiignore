@@ -47,7 +47,7 @@ Library/
 {{- end }}
 
 {{ if eq .chezmoi.os "darwin" }}
-# iTerm2 remote-host profiles deploy per-machine (the base `zellij` profile always applies):
+# iTerm2 remote-host profiles deploy per-machine (the `zellij` and `zsh` profiles always apply):
 #   - never deploy the profile for the host you're on (no SSHing into yourself); keyed on
 #     hostname, so karl-<hostname>.json self-excludes (e.g. karl-mantis.json on mantis).
 #   - on CMS (work) workstations, deploy none of the remote-host profiles, so the work machine

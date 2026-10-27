@@ -189,6 +189,7 @@ Safeguards:
 - IDE integrated terminals skipped by name (`VSCODE_*`, `TERM_PROGRAM`, `ZED_TERM`, `TERMINAL_EMULATOR`).
 - The Claude desktop app's shell skipped by name (`TERM_PROGRAM=claude-desktop`).
 - `NO_ZELLIJ=1` environment variable opt-out.
+    The iTerm2 `zsh` profile is the local route that uses it: a login zsh started with `NO_ZELLIJ=1`.
 - Recursion prevention (checks `$ZELLIJ` variable).
 - Fallback to the normal shell if zellij missing.
 
