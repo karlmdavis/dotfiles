@@ -892,6 +892,12 @@ def test_shim_runs_the_package_and_passes_its_arguments_and_status(zellij, monke
     shim = project.parents[1] / "bin" / "executable_zellij-gc"
     monkeypatch.setenv("ZELLIJ_GC_LIB_DIR", str(project))
     monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    # The `uv` on PATH is usually a mise shim, and mise refuses to run under a config file it
+    # does not trust. The zellij fixture gives this test a throwaway HOME, which holds no trust
+    # records, so every mise.toml the shim's mise would load (each one up the tree: the repo's,
+    # and the enclosing checkout's when this is a worktree inside it) is vouched for explicitly.
+    mise_roots = [parent for parent in project.parents if (parent / "mise.toml").is_file()]
+    monkeypatch.setenv("MISE_TRUSTED_CONFIG_PATHS", os.pathsep.join(map(str, mise_roots)))
 
     preview = subprocess.run([str(shim), "--dry-run"], capture_output=True, text=True, check=False)
     assert preview.returncode == 0, preview.stderr
