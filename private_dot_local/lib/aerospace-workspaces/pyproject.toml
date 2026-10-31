@@ -1,7 +1,7 @@
 [project]
 name = "aerospace-workspaces"
 version = "0.1.0"
-description = "Shared AeroSpace workspace helpers for the SwiftBar plugin and the workspace-switch HUD."
+description = "Shared AeroSpace workspace helpers for the SwiftBar and SketchyBar plugins and the workspace-switch HUD."
 requires-python = ">=3.11"
 dependencies = ["pyyaml"]
 

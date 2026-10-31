@@ -99,6 +99,11 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     see also: [palette docs](private_Library/private_Application%20Support/iTerm2/README.md), the
     [color schemes stash](private_Library/private_Application%20Support/iTerm2/color-schemes/), and the
     [quit-prompt disabler](.chezmoiscripts/run_once_after_2026-09-05-configure-iterm2-quit.sh.tmpl) (so iTerm2 never blocks a macOS restart).
+- [SketchyBar](https://felixkratz.github.io/SketchyBar/) (macOS status bar, in place of the menu bar):
+    [`~/.config/sketchybar/`](dot_config/sketchybar/),
+    see also: the AeroSpace workspace strip's logic in the
+    [`aerospace-workspaces`](private_dot_local/lib/aerospace-workspaces/) package;
+    launched from [`~/.aerospace.toml`](dot_aerospace.toml.tmpl).
 - [SwiftBar](https://swiftbar.app/) (macOS menu bar): AeroSpace workspace indicator at
     [`~/.config/swiftbar/plugins/`](dot_config/swiftbar/plugins/) (a thin shim over the
     [`aerospace-workspaces`](private_dot_local/lib/aerospace-workspaces/) package),

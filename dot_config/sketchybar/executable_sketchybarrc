@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# SketchyBar config: a thin status bar that stands in for the native macOS menu bar, which is set
+# to hide automatically (System Settings > Menu Bar).
+#
+# SketchyBar runs this file once at startup, and again on every reload; each `sketchybar` call
+# below sends configuration to that running instance. Left of the notch is the AeroSpace workspace
+# strip; right of it are the status items. Plugins live in plugins/ and are run by SketchyBar with
+# $NAME (the item), $SENDER (the event), and $CONFIG_DIR (this directory) in their environment.
+
+# shellcheck source=dot_config/sketchybar/common.sh
+source "$CONFIG_DIR/common.sh"
+
+PLUGINS="$CONFIG_DIR/plugins"
+# Click scripts run outside this file, so they get the absolute path.
+SKETCHYBAR="$(command -v sketchybar)"
+
+# Reload whenever a file in this directory changes, so `chezmoi apply` is the whole tweak loop.
+sketchybar --hotload on
+
+# The bar. Opaque and square-edged, with no blur, border, or shadow. `height` is what an external
+# display gets; plugins/notch.sh sets the built-in display's height to fill its notch band.
+sketchybar --bar \
+  height=26 \
+  color="$BAR_COLOR" \
+  padding_left=8 \
+  padding_right=8
+
+sketchybar --default \
+  icon.font="$FONT:Regular:15.0" \
+  icon.color="$FG" \
+  icon.padding_left=6 \
+  icon.padding_right=0 \
+  label.font="$FONT:Regular:13.0" \
+  label.color="$FG" \
+  label.padding_left=4 \
+  label.padding_right=4 \
+  popup.background.color="$POPUP_COLOR" \
+  popup.background.border_color="$POPUP_BORDER" \
+  popup.background.border_width=1 \
+  popup.background.corner_radius=4 \
+  updates=when_shown
+
+# aerospace_workspace_change is triggered from exec-on-workspace-change in ~/.aerospace.toml;
+# tailscale_refresh by plugins/tailscale.sh after it changes something.
+sketchybar --add event aerospace_workspace_change \
+           --add event tailscale_refresh
+
+# ---- Left --------------------------------------------------------------------------------------
+
+# Two invisible items that exist only to run a script (hence updates=on: nothing is "shown").
+#
+# `notch` sizes the bar on the built-in display, again whenever the display arrangement or
+# resolution changes.
+#
+# `workspaces` maintains the AeroSpace workspace strip: it adds a `space.<id>` item per workspace
+# and shows the occupied ones (see the aerospace_workspaces.sketchybar module). AeroSpace only
+# announces workspace switches, and a window opening, closing, or moving to another workspace
+# changes the strip too: macOS announces the first two, and the 10s re-run catches the last.
+sketchybar --add item notch left \
+  --set notch drawing=off updates=on script="$PLUGINS/notch.sh" \
+  --subscribe notch display_change system_woke \
+  \
+  --add item workspaces left \
+  --set workspaces drawing=off updates=on update_freq=10 \
+    script="$PLUGINS/aerospace-workspaces.py --dim $DIM --accent $ACCENT" \
+  --subscribe workspaces aerospace_workspace_change space_windows_change system_woke
+
+# ---- Right (the first item added sits at the edge) ---------------------------------------------
+
+sketchybar --add item clock right \
+  --set clock icon.drawing=off update_freq=10 script="$PLUGINS/clock.sh"
+
+sketchybar --add item battery right \
+  --set battery update_freq=120 script="$PLUGINS/battery.sh" \
+  --subscribe battery power_source_change system_woke
+
+# Click toggles mute.
+sketchybar --add item volume right \
+  --set volume script="$PLUGINS/volume.sh" \
+  --subscribe volume volume_change mouse.clicked
+
+# CPU and RAM: the script on `cpu` updates both. Fixed-width labels keep the items to their left
+# from shifting as the numbers change.
+sketchybar --add item ram right \
+  --set ram icon="$ICON_RAM" label.width=38 label.align=right \
+  --add item cpu right \
+  --set cpu icon="$ICON_CPU" label.width=38 label.align=right update_freq=5 script="$PLUGINS/system.sh"
+
+# Wi-Fi: the icon shows connected / not connected / off, and a click opens a popup with a power
+# toggle, the current address, and a shortcut to the system's Wi-Fi settings. There is no network
+# name or network picker: macOS redacts the SSID from anything without root or Location access.
+sketchybar --add item wifi right \
+  --set wifi label.drawing=off update_freq=30 script="$PLUGINS/wifi.sh" \
+    click_script="$SKETCHYBAR --set wifi popup.drawing=toggle" \
+  --subscribe wifi wifi_change system_woke mouse.exited.global \
+  \
+  --add item wifi.power popup.wifi \
+  --set wifi.power icon.drawing=off click_script="$PLUGINS/wifi.sh toggle" \
+  --add item wifi.address popup.wifi \
+  --set wifi.address icon.drawing=off label.color="$DIM" \
+  --add item wifi.settings popup.wifi \
+  --set wifi.settings icon.drawing=off label="Wi-Fi Settings…" \
+    click_script="open 'x-apple.systempreferences:com.apple.wifi-settings-extension'; $SKETCHYBAR --set wifi popup.drawing=off"
+
+# Tailscale and 1Password are not installed on every machine, so each item appears only where its
+# app does.
+
+# Tailscale: the icon shows off / on / on with an exit node (which is then named beside it), and a
+# click opens a popup to connect or disconnect and to pick the exit node. plugins/tailscale.sh
+# fills in the exit-node rows.
+if command -v tailscale >/dev/null || [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+  sketchybar --add item tailscale right \
+    --set tailscale icon="$ICON_TAILSCALE" label.drawing=off update_freq=30 script="$PLUGINS/tailscale.sh" \
+      click_script="$SKETCHYBAR --set tailscale popup.drawing=toggle" \
+    --subscribe tailscale tailscale_refresh system_woke mouse.exited.global \
+    \
+    --add item tailscale.toggle popup.tailscale \
+    --set tailscale.toggle icon.drawing=off
+fi
+
+# 1Password: a click opens Quick Access.
+if [ -x /Applications/1Password.app/Contents/MacOS/1Password ]; then
+  sketchybar --add item onepassword right \
+    --set onepassword icon="$ICON_1PASSWORD" label.drawing=off \
+      click_script="/Applications/1Password.app/Contents/MacOS/1Password --quick-access"
+fi
+
+# Run every script once now, rather than wait for each one's first event or tick.
+sketchybar --update

@@ -6,10 +6,16 @@
 {{- end -}}
 config-version = 2
 
-# Push a SwiftBar refresh once the server is up, so the menu-bar workspace indicator stops
-# showing "unavailable" at login as soon as AeroSpace can answer, instead of waiting for the
-# plugin's next 10s tick. Same push as exec-on-workspace-change below.
-after-startup-command = ['exec-and-forget open -g "swiftbar://refreshallplugins"']
+# Once the server is up:
+#   - Push a SwiftBar refresh, so the menu-bar workspace indicator stops showing "unavailable" at
+#     login as soon as AeroSpace can answer, instead of waiting for the plugin's next 10s tick.
+#     Same push as exec-on-workspace-change below.
+#   - Start SketchyBar, which reads ~/.config/sketchybar/sketchybarrc; it detects an
+#     already-running instance, so an AeroSpace restart does not start a second one.
+after-startup-command = [
+    'exec-and-forget open -g "swiftbar://refreshallplugins"',
+    'exec-and-forget sketchybar',
+]
 start-at-login = true
 
 enable-normalization-flatten-containers = true
@@ -28,17 +34,19 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B",
 
 on-mode-changed = []
 
-# On every workspace switch, push an instant SwiftBar refresh so the menu-bar workspace indicator
-# updates immediately (the plugin's 10s filename interval is just the fallback).
-# See ~/.config/swiftbar/plugins/aerospace-workspaces.10s.py.
+# On every workspace switch, push an instant refresh to both workspace indicators so they update
+# immediately (each one's own 10s tick is just the fallback).
+# See ~/.config/swiftbar/plugins/aerospace-workspaces.10s.py and the `workspaces` item in
+# ~/.config/sketchybar/sketchybarrc.
+{{- $refresh := "open -g 'swiftbar://refreshallplugins'; sketchybar --trigger aerospace_workspace_change" }}
 {{- if index $data "sticky-windows" }}
 # First, float and pull this machine's "sticky" windows (its workspaces.yaml `sticky-windows:`
 # rules) onto the new workspace, since AeroSpace has no show-on-all-workspaces option.
 # See ~/.config/aerospace/follow-sticky-windows.py.
 exec-on-workspace-change = ['/bin/bash', '-c',
-    "~/.config/aerospace/follow-sticky-windows.py; open -g 'swiftbar://refreshallplugins'"]
+    "~/.config/aerospace/follow-sticky-windows.py; {{ $refresh }}"]
 {{- else }}
-exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallplugins'"]
+exec-on-workspace-change = ['/bin/bash', '-c', "{{ $refresh }}"]
 {{- end }}
 
 [key-mapping]
@@ -49,7 +57,10 @@ exec-on-workspace-change = ['/bin/bash', '-c', "open -g 'swiftbar://refreshallpl
     inner.vertical =   0
     outer.left =       0
     outer.bottom =     0
-    outer.top =        0
+    # Room for SketchyBar. On the built-in display macOS already keeps the notch band clear of
+    # windows and the bar sits inside it; any other display reserves nothing, so leave the bar's
+    # height (`height` in ~/.config/sketchybar/sketchybarrc).
+    outer.top =        [{ monitor."built-in" = 0 }, 26]
     outer.right =      0
 
 [mode.main.binding]
