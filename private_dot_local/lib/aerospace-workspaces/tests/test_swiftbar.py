@@ -6,7 +6,11 @@ import time
 
 from aerospace_workspaces import swiftbar
 from aerospace_workspaces.swiftbar import (
+    TITLE_ACCENT,
+    TITLE_DIM,
+    TITLE_NAME_LIMIT,
     UNAVAILABLE_TITLE,
+    menu_bar_title,
     ordered_ids,
     render,
     render_unavailable,
@@ -60,17 +64,59 @@ def test_ordered_ids_declared_first_then_remaining():
 # --- title ----------------------------------------------------------------------------------
 
 
-def test_title_is_focused_icon_label():
-    assert render_default(focused="C").splitlines()[0] == "💬 C: Comms"
+def strip(focused="C", ids=None, windows=None):
+    """The title line as (plain text with the colour codes removed, SwiftBar params)."""
+    if ids is None:
+        ids = ["I", "9", "C", "Z"]
+    line = menu_bar_title(focused, ids, WINDOWS if windows is None else windows, RECORDS)
+    text, _, params = line.partition(" | ")
+    return text.replace(TITLE_DIM, "").replace(TITLE_ACCENT, ""), params
 
 
-def test_title_includes_focused_emoji():
-    assert render_default(focused="I").splitlines()[0].startswith("🖥️")
+def test_title_is_first_rendered_line():
+    expected = menu_bar_title("C", ["I", "9", "C", "Z"], WINDOWS, RECORDS)
+    assert render_default(focused="C").splitlines()[0] == expected
+
+
+def test_title_lists_occupied_workspaces_in_aerospace_order():
+    # I, C and Z have windows; 9 is empty and not focused, so it is left out. Order follows the
+    # live `ids`, not the declared order the dropdown uses.
+    assert strip(focused="C")[0] == "I 💬 C: Comms Z"
+
+
+def test_title_shows_focused_workspace_even_when_empty():
+    assert strip(focused="9")[0] == "I 9: Hiring C Z"
+
+
+def test_title_shows_focused_workspace_missing_from_ids():
+    assert strip(focused="Q", ids=["I", "C"])[0] == "I C Q"
+
+
+def test_title_with_only_the_focused_workspace():
+    assert strip(focused="C", ids=["C", "9"], windows={})[0] == "💬 C: Comms"
+
+
+def test_title_enables_ansi_rendering():
+    assert strip()[1] == "ansi=true"
+
+
+def test_title_colours_every_entry():
+    # SwiftBar leaves uncoloured text in an ANSI title black, so no entry may go without a code:
+    # the focused entry carries the accent and each of the others the dim colour.
+    text = menu_bar_title("C", ["I", "9", "C", "Z"], WINDOWS, RECORDS).partition(" | ")[0]
+    assert text == f"{TITLE_DIM}I {TITLE_ACCENT}💬 C: Comms {TITLE_DIM}Z"
 
 
 def test_long_focused_name_truncated_with_ellipsis():
-    out = render("V", ["V"], {}, RECORDS, DECLARED).splitlines()[0]
-    assert out.startswith("📹 V: Meetings") and out.endswith("…") and len(out) <= 30
+    focused = strip(focused="V", ids=["V"], windows={})[0]
+    assert focused.startswith("📹 V: Meetings") and focused.endswith("…")
+    assert len(focused) <= TITLE_NAME_LIMIT
+
+
+def test_pipe_in_workspace_name_neutralized():
+    # A raw `|` in the title would start SwiftBar's params early and swallow `ansi=true`.
+    line = menu_bar_title("P", ["P"], {}, {"P": {"name": "a | b"}})
+    assert line.count("|") == 1 and "a ¦ b" in line
 
 
 def test_separator_follows_title():
