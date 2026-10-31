@@ -94,6 +94,10 @@ Everything else (the `dot_*`, `private_dot_*`, and `private_Library/` entries) i
     [`workspaces.yaml` icon/name/hint map](dot_config/aerospace/create_workspaces.yaml).
 - [Hammerspoon](https://www.hammerspoon.org/) (macOS automation):
     [`~/.hammerspoon/`](dot_hammerspoon/).
+- [JankyBorders](https://github.com/FelixKratz/JankyBorders) (macOS focused-window border):
+    [`~/.config/borders/bordersrc`](dot_config/borders/executable_bordersrc),
+    see also: [live-reload on apply](.chezmoiscripts/run_onchange_after_reload-borders.sh.tmpl);
+    launched from [`~/.aerospace.toml`](dot_aerospace.toml.tmpl).
 - [iTerm2](https://iterm2.com/) (macOS terminal):
     [`~/Library/Application Support/iTerm2/DynamicProfiles/`](private_Library/private_Application%20Support/iTerm2/DynamicProfiles/),
     see also: [palette docs](private_Library/private_Application%20Support/iTerm2/README.md), the
