@@ -219,23 +219,30 @@ def zellij_cache_dir() -> Path:
 
 
 def read_metadata(name: str) -> str | None:
-    """The text of a running session's metadata file, or None if there is none to be read.
+    """The text of a running session's metadata file, or None if no file that can be read is its.
 
     A session's folder is found by the name its file records, not by the folder's own name: zellij
     0.46 names the folder for a random id, where earlier versions named it for the session.
+    So every session's file is read to find one, and a file that cannot be read is passed over as
+    another session's.
     The folder above `session_info` is named for a version of zellij's file format, and folders
     from earlier versions are left behind, so the most recently written file is the one used.
     """
-    name_line = f"name {json.dumps(name)}"
+    # The name as zellij's KDL writer quotes it, which leaves characters beyond ASCII as they are.
+    name_line = f"name {json.dumps(name, ensure_ascii=False)}"
     newest: tuple[float, str] | None = None
     try:
-        for path in zellij_cache_dir().glob(f"*/session_info/*/{METADATA_FILE}"):
-            text = path.read_text(encoding="utf-8", errors="replace")
-            written = path.stat().st_mtime
-            if name_line in text.splitlines() and (newest is None or written > newest[0]):
-                newest = (written, text)
+        paths = list(zellij_cache_dir().glob(f"*/session_info/*/{METADATA_FILE}"))
     except OSError:
         return None
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            written = path.stat().st_mtime
+        except OSError:
+            continue
+        if name_line in text.splitlines() and (newest is None or written > newest[0]):
+            newest = (written, text)
     return None if newest is None else newest[1]
 
 
