@@ -363,8 +363,13 @@ class FakeZellij:
         threading.Thread(target=watch, daemon=True).start()
 
 
-def write_metadata(name, *, clients=0, panes=((True, "welcome-screen"),), tabs=("Tab #1",)):
-    """Write a session's metadata file as its zellij server would, in zellij's own layout."""
+def write_metadata(
+    name, *, clients=0, panes=((True, "welcome-screen"),), tabs=("Tab #1",), folder=None
+):
+    """Write a session's metadata file as its zellij server would, in zellij's own layout.
+
+    `folder` is the session's folder name where that isn't its name, as from zellij 0.46.
+    """
     lines = [f'name "{name}"', "tabs {"]
     for position, tab in enumerate(tabs):
         lines += ["    tab {", f"        position {position}", f'        name "{tab}"', "    }"]
@@ -378,7 +383,7 @@ def write_metadata(name, *, clients=0, panes=((True, "welcome-screen"),), tabs=(
         lines += [f'        plugin_url "{plugin_url}"'] if plugin_url else []
         lines += ["        tab_position 0", "    }"]
     lines += ["}", f"connected_clients {clients}", "creation_time 18000", ""]
-    folder = collector.zellij_cache_dir() / "contract_version_1" / "session_info" / name
+    folder = collector.zellij_cache_dir() / "contract_version_1" / "session_info" / (folder or name)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / collector.METADATA_FILE).write_text("\n".join(lines), encoding="utf-8")
     return "\n".join(lines)
@@ -626,11 +631,24 @@ def test_metadata_is_read_from_the_newest_of_zellij_s_folders(zellij):
     current = write_metadata("dotfiles", clients=1)
     stale = collector.zellij_cache_dir() / "0.43.1" / "session_info" / "dotfiles"
     stale.mkdir(parents=True)
-    (stale / collector.METADATA_FILE).write_text("connected_clients 0\n", encoding="utf-8")
+    (stale / collector.METADATA_FILE).write_text(
+        'name "dotfiles"\nconnected_clients 0\n', encoding="utf-8"
+    )
     os.utime(stale / collector.METADATA_FILE, (0, 0))
     assert collector.read_metadata("dotfiles") == current
     assert collector.read_metadata("no-such-session") is None
     assert collector.read_metadata("*") is None
+
+
+def test_metadata_is_found_by_the_name_in_the_file_not_the_folder_s(zellij):
+    """zellij 0.46 names a session's folder for a random id, and a rename leaves it where it is."""
+    current = write_metadata("dotfiles", clients=1, folder="3f9a1c0b7d2e")
+    # A folder named for the session but recording another name belongs to another session.
+    write_metadata("renamed-since", folder="dotfiles")
+    assert collector.read_metadata("dotfiles") == current
+    # A tab of that name is not the session's name.
+    write_metadata("other", tabs=("homelab",), folder="5b7e2a9c1d04")
+    assert collector.read_metadata("homelab") is None
 
 
 def test_a_run_with_nothing_to_delete_still_leaves_a_line(zellij, tmp_path):

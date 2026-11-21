@@ -30,7 +30,6 @@ import argparse
 import contextlib
 import fcntl
 import functools
-import glob
 import json
 import logging
 import logging.handlers
@@ -222,15 +221,22 @@ def zellij_cache_dir() -> Path:
 def read_metadata(name: str) -> str | None:
     """The text of a running session's metadata file, or None if there is none to be read.
 
+    A session's folder is found by the name its file records, not by the folder's own name: zellij
+    0.46 names the folder for a random id, where earlier versions named it for the session.
     The folder above `session_info` is named for a version of zellij's file format, and folders
     from earlier versions are left behind, so the most recently written file is the one used.
     """
+    name_line = f"name {json.dumps(name)}"
+    newest: tuple[float, str] | None = None
     try:
-        files = list(zellij_cache_dir().glob(f"*/session_info/{glob.escape(name)}/{METADATA_FILE}"))
-        newest = max(files, key=lambda path: path.stat().st_mtime, default=None)
-        return None if newest is None else newest.read_text(encoding="utf-8", errors="replace")
+        for path in zellij_cache_dir().glob(f"*/session_info/*/{METADATA_FILE}"):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            written = path.stat().st_mtime
+            if name_line in text.splitlines() and (newest is None or written > newest[0]):
+                newest = (written, text)
     except OSError:
         return None
+    return None if newest is None else newest[1]
 
 
 class RunFailedError(Exception):
