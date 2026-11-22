@@ -77,8 +77,12 @@ Other sessions usually contain running Claude Code conversations and long-lived 
     it shows as EXITED and can be resurrected.
 - `zellij delete-session <name>` removes a session's saved layout for good; with `--force` it also
     kills a running one first.
-- When the user asks to tidy sessions, say which of the two you mean and ask which sessions, by
-    name, before running either.
+- When the user asks to tidy or clean up sessions, lay out both choices in your reply, because
+    they leave the chooser looking different and "clean up" could mean either:
+    an exited session can only be deleted;
+    a running one can be killed, which stops its programs but leaves it in the chooser as EXITED,
+    or deleted with `--force`, which removes it altogether.
+    Then ask which sessions, by name, and which of the two, before running anything.
 - `kill-all-sessions` and `delete-all-sessions` are the user's to run, from the iTerm2 `zsh` profile
     (a shell outside Zellij), because they also end your own session mid-command.
 - Never interrupt a delete once it has started.
