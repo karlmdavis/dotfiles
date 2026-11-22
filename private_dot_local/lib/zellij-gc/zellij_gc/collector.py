@@ -30,7 +30,6 @@ import argparse
 import contextlib
 import fcntl
 import functools
-import glob
 import json
 import logging
 import logging.handlers
@@ -220,17 +219,34 @@ def zellij_cache_dir() -> Path:
 
 
 def read_metadata(name: str) -> str | None:
-    """The text of a running session's metadata file, or None if there is none to be read.
+    """Return the text of the metadata file for the session called `name`, or None if none is found.
 
-    The folder above `session_info` is named for a version of zellij's file format, and folders
-    from earlier versions are left behind, so the most recently written file is the one used.
+    Zellij keeps one metadata file per session, each in its own folder.
+    Before 0.46 that folder was named after the session; from 0.46 it is named with a random id.
+    So the folder name cannot be relied on, and this reads every metadata file and picks the one
+    whose `name` line matches.
+    A file that cannot be read is skipped.
+
+    Zellij also leaves old copies behind in folders for earlier versions of its file format.
+    If more than one file matches, the most recently modified one is returned.
     """
+    # Zellij's KDL writer does not escape non-ASCII characters, so neither does this.
+    name_line = f"name {json.dumps(name, ensure_ascii=False)}"
+    # Modification time in whole nanoseconds, paired with the file's text.
+    newest: tuple[int, str] | None = None
     try:
-        files = list(zellij_cache_dir().glob(f"*/session_info/{glob.escape(name)}/{METADATA_FILE}"))
-        newest = max(files, key=lambda path: path.stat().st_mtime, default=None)
-        return None if newest is None else newest.read_text(encoding="utf-8", errors="replace")
+        paths = list(zellij_cache_dir().glob(f"*/session_info/*/{METADATA_FILE}"))
     except OSError:
         return None
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            written = path.stat().st_mtime_ns
+        except OSError:
+            continue
+        if name_line in text.splitlines() and (newest is None or written > newest[0]):
+            newest = (written, text)
+    return None if newest is None else newest[1]
 
 
 class RunFailedError(Exception):
