@@ -1,8 +1,9 @@
 # Upgrading Zellij
 
 This is the procedure used for 0.45.1 → 0.46.0 on macOS on 2026-11-22, which went cleanly.
-The shape of it should hold for later upgrades; the command names are that day's, so confirm them
-  with `--help`, and read the new version's release notes for anything that changes the picture.
+The shape of it should hold for later upgrades.
+Read the new version's release notes for anything that changes the picture, and if a command here
+  fails, follow "When a command here fails" in `SKILL.md`.
 
 ## What makes it safe
 

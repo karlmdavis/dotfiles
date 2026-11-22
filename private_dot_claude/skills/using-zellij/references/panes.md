@@ -1,65 +1,73 @@
 # Driving panes and tabs from the shell
 
-The commands here are examples that worked on Zellij 0.46.0.
-Before using one, find it in `zellij --help` or `zellij action --help` and read its own `--help`:
-  flags have been added and renamed between versions, and newer actions may do the job better.
-The lessons under each heading are what past sessions learned the hard way, and they outlast the
-  flags.
+The commands are the ones in the skill's core table, checked on Zellij 0.46.0.
+Use them as written; if one fails, follow "When a command here fails" in `SKILL.md`.
 
-## The steps, and what to look up for each
+## Find the right pane
 
-| Step | Look in the help for | 0.46.0 example |
-| --- | --- | --- |
-| See the panes | An action that lists panes, and its options for tab, command, and state | `zellij action list-panes -t -c -s` |
-| Type into a pane | Actions that write characters, send keys, or paste | `zellij action write-chars --pane-id terminal_3 'ls'` |
-| Press a key | The send-keys action | `zellij action send-keys --pane-id terminal_3 "Enter"` |
-| Open a pane | The `run` command | `zellij run --no-focus --name review -- <command>` |
-| Open a tab | The new-tab action | `zellij action new-tab --name review -- <command>` |
-| Read a pane | An action that dumps a pane's screen | `zellij action dump-screen --pane-id terminal_3 --full` |
-| Follow a pane | The `subscribe` command | `zellij subscribe --pane-id terminal_3` |
-| Close a pane | The close-pane action | `zellij action close-pane --pane-id terminal_3` |
-
-## Finding the right pane
+```bash
+zellij action list-panes -t -c -s
+```
 
 - Your own pane is `terminal_$ZELLIJ_PANE_ID`.
     "The pane next to this one" is another terminal pane in the same tab as yours.
     If more than one fits, ask which.
-- Look at what each pane is running before typing into it.
+- Look at the `COMMAND` column before typing into a pane.
     Characters go to whatever program is there, so a shell command belongs only in a pane sitting
     at a shell prompt.
 
-## Typing
+## Type into a pane that is already open
 
-- Name the target pane on every command.
-    Without one, the action goes to the focused pane, which is usually your own.
+```bash
+zellij action write-chars --pane-id terminal_3 'hx README.md'
+zellij action send-keys --pane-id terminal_3 "Enter"
+```
+
+- Sending text and pressing Enter are separate commands.
+- `send-keys` takes key names: `"Enter"`, `"Ctrl c"`, `"Esc"`.
 - The panes' shell is nushell, so write nushell syntax, or start the line with `zsh -lc '…'`.
-- Sending text and pressing Enter are separate actions.
 
-## Opening
+## Open a new pane
 
-- A command started in a new pane does not get the login `PATH` and is not run through a shell.
-    Use absolute paths (`/opt/homebrew/bin/hx`) or wrap it as `zsh -lc '<command>'`.
-- A new pane takes focus unless told not to, and in a stack that collapses your own pane to its
-    title bar while the user is reading it.
-    Look in the help for an option that leaves focus alone; where the installed version has none,
-    move focus back to your own pane with the focus action afterwards.
-- The opening command prints the new pane's id.
-    Capture it and use it for every later step, never a guessed id.
-- Avoid the close-on-exit option unless nobody needs the output.
-    A command that fails at once then takes its error message with it, and the pane is simply gone.
-- For a shell the user and you will share, open a login shell and type into it, so that it stays
-    open between commands.
+```bash
+zellij run --near-current-pane --no-focus --direction down --name review -- /opt/homebrew/bin/hx README.md
+```
 
-## Reading and waiting
+- `--near-current-pane` puts it in your tab, next to your pane.
+    Without it the pane opens wherever the user's focus is, which may be another tab.
 
-- Dumping the screen works on a pane collapsed in a stack.
-- To wait for a prompt, poll the dump until the expected text appears; a first start of a slow tool
-    can take over a minute before printing anything.
-- A subscription runs until stopped, so start it in the background.
+- It prints the new pane's id (`terminal_<n>`).
+    Use that id for every later step, never a guessed one.
+- `--direction down` or `right` makes a split; `--stacked` stacks it with the current pane;
+    `--floating` floats it; `--cwd <dir>` sets its directory.
+- The command does not get the login `PATH` and is not run through a shell.
+    Use absolute paths, or wrap it as `-- zsh -lc '<command>'`.
+- `--no-focus` leaves the user's cursor where it was.
+    Without it the new pane takes focus, and in a stack your own pane collapses to its title bar
+    while the user is reading it.
+- When the command exits, the pane stays open showing its exit status.
+    Avoid `--close-on-exit` unless nobody needs the output: a command that fails at once then takes
+    its error message with it, and the pane is simply gone.
+- For a shell the user and you will share, open `-- zsh -l` and type into it, so it stays open
+    between commands.
+- A new tab instead: `zellij action new-tab --name <name> --cwd <dir> -- <command>`, which prints
+    the tab's id.
+
+## Read a pane
+
+```bash
+zellij action dump-screen --pane-id terminal_3          # What is visible now.
+zellij action dump-screen --pane-id terminal_3 --full   # Including scrollback.
+```
+
+- This works on a pane collapsed in a stack.
+- Pipe it through `tail` or `grep`; a full scrollback can be long.
+- To wait for a prompt, poll until the expected text appears; a slow tool's first start can take
+    over a minute before printing anything.
 
 ## Afterwards
 
-- Close only panes you opened.
+- Close only panes you opened (`zellij action close-pane --pane-id terminal_<n>`).
     If the point was to show the user something, leave it open and say that it is.
 - List the panes again to confirm the result, and when the pane was for the user's eyes, ask
     whether they can see it.
@@ -74,5 +82,5 @@ The lessons under each heading are what past sessions learned the hard way, and 
 - **Prompts that spend money or change data.**
     When a shared pane asks a consequential question, the user answers it, not you.
 - **Other sessions.**
-    A global option on `zellij` targets another session by name.
+    `zellij --session <name> action …` reaches another session.
     Reading from it is fine; typing into it or rearranging it needs the user's request.

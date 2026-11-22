@@ -1,10 +1,10 @@
 # Inspecting sessions and Zellij's files
 
 Everything here is read-only.
-The commands are examples that worked on Zellij 0.46.0, and the file layout is what that version
-  uses; both have changed before.
-Confirm commands with `--help`, and confirm paths by looking (`ls`, and the socket path in each
-  server's command line) before building on them.
+The commands were checked on Zellij 0.46.0; use them as written, and if one fails, follow "When a
+  command here fails" in `SKILL.md`.
+The file layout is what 0.46.0 uses and has changed before, so confirm a path by looking (`ls`, or
+  the socket path in each server's command line) before building on it.
 
 ## What is running
 
@@ -45,6 +45,9 @@ A few actions, such as `current-tab-info` and `override-layout`, act on an attac
 
 - `list-panes -c` shows each pane's command; a pane running Claude Code shows the `claude` command
     line, including `--resume <session id>` when it was resumed.
+    The column is not proof that it is running: a pane in a resurrected session shows its saved
+    command while still waiting at "Waiting to run … <ENTER> run".
+    Confirm with `dump-screen` on that pane, or by finding the process.
 - `~/.claude/sessions/<pid>.json` records each running Claude Code process's `sessionId`, `name`,
     `cwd`, and `status`.
 - Walk a `claude` process's parents (`ps -o ppid=`) up to a `zellij --server` process to learn its

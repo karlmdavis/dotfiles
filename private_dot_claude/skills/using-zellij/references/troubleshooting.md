@@ -2,7 +2,7 @@
 
 Each entry records what was actually seen to work, and what was tried and did not, with the
   version it was seen on.
-Commands are examples from that version; confirm them with `--help` on the installed one.
+If a command fails on the installed version, follow "When a command here fails" in `SKILL.md`.
 Whatever the fault, a fix counts as working only when the user says so.
 
 ## A session attaches to a blank screen, or a pane is squeezed to one row
