@@ -368,9 +368,10 @@ def write_metadata(
 ):
     """Write a session's metadata file as its zellij server would, in zellij's own layout.
 
-    `folder` is the session's folder name where that isn't its name, as from zellij 0.46.
+    `folder` is the folder to write it in, when that differs from the session's name
+    (zellij 0.46 names the folder with a random id).
     """
-    # As zellij's KDL writer quotes a string: only these two characters of a name are escaped.
+    # Zellij's KDL writer escapes backslashes and double quotes, and leaves the rest as is.
     quoted = name.replace("\\", "\\\\").replace('"', '\\"')
     lines = [f'name "{quoted}"', "tabs {"]
     for position, tab in enumerate(tabs):
@@ -392,13 +393,13 @@ def write_metadata(
 
 
 def metadata_path(folder, version="contract_version_1"):
-    """Where the metadata file of the session in `folder` is."""
+    """Return the path of the metadata file inside the session folder `folder`."""
     folder = collector.zellij_cache_dir() / version / "session_info" / folder
     return folder / collector.METADATA_FILE
 
 
 def left_by_an_earlier_zellij(folder, version="0.43.1"):
-    """Move a session's folder to where an earlier version of zellij kept them."""
+    """Move a session's folder into the directory an earlier zellij version used."""
     moved = metadata_path(folder, version).parent
     moved.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(metadata_path(folder).parent, moved)
@@ -611,7 +612,7 @@ def test_sessions_in_use_by_their_metadata_cost_no_queries(zellij, tmp_path, cap
 
 
 def test_sessions_in_folders_named_for_an_id_cost_no_queries_either(zellij):
-    """As zellij 0.46 lays them out: no folder is named for its session."""
+    """The zellij 0.46 layout: every folder is named with an id, not the session's name."""
     write_metadata("dotfiles", clients=1, folder="3f9a1c0b7d2e")
     write_metadata("outstanding-cowbell", clients=1, folder="5b7e2a9c1d04")
     write_metadata("shell-beside-chooser", panes=((False, None),), folder="7c1d045b7e2a")
@@ -653,7 +654,7 @@ def test_nothing_is_deleted_on_the_word_of_the_metadata(zellij):
 
 @pytest.mark.parametrize("newest", ["1a", "2b", "3c"])
 def test_metadata_is_read_from_the_most_recently_written_file(zellij, newest):
-    """Whichever file it is, and in whatever order the folders are listed."""
+    """Each of three matching files takes a turn as newest, so listing order cannot matter."""
     written = {}
     for age, folder in enumerate(("1a", "2b", "3c"), start=1):
         written[folder] = write_metadata("dotfiles", clients=age, folder=folder)
@@ -670,7 +671,7 @@ def test_metadata_is_read_from_the_newest_of_zellij_s_folders(zellij):
     current = write_metadata("dotfiles", clients=1)
     assert collector.read_metadata("dotfiles") == current
     assert collector.read_metadata("no-such-session") is None
-    # A session whose zellij still writes to an earlier version's folder is found there.
+    # A session whose only file is in an earlier version's folder is still found.
     earlier = write_metadata("homelab", clients=1)
     left_by_an_earlier_zellij("homelab")
     assert collector.read_metadata("homelab") == earlier
@@ -678,7 +679,7 @@ def test_metadata_is_read_from_the_newest_of_zellij_s_folders(zellij):
 
 @pytest.mark.parametrize("name", ["*", "a[b]", "café", 'say "hi"', "back\\slash", "name x"])
 def test_metadata_is_found_for_a_name_of_any_characters(zellij, name):
-    """Nothing in a name is a pattern, and zellij writes characters beyond ASCII as they are."""
+    """Glob characters, non-ASCII characters, quotes, backslashes and spaces all match."""
     current = write_metadata(name, clients=1, folder="3f9a1c0b7d2e")
     write_metadata("dotfiles", folder="5b7e2a9c1d04")
     assert collector.read_metadata(name) == current
@@ -686,7 +687,7 @@ def test_metadata_is_found_for_a_name_of_any_characters(zellij, name):
 
 def test_a_file_that_cannot_be_read_hides_only_its_own_session(zellij):
     current = write_metadata("dotfiles", clients=1, folder="3f9a1c0b7d2e")
-    # A folder where the file should be cannot be read as one, whoever is asking.
+    # A directory in place of the file fails to read even when the tests run as root.
     metadata_path("5b7e2a9c1d04").mkdir(parents=True)
     write_metadata("locked", folder="7c1d045b7e2a")
     metadata_path("7c1d045b7e2a").chmod(0)
@@ -694,12 +695,12 @@ def test_a_file_that_cannot_be_read_hides_only_its_own_session(zellij):
 
 
 def test_metadata_is_found_by_the_name_in_the_file_not_the_folder_s(zellij):
-    """zellij 0.46 names a session's folder for a random id, and a rename leaves it where it is."""
+    """Zellij 0.46 names the folder with a random id, and renaming a session does not move it."""
     current = write_metadata("dotfiles", clients=1, folder="3f9a1c0b7d2e")
-    # A folder named for the session but recording another name belongs to another session.
+    # A folder called "dotfiles" whose file records a different name is a different session.
     write_metadata("renamed-since", folder="dotfiles")
     assert collector.read_metadata("dotfiles") == current
-    # A tab of that name is not the session's name.
+    # A tab called "homelab" does not make the session match "homelab".
     write_metadata("other", tabs=("homelab",), folder="5b7e2a9c1d04")
     assert collector.read_metadata("homelab") is None
 

@@ -219,18 +219,21 @@ def zellij_cache_dir() -> Path:
 
 
 def read_metadata(name: str) -> str | None:
-    """The text of a running session's metadata file, or None if no file that can be read is its.
+    """Return the text of the metadata file for the session called `name`, or None if none is found.
 
-    A session's folder is found by the name its file records, not by the folder's own name: zellij
-    0.46 names the folder for a random id, where earlier versions named it for the session.
-    So every session's file is read to find one, and a file that cannot be read is passed over as
-    another session's.
-    The folder above `session_info` is named for a version of zellij's file format, and folders
-    from earlier versions are left behind, so the most recently written file is the one used.
+    Zellij keeps one metadata file per session, each in its own folder.
+    Before 0.46 that folder was named after the session; from 0.46 it is named with a random id.
+    So the folder name cannot be relied on, and this reads every metadata file and picks the one
+    whose `name` line matches.
+    A file that cannot be read is skipped.
+
+    Zellij also leaves old copies behind in folders for earlier versions of its file format.
+    If more than one file matches, the most recently modified one is returned.
     """
-    # The name as zellij's KDL writer quotes it, which leaves characters beyond ASCII as they are.
+    # Zellij's KDL writer does not escape non-ASCII characters, so neither does this.
     name_line = f"name {json.dumps(name, ensure_ascii=False)}"
-    newest: tuple[float, str] | None = None
+    # Modification time in whole nanoseconds, paired with the file's text.
+    newest: tuple[int, str] | None = None
     try:
         paths = list(zellij_cache_dir().glob(f"*/session_info/*/{METADATA_FILE}"))
     except OSError:
@@ -238,7 +241,7 @@ def read_metadata(name: str) -> str | None:
     for path in paths:
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
-            written = path.stat().st_mtime
+            written = path.stat().st_mtime_ns
         except OSError:
             continue
         if name_line in text.splitlines() and (newest is None or written > newest[0]):
