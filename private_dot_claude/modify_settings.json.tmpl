@@ -214,6 +214,8 @@ TEMPLATE: Final = r"""
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "inputNeededNotifEnabled": true,
+  {{- /* On by default: Claude Code compacts a long conversation while the session sits idle. */}}
+  "idleCompaction": false,
   "hooks": {
     "PreToolUse": [
       {
