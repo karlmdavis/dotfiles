@@ -248,7 +248,8 @@ This repository also manages Claude Code configuration for consistent setup acro
 - `~/.claude/commands/pr-merge.md` - Squash merge PR and clean up local branch.
 
 **Custom Skills:**
-- `~/.claude/skills/using-zellij-docs/` - Ensures version-specific accuracy for Zellij shortcuts and config.
+- `~/.claude/skills/using-zellij/` - How agents here work with Zellij: asking the installed binary's help
+    first, driving panes, inspecting sessions, what is destructive, troubleshooting, and upgrading.
 - `~/.claude/skills/awaiting-pr-workflows/`, `getting-pr-artifacts/`, `getting-pr-review-comments/`,
     `getting-pr-workflow-results/` - PR workflow helpers used by the slash commands above.
 
