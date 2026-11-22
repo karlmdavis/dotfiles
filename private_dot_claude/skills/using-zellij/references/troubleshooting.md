@@ -49,6 +49,8 @@ Zellij handles its own bindings before passing keys to the pane.
 - `Alt Left` and `Alt Right` are already unbound in the config for this reason.
     Zellij 0.45 read only the first global `unbind` node, so further keys went on that same line.
 - A known overlap: `Ctrl g` is Zellij's default lock key and Claude Code's external-editor key.
+    Claude Code also opens the external editor on `Ctrl e`, `Ctrl e`, which Zellij leaves alone, so
+    suggest that before rebinding anything.
 
 ## A session was resurrected and then disappeared
 

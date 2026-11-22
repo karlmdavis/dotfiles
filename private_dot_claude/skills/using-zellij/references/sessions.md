@@ -1,6 +1,8 @@
-# Inspecting sessions and Zellij's files
+# Sessions: inspecting, ending, and creating them, and Zellij's files
 
-Everything here is read-only.
+The commands up to "Ending and creating sessions" only read state.
+None of them changes a session, so they are safe to run against any session, including ones
+  holding other people's live work, without asking first.
 The commands were checked on Zellij 0.46.0; use them as written, and if one fails, follow "When a
   command here fails" in `SKILL.md`.
 The file layout is what 0.46.0 uses and has changed before, so confirm a path by looking (`ls`, or
@@ -91,8 +93,22 @@ The file formats are internal to Zellij and undocumented, so treat anything read
 `zellij-gc` follows the same rule; see `private_dot_local/lib/zellij-gc/zellij_gc/collector.py` in the
   dotfiles repo.
 
-## Creating sessions without a terminal
+## Ending and creating sessions
 
-Attaching needs a terminal, so a script cannot create a session that way.
-`zellij attach --help` lists an option that creates a detached session in the background instead
-  (`--create-background` on 0.46.0).
+These change things, so each needs the user's request.
+
+- When the user asks to tidy or clean up sessions, lay out both choices in your reply, because
+    they leave the chooser looking different and "clean up" could mean either:
+    an exited session can only be deleted;
+    a running one can be killed, which stops its programs but leaves it in the chooser as EXITED,
+    or deleted with `--force`, which removes it altogether.
+    Then ask which sessions, by name, and which of the two, before running anything.
+- `kill-all-sessions` and `delete-all-sessions` are the user's to run, from the iTerm2 `zsh` profile
+    (a shell outside Zellij), because they also end your own session mid-command.
+- Never interrupt a delete once it has started.
+- `~/.local/bin/zellij-gc` deletes abandoned sessions for real; `zellij-gc --dry-run` only looks.
+- For experiments, create throwaway sessions with an obvious name such as `zz-probe-<something>`,
+    and delete only those afterwards.
+- To create a session from a script or the Bash tool, use
+    `zellij attach --create-background <name>`, which starts it detached.
+    Plain `zellij attach <name>` does not work there, because it needs a terminal to draw in.

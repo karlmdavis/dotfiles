@@ -1,12 +1,12 @@
 ---
 name: using-zellij
-description: Use for anything involving Zellij, the terminal multiplexer every terminal here runs in - opening, typing into, or reading another pane or tab; listing, inspecting, killing, or resurrecting sessions; answering keybinding, layout, or config questions; diagnosing a stuck pane, dead mouse, or swallowed key; upgrading Zellij; or touching the zellij-welcome launcher or zellij-gc collector. Use it even when the user doesn't say "Zellij" but asks to show or run something "in a new pane", "in the pane next to this one", or "in another tab", and before running any zellij command, because it gives the command forms that work here and several commands end live sessions.
+description: Use for anything involving Zellij (the terminal multiplexer most terminals here run in): opening, typing into, reading, or diagnosing problems with a tab or pane; listing, inspecting, killing, or resurrecting sessions; answering keybinding or other config questions; upgrading Zellij; or touching the user's custom zellij-welcome launcher or zellij-gc collector. Use it even when the user doesn't say "Zellij" but asks to show or run something "in a new pane", "in the pane next to this one", or "in another tab", and before running any zellij command, because it gives the command forms that work here without the risk of ending live sessions.
 ---
 
 # Using Zellij
 
-Every terminal on these machines is nushell inside a Zellij session, so you are almost certainly
-  running inside one right now, next to other sessions that hold live work.
+Almost every terminal on these machines is nushell inside a Zellij session, so you are almost
+  certainly running inside one right now, next to other sessions that hold live work.
 
 ## Orient
 
@@ -40,14 +40,30 @@ Use them as written, without reading their help first.
 | Default keybindings | `zellij setup --dump-keybinds default \| grep -n -i <word>` |
 | Check a config file | `zellij --config <file> setup --check` |
 
+## Sessions, tabs, and panes
+
+A session holds tabs, and each tab holds panes.
+Pane ids are unique across the whole session, so a command given `--pane-id` needs no tab.
+The tab matters in three places:
+
+- An action given no pane or tab id acts on the tab the user is looking at, which may not be the
+    tab you are in.
+    That is why the commands above name a pane, and why opening a pane uses `--near-current-pane`.
+- "The pane next to this one" means another pane in your tab, so list panes with `-t` to see each
+    pane's tab.
+- Tab-level actions (new tab, rename, close, swap layout) take a tab id, listed by
+    `zellij action list-tabs`.
+
 ## When a command here fails, or you need one not listed
 
 Zellij changes quickly, so a command in this skill can go stale.
 
 1. Read the help for that one command (`zellij <command> --help` or
     `zellij action <command> --help`) and use what the installed version says.
-    To find a command you don't know the name of, search the list:
-    `zellij action --help | grep -i <word>`.
+    To find a command you don't know the name of, search both lists, because some things are
+    top-level commands (`run`, `attach`, `list-sessions`, `subscribe`, `setup`) and the rest are
+    actions:
+    `zellij --help | grep -i <word>` and `zellij action --help | grep -i <word>`.
 2. If a command or flag written in this skill was wrong for the installed version, tell the user in
     your reply, even though you worked around it: which file and command, what the installed
     version (`zellij --version`) expects instead, and that the skill needs updating.
@@ -77,18 +93,9 @@ Other sessions usually contain running Claude Code conversations and long-lived 
     it shows as EXITED and can be resurrected.
 - `zellij delete-session <name>` removes a session's saved layout for good; with `--force` it also
     kills a running one first.
-- When the user asks to tidy or clean up sessions, lay out both choices in your reply, because
-    they leave the chooser looking different and "clean up" could mean either:
-    an exited session can only be deleted;
-    a running one can be killed, which stops its programs but leaves it in the chooser as EXITED,
-    or deleted with `--force`, which removes it altogether.
-    Then ask which sessions, by name, and which of the two, before running anything.
-- `kill-all-sessions` and `delete-all-sessions` are the user's to run, from the iTerm2 `zsh` profile
-    (a shell outside Zellij), because they also end your own session mid-command.
-- Never interrupt a delete once it has started.
-- `~/.local/bin/zellij-gc` deletes abandoned sessions for real; `zellij-gc --dry-run` only looks.
-- For experiments, create throwaway sessions with an obvious name such as `zz-probe-<something>`,
-    and delete only those afterwards.
+- Run either only when the user has asked for exactly that, by session name.
+    Before ending, tidying, or creating sessions, read "Ending and creating sessions" in
+    [references/sessions.md](references/sessions.md).
 - Reading another session is fine; typing into it or rearranging it needs the user's request.
 
 ## Check that it happened
@@ -112,27 +119,9 @@ Read the one that fits the task.
     [references/troubleshooting.md](references/troubleshooting.md).
 - Upgrading Zellij while sessions are running:
     [references/upgrading.md](references/upgrading.md).
-
-## Keybinding, layout, and config questions
-
-- The config (`~/.config/zellij/config.kdl`) is close to default: a theme, session serialization,
-    nushell as the default shell, no nested-session prompt, and one `unbind` of `Alt Left` and
-    `Alt Right`.
-    So the default preset applies apart from those two keys.
-    Read the file (it is short) in case this has changed.
-- Look a key up in the default preset with the command in the table, searching for the action
-    (`Lock`, `SwapLayout`, `NewPane`, `Resize`); never name a key from memory.
-    In the dump, `{primary}` is `Ctrl` and `{secondary}` is `Alt`, and each binding sits inside the
-    mode it applies in, so give the mode with the key.
-- Swap layouts (`Alt [` and `Alt ]`) cycle through presets, not through a history of earlier
-    layouts, and no preset makes a stack out of two panes.
-    To stack existing panes: `zellij action stack-panes -- terminal_<a> terminal_<b>`.
-- Zellij handles its own bindings before the program in the pane sees a key.
-    When a key "does nothing" in nushell, Helix, or Claude Code, look for it in Zellij's bindings
-    first (`Ctrl g` is both Zellij's lock key and Claude Code's external-editor key).
-- Edit the chezmoi source, `dot_config/zellij/config.kdl.tmpl` in the dotfiles repo, not the file in
-    `~`.
-    Keybinding changes have applied to running sessions without a restart.
+- A keybinding, layout, or config question, or a config change:
+    [references/keybindings.md](references/keybindings.md).
+    Never name a key from memory.
 
 ## How this setup launches Zellij
 
