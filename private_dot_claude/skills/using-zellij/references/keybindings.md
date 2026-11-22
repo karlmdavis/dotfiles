@@ -20,7 +20,7 @@ The commands were checked on Zellij 0.46.0; if one fails, follow "When a command
     When a key "does nothing" in nushell, Helix, or Claude Code, look for it in Zellij's bindings
     first.
     One known overlap: `Ctrl g` is both Zellij's default lock key and Claude Code's
-    external-editor key; Claude Code also opens the external editor on `Ctrl e`, `Ctrl e`, which
+    external-editor key; Claude Code also opens the external editor on `Ctrl x`, `Ctrl e`, which
     Zellij leaves alone.
 - Edit the chezmoi source, `dot_config/zellij/config.kdl.tmpl` in the dotfiles repo, not the file in
     `~`.
