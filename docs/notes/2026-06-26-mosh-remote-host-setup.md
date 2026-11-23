@@ -1,6 +1,12 @@
 # Mosh remote-host setup
 
-This repo's iTerm2 profiles for remote systems use [Mosh](https://mosh.org/) instead of plain
+**Status (2026-11-23): the iTerm2 remote-host profiles no longer use Mosh.**
+They connect with plain `ssh` inside a loop that reconnects when the connection is lost.
+Mosh redraws the screen from its own model of it and drops the escape sequences it does not know,
+  so agent status (OSC 7501) and notifications (OSC 9) from the remote zellij never reached iTerm2.
+Mosh stays installed, and this runbook stays for anyone who wants to use it by hand.
+
+This repo's iTerm2 profiles for remote systems used [Mosh](https://mosh.org/) instead of plain
   `ssh`/`it2ssh` so that sessions survive laptop suspend/wake, Wi-Fi drops, and IP changes.
 Mosh is only the client half of that.
 Each host you connect to must also run `mosh-server`, which is what this runbook sets up.
