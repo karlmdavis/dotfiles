@@ -3,7 +3,7 @@
     "Name" : "karl@scaleway-mini",
     "Guid" : "84801F28-C1B9-4965-9D5B-A35107C9A0E1",
     "Dynamic Profile Parent Name" : "zellij",
-    "Command" : "/opt/homebrew/bin/mosh --server=/opt/homebrew/bin/mosh-server karl@scaleway-mini.tail26736d.ts.net",
+    "Command" : "/bin/sh -c 'while :; do ssh -t -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o ConnectTimeout=10 karl@scaleway-mini.tail26736d.ts.net; [ $? -eq 255 ] || exit 0; echo \"[ssh] Connection lost; retrying in 5 seconds (Ctrl-C to give up).\"; sleep 5; done'",
     "Custom Command" : "Yes",
     "Title Components" : 64
   }]

@@ -3,7 +3,7 @@
     "Name" : "karl@eddings",
     "Guid" : "B1A20E77-7F20-4B01-AF06-69BB4B4259ED",
     "Dynamic Profile Parent Name" : "zellij",
-    "Command" : "/opt/homebrew/bin/mosh karl@eddings.tail26736d.ts.net",
+    "Command" : "/bin/sh -c 'while :; do ssh -t -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o ConnectTimeout=10 karl@eddings.tail26736d.ts.net; [ $? -eq 255 ] || exit 0; echo \"[ssh] Connection lost; retrying in 5 seconds (Ctrl-C to give up).\"; sleep 5; done'",
     "Custom Command" : "Yes",
     "Title Components" : 64
   }]
