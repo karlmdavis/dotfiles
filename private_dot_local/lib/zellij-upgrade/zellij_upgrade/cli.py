@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from zellij_upgrade.hosts import Host, pick_host, zellij_path
+from zellij_upgrade.hosts import Host, ITermHost, pick_host, zellij_path
 from zellij_upgrade.inventory import (
     WAITING_TO_RUN,
     ClaudePane,
@@ -123,9 +123,11 @@ def describe(inventory: Inventory, host: Host) -> str:
         f"{inventory.zellij_version} is installed. Sessions come back as {host.description}.",
         "",
     ]
-    for window in inventory.windows:
-        where = f"workspace {window.workspace}" if window.workspace else "no particular workspace"
-        lines.append(f"Window on {where}: {', '.join(window.sessions)}")
+    if isinstance(host, ITermHost):
+        lines.extend(
+            f"Window on {_where(window.workspace)}: {', '.join(window.sessions)}"
+            for window in inventory.windows
+        )
     for session in inventory.sessions:
         lines.append("")
         lines.append(f"{session.name}:")
@@ -265,7 +267,7 @@ class Run:
                 continue
             for name in window.sessions:
                 if self.tools.wait_for(functools.partial(self._is_up, name), tries=8):
-                    self.notes.append(f"- `{name}` is back ({_where(window.workspace)}).")
+                    self.notes.append(f"- `{name}` is back.")
                     continue
                 layout = self._backed_up_layout(name)
                 if layout is None:

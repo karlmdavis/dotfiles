@@ -171,7 +171,9 @@ def test_a_full_run_with_iterm_upgrades_restarts_and_resumes_everything(machine,
     assert not machine.ran("zellij", "send-keys", "terminal_1", "Esc")
     assert "Everything came back." in machine.report()
     assert machine.ran("brew", "cleanup", "zellij")
-    assert "No problems found." in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Window on workspace I: alpha, beta (two)" in out
+    assert "No problems found." in out
 
 
 def test_nothing_is_ended_before_the_upgrade_and_nothing_reopened_before_the_end(machine):
@@ -196,9 +198,12 @@ def test_the_saved_sessions_and_the_inventory_are_kept_in_the_state_folder(machi
     assert "upgrade zellij with Homebrew" in (state / "run.log").read_text()
 
 
-def test_without_iterm_sessions_come_back_in_the_background(machine):
+def test_without_iterm_sessions_come_back_in_the_background(machine, capsys):
     machine.change(iterm=False)
     assert cli.main(["--yes"]) == 0
+    out = capsys.readouterr().out
+    assert "Sessions come back as background sessions." in out
+    assert "Window on" not in out
     assert machine.scripts() == []
     assert machine.ran("zellij", "attach", "--create-background", "alpha")
     assert machine.ran("zellij", "attach", "--create-background", "beta (two)")
