@@ -1,58 +1,53 @@
 # Upgrading Zellij
 
-This is the procedure used for 0.45.1 → 0.46.0 on macOS on 2026-11-22, which went cleanly.
-The shape of it should hold for later upgrades.
-Read the new version's release notes for anything that changes the picture, and if a command here
-  fails, follow "When a command here fails" in `SKILL.md`.
+Upgrading ends every session, and with them every shell and Claude Code session inside, including
+  the one doing the upgrade.
+`zellij-upgrade` does the whole cycle and puts everything back.
+Its source and guide are in the dotfiles repo at `private_dot_local/lib/zellij-upgrade/`
+  (`CLAUDE.md` there says what it does and checks).
 
-## What makes it safe
+## Run it
 
-- `brew upgrade zellij` replaces the binary on disk and restarts nothing.
-    Every running session keeps its old server until that session ends.
-- The dotfiles' package script runs `brew bundle --no-upgrade`, so `chezmoi apply` never upgrades
-    Zellij on its own.
-- Killing a session keeps its saved layout, and the new version resurrected layouts saved by the
-    old one.
+1. Read the new version's release notes for anything that changes the picture.
+2. Preview: `zellij-upgrade --dry-run`.
+    It shows what is running and how each Claude session would be resumed, lists as problems the
+    panes it cannot resume, and changes nothing.
+3. Run it only when the user has asked for the upgrade: `zellij-upgrade`.
+    It asks before ending anything; `--yes` skips that question, so pass it only when the user has
+    already said to go ahead.
+    Started inside Zellij, it carries on in a new terminal window (or a detached process), waits
+    for every Claude session to finish its turn, and ends the session you are in.
+    End your turn after starting it.
+4. When it has brought everything back, it types a message into the pane it was started from.
+    Read the report it names and check the result: `zellij --version`, `zellij list-sessions`, and
+    each Claude pane.
 
-## Before
+Its exit status is 1, and the old version stays installed, when anything did not come back.
+The report then says, for each pane, what to type by hand.
 
-1. Read the release notes for the new version, and check whether the `zellij-gc` collector and the
-    config still fit it (`zellij --config <rendered config> setup --check` with the new binary, and
-    `zellij-gc --dry-run` after the upgrade).
-2. Back up the session cache (`contract_version_1/` under the cache folder; see
-    [sessions.md](sessions.md)) and the old binary into a dated folder under `~/.local/state/`.
-3. Record what is running: sessions, their tabs and panes, and the Claude Code session in each pane
-    with its directory and session id, so the user can resume each with `claude --resume <id>`.
-    [sessions.md](sessions.md) says where that information comes from.
+## What it does not do
 
-## Upgrade
+- A Claude session that has never taken a turn has no saved conversation, so it cannot be resumed.
+    The preview lists it; start it again by hand afterwards.
+- A pane where Claude asks a question at startup (whether to trust the folder, for one) is reported
+    as not running. Answering that question is the user's decision.
+- Sessions resumed by id on a slow machine can come back reporting no status to Zellij
+    (a Claude Code startup timing bug seen on `scaleway-mini`). Exiting such a session and resuming
+    it from the `claude --resume` picker fixes it.
 
-```bash
-HOMEBREW_NO_INSTALL_CLEANUP=1 brew upgrade zellij
-```
+## What is kept, and rollback
 
-The flag keeps the old version's files on disk while old servers are still running from them.
-Afterwards, check that `zellij --version` shows the new version, that the same server processes are
-  still running, and that `zellij-gc --dry-run` reports no unparsed lines.
+Each run keeps `inventory.json`, `run.log`, `report.md`, a copy of Zellij's saved sessions and the
+  old binary under `~/.local/state/zellij-upgrade/<time>/`.
 
-## Cutover, which is the user's to run
-
-It ends every program inside Zellij, including the Claude Code session doing the upgrade.
-
-1. The user brings each Claude Code session to a stopping point and exits it.
-    Background sessions run by the Claude daemon are separate; they are stopped from `claude agents`.
-2. From the iTerm2 `zsh` profile (a shell outside Zellij), the user runs `zellij kill-all-sessions`.
-3. The user reopens each session from the chooser, types in it before switching to another (see the
-    resurrection bug in [troubleshooting.md](troubleshooting.md)), and resumes Claude Code.
-4. Once no old server remains, `brew cleanup zellij` removes the old version.
-
-## Rollback
-
-`brew unlink zellij`, then link the backed-up binary at Homebrew's `bin/zellij`.
-A lost layout can be opened from the backup with
-  `zellij --layout <backup>/session_info/<folder>/session-layout.kdl -s <name>`.
+- To go back a version: `brew unlink zellij`, then link the kept binary (`zellij-before-upgrade`)
+    at Homebrew's `bin/zellij`.
+- A lost layout can be opened from the copy with
+    `zellij --layout <state folder>/session-cache/session_info/<folder>/session-layout.kdl -s <name>`.
 
 ## Other machines
 
-Repeat per machine.
-On Linux the cache is `~/.cache/zellij/` and Homebrew lives in `/home/linuxbrew/.linuxbrew/`.
+Run it on each machine.
+Where iTerm2 is open, sessions come back in iTerm2 windows; elsewhere, detached in the background.
+The dotfiles' package script runs `brew bundle --no-upgrade`, so `chezmoi apply` never upgrades
+  Zellij on its own.

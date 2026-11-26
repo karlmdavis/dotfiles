@@ -15,6 +15,7 @@ config_roots = [
   "private_dot_local/lib/aerospace-workspaces",
   "private_dot_local/lib/cmd-notify",
   "private_dot_local/lib/zellij-gc",
+  "private_dot_local/lib/zellij-upgrade",
 ]
 
 [tools]
@@ -26,6 +27,7 @@ bats = "latest"
 description = "Run shellcheck on managed shell scripts, and the Python linters where set up"
 run = """
 mise run '//private_dot_local/lib/zellij-gc:lint'
+mise run '//private_dot_local/lib/zellij-upgrade:lint'
 
 echo "Running shellcheck..."
 shellcheck \
@@ -50,6 +52,7 @@ bats test/aerospace/ test/claude/ test/iterm/ test/obsidian/ test/zellij/
 mise run '//private_dot_local/lib/aerospace-workspaces:test'
 mise run '//private_dot_local/lib/cmd-notify:test'
 mise run '//private_dot_local/lib/zellij-gc:test'
+mise run '//private_dot_local/lib/zellij-upgrade:test'
 """
 
 [tasks.ci]

@@ -158,6 +158,11 @@ Custom development authored here; each could plausibly be broken out into its ow
     [`~/.local/lib/zellij-gc/`](private_dot_local/lib/zellij-gc/),
     a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind a
     thin shim at [`~/.local/bin/zellij-gc`](private_dot_local/bin/executable_zellij-gc).
+- `zellij-upgrade` (upgrades Zellij, then brings every session, terminal window and Claude Code
+    session back as it was):
+    [`~/.local/lib/zellij-upgrade/`](private_dot_local/lib/zellij-upgrade/),
+    a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind a
+    thin shim at [`~/.local/bin/zellij-upgrade`](private_dot_local/bin/executable_zellij-upgrade).
 - `aerospace-workspaces` (shared AeroSpace workspace logic for the SwiftBar plugin + HUD):
     [`~/.local/lib/aerospace-workspaces/`](private_dot_local/lib/aerospace-workspaces/),
     a Python package (pytest tests + own `mise.toml`, run from root via the mise monorepo) behind

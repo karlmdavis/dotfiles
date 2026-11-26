@@ -23,6 +23,10 @@ test/
 .local/lib/zellij-gc/mise.toml
 .local/lib/zellij-gc/pyproject.toml
 .local/lib/zellij-gc/tests
+.local/lib/zellij-upgrade/CLAUDE.md
+.local/lib/zellij-upgrade/mise.toml
+.local/lib/zellij-upgrade/pyproject.toml
+.local/lib/zellij-upgrade/tests
 .local/lib/**/__pycache__
 .local/lib/**/.pytest_cache
 .local/lib/**/*.pyc
