@@ -204,6 +204,13 @@ Before opening the chooser, `zellij-welcome` runs `~/.local/bin/zellij-gc`, whic
 Its rules, records, and controls are in
   [`private_dot_local/lib/zellij-gc/CLAUDE.md`](./private_dot_local/lib/zellij-gc/CLAUDE.md).
 
+**Upgrading Zellij:**
+Upgrading ends every session, so `~/.local/bin/zellij-upgrade` does the whole cycle: it records
+  what is running, upgrades with Homebrew, ends the sessions, reopens each terminal window on its
+  AeroSpace workspace, and resumes each Claude Code session.
+What it does, checks, and leaves behind is in
+  [`private_dot_local/lib/zellij-upgrade/CLAUDE.md`](./private_dot_local/lib/zellij-upgrade/CLAUDE.md).
+
 ## Development Toolchain
 
 This repository manages configurations for:
